@@ -1,0 +1,7 @@
+{
+  "name": "front_vibes",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
