@@ -20,14 +20,16 @@
 
 <script setup lang="ts">
 import { IonButton, IonContent, IonPage } from '@ionic/vue';
-import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
-const router = useRouter();
 const { currentUser, logout } = useAuth();
 
 async function handleLogout() {
-  await logout();
-  await router.replace('/sign-in');
+  try {
+    await logout();
+    window.location.replace('/sign-in');
+  } catch {
+    // ignore logout errors
+  }
 }
 </script>

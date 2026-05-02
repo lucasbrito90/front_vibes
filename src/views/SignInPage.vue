@@ -86,7 +86,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 import {
   IonButton,
   IonButtons,
@@ -102,7 +101,6 @@ import {
 import { chevronBackOutline, eyeOffOutline, logoApple } from 'ionicons/icons';
 import { useAuth } from '@/composables/useAuth';
 
-const router = useRouter();
 const { loginWithEmail, loginWithGoogle, loading, error } = useAuth();
 
 const email = ref('');
@@ -110,12 +108,20 @@ const password = ref('');
 const showPassword = ref(false);
 
 async function handleGoogleLogin() {
-  await loginWithGoogle();
-  await router.replace('/home');
+  try {
+    await loginWithGoogle();
+    window.location.replace('/home');
+  } catch {
+    // error.value is already set inside loginWithGoogle via useAuth
+  }
 }
 
 async function handleEmailLogin() {
-  await loginWithEmail(email.value, password.value);
-  await router.replace('/home');
+  try {
+    await loginWithEmail(email.value, password.value);
+    window.location.replace('/home');
+  } catch {
+    // error.value is already set inside loginWithEmail via useAuth
+  }
 }
 </script>

@@ -84,7 +84,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 import {
   IonButton,
   IonButtons,
@@ -102,7 +101,6 @@ import { chevronBackOutline, eyeOffOutline, logoApple } from 'ionicons/icons';
 import { updateProfile } from 'firebase/auth';
 import { useAuth } from '@/composables/useAuth';
 
-const router = useRouter();
 const { signUpWithEmail, loginWithGoogle, loading, error, currentUser } = useAuth();
 
 const name = ref('');
@@ -111,17 +109,25 @@ const password = ref('');
 const showPassword = ref(false);
 
 async function handleGoogleLogin() {
-  await loginWithGoogle();
-  await router.replace('/home');
+  try {
+    await loginWithGoogle();
+    window.location.replace('/home');
+  } catch {
+    // error.value is already set inside loginWithGoogle via useAuth
+  }
 }
 
 async function handleEmailSignUp() {
-  await signUpWithEmail(email.value, password.value);
+  try {
+    await signUpWithEmail(email.value, password.value);
 
-  if (currentUser.value && name.value) {
-    await updateProfile(currentUser.value, { displayName: name.value });
+    if (currentUser.value && name.value) {
+      updateProfile(currentUser.value, { displayName: name.value }).catch(() => {});
+    }
+
+    window.location.replace('/home');
+  } catch {
+    // error.value is already set inside signUpWithEmail via useAuth
   }
-
-  await router.replace('/home');
 }
 </script>

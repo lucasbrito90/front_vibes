@@ -98,7 +98,12 @@ const form = reactive({
   is_active: true,
 });
 
-onMounted(() => fetchVibe(Number(route.params.id)));
+onMounted(async () => {
+  await fetchVibe(Number(route.params.id));
+  if (error.value) {
+    router.back();
+  }
+});
 
 watch(selectedVibe, (vibe) => {
   if (vibe) {
