@@ -31,19 +31,9 @@ const routes: Array<RouteRecordRaw> = [
     meta: { publicOnly: true },
   },
 
-  // ── Authenticated sub-pages (no tab bar) ───────────────────────────────────
-  {
-    path: '/vibes/create',
-    component: () => import('@/views/CreateVibePage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/vibes/:id/edit',
-    component: () => import('@/views/EditVibePage.vue'),
-    meta: { requiresAuth: true },
-  },
-
-  // ── Authenticated tab routes (tab bar visible) ─────────────────────────────
+  // ── Authenticated routes (tab bar visible) ────────────────────────────────
+  // All authenticated pages live inside TabsLayout so Ionic's ion-router-outlet
+  // can manage the full navigation stack (push/pop) without outlet conflicts.
   {
     path: '/',
     component: () => import('@/views/TabsLayout.vue'),
@@ -58,6 +48,16 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'vibes',
         component: () => import('@/views/VibesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'vibes/create',
+        component: () => import('@/views/CreateVibePage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'vibes/:id/edit',
+        component: () => import('@/views/EditVibePage.vue'),
         meta: { requiresAuth: true },
       },
       {

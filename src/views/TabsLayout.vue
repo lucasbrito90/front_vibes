@@ -35,10 +35,10 @@ import { homeOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icon
 
 <style scoped>
 .app-tab-bar {
-  --background: #0b1120;
-  --color: rgba(148, 163, 184, 0.65);
-  --color-selected: var(--ion-color-primary, #7c3aed);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  --background: var(--app-color-bg, #ffffff);
+  --color: var(--app-color-text-muted, #94a3b8);
+  --color-selected: var(--ion-color-primary, #1dac92);
+  border-top: 1px solid var(--app-color-border, #cbd5e1);
   height: 56px;
   padding-bottom: env(safe-area-inset-bottom);
 }

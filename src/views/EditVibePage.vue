@@ -3,7 +3,7 @@
     <ion-header class="auth-header">
       <ion-toolbar class="auth-toolbar">
         <ion-buttons slot="start">
-          <ion-button fill="clear" router-link="/vibes">
+          <ion-button fill="clear" @click="router.back()">
             <ion-icon :icon="chevronBackOutline" class="auth-back-icon" />
           </ion-button>
         </ion-buttons>
