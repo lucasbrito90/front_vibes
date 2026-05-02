@@ -2,17 +2,7 @@
   <ion-page>
     <ion-header class="ion-no-border">
       <ion-toolbar class="vibes-toolbar">
-        <ion-buttons slot="start">
-          <ion-button fill="clear" router-link="/home" class="vibes-back-btn">
-            <ion-icon :icon="chevronBackOutline" />
-          </ion-button>
-        </ion-buttons>
         <ion-title class="vibes-toolbar-title">My Vibes</ion-title>
-        <ion-buttons slot="end">
-          <ion-button fill="clear" router-link="/vibes/create" class="vibes-add-btn">
-            <ion-icon :icon="addOutline" />
-          </ion-button>
-        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -30,7 +20,7 @@
 
         <div v-else-if="!vibes.length" class="vibes-state">
           <p class="vibes-state-title">No vibes yet</p>
-          <p class="vibes-state-sub">Create your first ambient scenario</p>
+          <p class="vibes-state-sub">Create your first vibe</p>
           <ion-button router-link="/vibes/create" expand="block" class="vibes-create-btn">
             Create Vibe
           </ion-button>
@@ -60,10 +50,10 @@
                 </span>
               </div>
               <div class="vibe-card-actions">
-                <button class="vibe-action-btn" @click.stop="goEdit(vibe.id)">
+                <button class="vibe-action-btn" @click.stop="goEdit(vibe.id)" aria-label="Edit vibe">
                   <ion-icon :icon="pencilOutline" />
                 </button>
-                <button class="vibe-action-btn danger" @click.stop="handleDelete(vibe.id)">
+                <button class="vibe-action-btn danger" @click.stop="handleDelete(vibe.id)" aria-label="Delete vibe">
                   <ion-icon :icon="trashOutline" />
                 </button>
               </div>
@@ -72,6 +62,12 @@
         </div>
 
       </div>
+
+      <ion-fab slot="fixed" vertical="bottom" horizontal="end" class="vibes-fab">
+        <ion-fab-button router-link="/vibes/create" color="primary">
+          <ion-icon :icon="addOutline" />
+        </ion-fab-button>
+      </ion-fab>
     </ion-content>
   </ion-page>
 </template>
@@ -79,8 +75,9 @@
 <script setup lang="ts">
 import {
   IonButton,
-  IonButtons,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonHeader,
   IonIcon,
   IonPage,
@@ -89,7 +86,7 @@ import {
   IonToolbar,
   alertController,
 } from '@ionic/vue';
-import { addOutline, chevronBackOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, pencilOutline, trashOutline } from 'ionicons/icons';
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
@@ -137,16 +134,11 @@ async function handleDelete(id: number) {
   color: var(--app-color-text-primary);
 }
 
-.vibes-back-btn,
-.vibes-add-btn {
-  --color: var(--app-color-text-primary);
-  font-size: 22px;
-}
-
 /* ── Page content ─────────────────────────────── */
 
 .vibes-content {
-  padding: 8px 20px 32px;
+  /* Extra bottom padding clears the FAB (72px) above the tab bar */
+  padding: 8px 20px 100px;
 }
 
 /* ── Empty / loading states ───────────────────── */
@@ -206,7 +198,7 @@ async function handleDelete(id: number) {
   overflow: hidden;
 }
 
-/* Bottom dark blur strip (bottom 35%) */
+/* Bottom dark blur strip */
 .vibe-card-overlay {
   position: absolute;
   left: 0;
@@ -222,38 +214,40 @@ async function handleDelete(id: number) {
 /* Badge — top left */
 .vibe-card-badge {
   position: absolute;
-  top: 20px;
-  left: 22px;
-  height: 22px;
+  top: 14px;
+  left: 14px;
+  height: 24px;
   padding: 0 10px;
   display: flex;
   align-items: center;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   font-size: 10px;
-  font-weight: 500;
-  color: #fff;
-  letter-spacing: 0.2px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
   white-space: nowrap;
   z-index: 1;
 }
 
 .badge-active {
-  background: var(--ion-color-primary);
+  background: rgba(16, 185, 129, 0.22);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #6ee7b7;
 }
 
 .badge-inactive {
-  background: rgba(100, 116, 139, 0.8);
+  background: rgba(100, 116, 139, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Bottom content row */
 .vibe-card-bottom {
   position: absolute;
-  left: 22px;
-  right: 14px;
-  bottom: 14px;
+  left: 16px;
+  right: 10px;
+  bottom: 10px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -290,10 +284,10 @@ async function handleDelete(id: number) {
   text-overflow: ellipsis;
 }
 
-/* Action buttons */
+/* Action buttons — 44 × 44 px touch target */
 .vibe-card-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -301,29 +295,35 @@ async function handleDelete(id: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
   cursor: pointer;
   transition: background 0.15s;
+  padding: 0;
 }
 
 .vibe-action-btn:active {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .vibe-action-btn.danger {
-  background: rgba(247, 85, 85, 0.3);
-  border-color: rgba(247, 85, 85, 0.4);
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.4);
 }
 
 .vibe-action-btn.danger:active {
-  background: rgba(247, 85, 85, 0.5);
+  background: rgba(239, 68, 68, 0.42);
+}
+
+/* FAB offset from the tab bar */
+.vibes-fab {
+  --bottom: 72px;
 }
 </style>

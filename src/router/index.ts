@@ -4,10 +4,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/services/firebase';
 
 const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/',
-    redirect: '/sign-in-sign-up'
-  },
+  // ── Public-only routes (no tab bar) ────────────────────────────────────────
   {
     path: '/sign-in-sign-up',
     component: () => import('@/views/SignInSignUpPage.vue'),
@@ -33,16 +30,8 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('@/views/ResetPasswordSuccessPage.vue'),
     meta: { publicOnly: true },
   },
-  {
-    path: '/home',
-    component: () => import('@/views/HomePage.vue'),
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/vibes',
-    component: () => import('@/views/VibesPage.vue'),
-    meta: { requiresAuth: true },
-  },
+
+  // ── Authenticated sub-pages (no tab bar) ───────────────────────────────────
   {
     path: '/vibes/create',
     component: () => import('@/views/CreateVibePage.vue'),
@@ -52,6 +41,31 @@ const routes: Array<RouteRecordRaw> = [
     path: '/vibes/:id/edit',
     component: () => import('@/views/EditVibePage.vue'),
     meta: { requiresAuth: true },
+  },
+
+  // ── Authenticated tab routes (tab bar visible) ─────────────────────────────
+  {
+    path: '/',
+    component: () => import('@/views/TabsLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', redirect: '/home' },
+      {
+        path: 'home',
+        component: () => import('@/views/HomePage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'vibes',
+        component: () => import('@/views/VibesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'settings',
+        component: () => import('@/views/SettingsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+    ],
   },
 ];
 
