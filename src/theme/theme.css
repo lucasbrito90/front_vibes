@@ -1,0 +1,139 @@
+/* Global Ionic layer mapped to the Figma design system. */
+
+:root {
+  --ion-background-color: var(--app-color-bg);
+  --ion-background-color-rgb: 255, 255, 255;
+  --ion-text-color: var(--app-color-text-primary);
+  --ion-text-color-rgb: 18, 24, 38;
+}
+
+html,
+body,
+ion-app {
+  font-family: var(--ion-font-family);
+  background: var(--app-color-bg);
+  color: var(--app-color-text-primary);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  color: var(--app-color-text-primary);
+  font-weight: var(--app-font-weight-bold);
+}
+
+h1 {
+  font-size: var(--app-font-size-h1);
+  line-height: var(--app-line-height-heading);
+}
+
+h2 {
+  font-size: var(--app-font-size-h2);
+  line-height: var(--app-line-height-heading);
+}
+
+h3 {
+  font-size: var(--app-font-size-h3);
+  line-height: var(--app-line-height-heading);
+}
+
+h4 {
+  font-size: var(--app-font-size-h4);
+  line-height: var(--app-line-height-heading-tight);
+  letter-spacing: 0.3px;
+}
+
+h5 {
+  font-size: var(--app-font-size-h5);
+  line-height: var(--app-line-height-heading-tight);
+}
+
+h6 {
+  font-size: var(--app-font-size-h6);
+  line-height: var(--app-line-height-heading-tight);
+  letter-spacing: 0.2px;
+}
+
+ion-content {
+  --background: var(--app-color-bg);
+}
+
+ion-toolbar {
+  --background: var(--app-color-bg);
+  --border-style: none;
+}
+
+/* Buttons: Figma uses rounded corners, medium weight text and primary gradient. */
+ion-button {
+  --border-radius: var(--app-radius-md);
+  --padding-start: var(--app-space-6);
+  --padding-end: var(--app-space-6);
+  font-size: var(--app-font-size-body-lg);
+  font-weight: var(--app-font-weight-bold);
+  letter-spacing: 0.2px;
+  text-transform: none;
+}
+
+ion-button.btn-primary,
+ion-button[data-variant='primary'] {
+  --background: var(--app-gradient-primary);
+  --color: #ffffff;
+}
+
+ion-button.btn-outline,
+ion-button[data-variant='outline'] {
+  --background: #ffffff;
+  --color: var(--app-color-text-primary);
+  --border-color: var(--app-color-border);
+  --border-style: solid;
+  --border-width: 1px;
+}
+
+/* Inputs: light surface, subtle border, rounded shape. */
+ion-item.input-field,
+ion-item[data-variant='input'] {
+  --background: var(--app-color-surface-subtle);
+  --border-color: transparent;
+  --border-width: 0;
+  --inner-border-width: 0;
+  --min-height: var(--app-space-10);
+  border-radius: var(--app-radius-md);
+}
+
+ion-item.input-field ion-input,
+ion-item[data-variant='input'] ion-input {
+  --placeholder-color: var(--app-color-text-muted);
+  --placeholder-opacity: 1;
+  color: var(--app-color-text-primary);
+  font-size: var(--app-font-size-body-md);
+}
+
+/* Cards: rounded and low-contrast surface like Figma content cards. */
+ion-card {
+  margin: 0;
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-surface);
+  color: var(--app-color-text-primary);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* Minimal spacing utilities for layout composition. */
+.u-gap-2 {
+  gap: var(--app-space-2);
+}
+
+.u-gap-3 {
+  gap: var(--app-space-3);
+}
+
+.u-gap-4 {
+  gap: var(--app-space-4);
+}
+
+.u-gap-6 {
+  gap: var(--app-space-6);
+}

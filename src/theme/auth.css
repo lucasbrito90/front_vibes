@@ -1,0 +1,387 @@
+.auth-page {
+  --background: #ffffff;
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.auth-content {
+  --background: #ffffff;
+}
+
+.auth-header {
+  box-shadow: none;
+}
+
+.auth-toolbar {
+  --background: #ffffff;
+  --border-style: none;
+  --min-height: 56px;
+  padding: 0 12px;
+}
+
+.auth-toolbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: #121826;
+}
+
+.auth-screen {
+  max-width: 375px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 0 20px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-back-button {
+  width: 24px;
+  height: 24px;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  color: #121826;
+}
+
+.auth-icon-button {
+  width: 24px;
+  height: 24px;
+  margin-top: 12px;
+  margin-bottom: 24px;
+  --padding-start: 0;
+  --padding-end: 0;
+  --background: transparent;
+}
+
+.auth-icon-button::part(native) {
+  padding: 0;
+}
+
+.auth-icon-button .auth-back-button {
+  margin: 0;
+}
+
+.auth-signin-title {
+  margin-top: 24px;
+}
+
+.auth-centered-title {
+  width: 100%;
+  text-align: center;
+  font-size: 18px;
+  margin: 0 0 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: #121826;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.3px;
+  color: #121826;
+}
+
+.auth-subtitle {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #64748b;
+  letter-spacing: 0.2px;
+}
+
+.auth-social-group {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.auth-social-button {
+  width: 100%;
+  min-height: 56px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #121826;
+  font-size: 16px;
+  font-weight: 500;
+  text-transform: none;
+  --padding-start: 0;
+  --padding-end: 0;
+  margin: 0;
+}
+
+.auth-social-button::part(native) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.auth-social-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth-social-icon-wrap {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-social-apple-icon {
+  font-size: 22px;
+  color: #121826;
+}
+
+.auth-social-google-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.auth-divider {
+  margin: 48px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #f1f5f9;
+}
+
+.auth-divider span {
+  font-size: 14px;
+  color: #94a3b8;
+  letter-spacing: 0.2px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.auth-item {
+  --background: #f1f5f9;
+  --border-color: transparent;
+  --border-width: 0;
+  --inner-border-width: 0;
+  --min-height: 56px;
+  border-radius: 12px;
+}
+
+.auth-item ion-input {
+  --placeholder-color: #94a3b8;
+  --placeholder-opacity: 1;
+  color: #121826;
+  font-size: 14px;
+}
+
+.auth-item ion-icon {
+  color: #94a3b8;
+}
+
+.auth-submit {
+  margin-top: 4px;
+  min-height: 60px;
+  --border-radius: 12px;
+  --background: linear-gradient(180deg, #1dac92 0%, #228e8e 100%);
+  --color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.auth-link {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: #1dac92;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  text-decoration: underline;
+}
+
+.auth-footer {
+  margin-top: 48px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: #121826;
+  width: 100%;
+}
+
+.auth-footer a {
+  color: #1dac92;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.auth-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.auth-screen-forgot {
+  padding-top: 0;
+}
+
+.auth-screen-signup {
+  padding-top: 24px;
+}
+
+.auth-forgot-title {
+  font-size: 24px;
+  letter-spacing: 0.3px;
+}
+
+.auth-forgot-subtitle {
+  margin-top: 8px;
+  width: 100%;
+  padding-right: 24px;
+}
+
+.auth-forgot-form {
+  margin-top: 40px;
+  min-height: calc(100vh - 360px);
+}
+
+.auth-forgot-submit {
+  margin-top: auto;
+}
+
+.auth-success-screen {
+  align-items: center;
+  justify-content: flex-start;
+  padding: 124px 20px 48px;
+  text-align: center;
+}
+
+.auth-success-illustration {
+  width: 205px;
+  height: auto;
+}
+
+.auth-success-title {
+  margin-top: 40px;
+  font-size: 24px;
+}
+
+.auth-success-subtitle {
+  margin-top: 8px;
+  color: #64748b;
+  width: 100%;
+  max-width: 334px;
+}
+
+.auth-success-submit {
+  width: 100%;
+  margin-top: auto;
+}
+
+.auth-entry-screen {
+  padding-top: 20px;
+}
+
+.auth-entry-hero {
+  position: relative;
+  width: 100%;
+  height: 458px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.auth-entry-hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.auth-entry-hero-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 180px;
+  text-align: center;
+  color: #252d41;
+}
+
+.auth-entry-hero-overlay h1 {
+  margin: 0;
+  font-size: 32.4px;
+  letter-spacing: 4.2px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.auth-entry-hero-overlay p {
+  margin: 6px 0 0;
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+}
+
+.auth-entry-buttons {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-entry-email-button {
+  margin-top: 0;
+}
+
+.auth-entry-email-button::part(native) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-entry-email-button ion-icon {
+  font-size: 22px;
+}
+
+.auth-entry-footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: #121826;
+}
+
+.auth-entry-footer a {
+  margin-left: 6px;
+  color: #1dac92;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.home-page {
+  --background: #ffffff;
+}
+
+.home-content {
+  --background: #ffffff;
+}

@@ -1,2 +1,87 @@
-/* For information on how to create your own theme, please refer to:
-http://ionicframework.com/docs/theming/ */
+/* Ionic design tokens mapped from Figma Design System (node 127:2). */
+:root {
+  /* Core Ionic color roles */
+  --ion-color-primary: #1dac92;
+  --ion-color-primary-rgb: 29, 172, 146;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1a987f;
+  --ion-color-primary-tint: #34b49d;
+
+  --ion-color-secondary: #252d41;
+  --ion-color-secondary-rgb: 37, 45, 65;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #20283a;
+  --ion-color-secondary-tint: #3b4254;
+
+  --ion-color-success: #64c086;
+  --ion-color-warning: #facc15;
+  --ion-color-danger: #f75555;
+
+  --ion-color-light: #f8fafc;
+  --ion-color-medium: #64748b;
+  --ion-color-dark: #121826;
+
+  /* App-level semantic tokens from Figma */
+  --app-color-bg: #ffffff;
+  --app-color-surface: #f8fafc;
+  --app-color-surface-subtle: #f1f5f9;
+  --app-color-border: #cbd5e1;
+  --app-color-text-primary: #121826;
+  --app-color-text-secondary: #64748b;
+  --app-color-text-muted: #94a3b8;
+
+  --app-color-primary-100: #d2eee9;
+  --app-color-primary-200: #a5ded3;
+  --app-color-primary-300: #77cdbe;
+  --app-color-primary-400: #4abda8;
+  --app-color-primary-500: #1dac92;
+  --app-color-primary-600: #228e8e;
+
+  --app-color-secondary-100: #c5cce0;
+  --app-color-secondary-200: #b1bbd6;
+  --app-color-secondary-300: #6378ae;
+  --app-color-secondary-400: #4a5a82;
+  --app-color-secondary-500: #252d41;
+
+  --app-gradient-primary: linear-gradient(180deg, #1dac92 0%, #228e8e 100%);
+
+  /* Typography */
+  --ion-font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --app-font-size-h1: 48px;
+  --app-font-size-h2: 40px;
+  --app-font-size-h3: 32px;
+  --app-font-size-h4: 24px;
+  --app-font-size-h5: 20px;
+  --app-font-size-h6: 18px;
+  --app-font-size-body-lg: 16px;
+  --app-font-size-body-md: 14px;
+  --app-font-size-body-sm: 12px;
+  --app-font-size-body-xs: 10px;
+
+  --app-line-height-heading: 1.1;
+  --app-line-height-heading-tight: 1.2;
+  --app-line-height-body: 1.4;
+
+  --app-font-weight-regular: 400;
+  --app-font-weight-medium: 500;
+  --app-font-weight-bold: 700;
+
+  /* Spacing scale */
+  --app-space-1: 4px;
+  --app-space-2: 8px;
+  --app-space-3: 12px;
+  --app-space-4: 16px;
+  --app-space-5: 20px;
+  --app-space-6: 24px;
+  --app-space-7: 32px;
+  --app-space-8: 40px;
+  --app-space-9: 48px;
+  --app-space-10: 56px;
+  --app-space-11: 60px;
+
+  --app-radius-sm: 8px;
+  --app-radius-md: 12px;
+  --app-radius-lg: 20px;
+}

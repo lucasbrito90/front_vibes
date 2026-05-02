@@ -1,39 +1,112 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
-import TabsPage from '../views/TabsPage.vue'
+import { User, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/services/firebase';
 
 const routes: Array<RouteRecordRaw> = [
+  // ── Public-only routes (no tab bar) ────────────────────────────────────────
   {
-    path: '/',
-    redirect: '/tabs/tab1'
+    path: '/sign-in-sign-up',
+    component: () => import('@/views/SignInSignUpPage.vue'),
+    meta: { publicOnly: true },
   },
   {
-    path: '/tabs/',
-    component: TabsPage,
+    path: '/sign-in',
+    component: () => import('@/views/SignInPage.vue'),
+    meta: { publicOnly: true },
+  },
+  {
+    path: '/sign-up',
+    component: () => import('@/views/SignUpPage.vue'),
+    meta: { publicOnly: true },
+  },
+  {
+    path: '/forgot-password',
+    component: () => import('@/views/ForgotPasswordPage.vue'),
+    meta: { publicOnly: true },
+  },
+  {
+    path: '/reset-password-success',
+    component: () => import('@/views/ResetPasswordSuccessPage.vue'),
+    meta: { publicOnly: true },
+  },
+
+  // ── Authenticated routes (tab bar visible) ────────────────────────────────
+  // All authenticated pages live inside TabsLayout so Ionic's ion-router-outlet
+  // can manage the full navigation stack (push/pop) without outlet conflicts.
+  {
+    path: '/',
+    component: () => import('@/views/TabsLayout.vue'),
+    meta: { requiresAuth: true },
     children: [
+      { path: '', redirect: '/home' },
       {
-        path: '',
-        redirect: '/tabs/tab1'
+        path: 'home',
+        component: () => import('@/views/HomePage.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'tab1',
-        component: () => import('@/views/Tab1Page.vue')
+        path: 'vibes',
+        component: () => import('@/views/VibesPage.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'tab2',
-        component: () => import('@/views/Tab2Page.vue')
+        path: 'vibes/create',
+        component: () => import('@/views/CreateVibePage.vue'),
+        meta: { requiresAuth: true },
       },
       {
-        path: 'tab3',
-        component: () => import('@/views/Tab3Page.vue')
-      }
-    ]
-  }
-]
+        path: 'vibes/:id/edit',
+        component: () => import('@/views/EditVibePage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'settings',
+        component: () => import('@/views/SettingsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+    ],
+  },
+];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
-})
+  routes,
+});
 
-export default router
+let authStateResolved = false;
+let authStatePromise: Promise<User | null> | null = null;
+
+function waitForAuthState(): Promise<User | null> {
+  if (auth.currentUser || authStateResolved) {
+    return Promise.resolve(auth.currentUser);
+  }
+
+  if (!authStatePromise) {
+    authStatePromise = new Promise((resolve) => {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        authStateResolved = true;
+        unsubscribe();
+        resolve(user);
+      });
+    });
+  }
+
+  return authStatePromise;
+}
+
+router.beforeEach(async (to) => {
+  const user = await waitForAuthState();
+
+  if (to.meta.requiresAuth && !user) {
+    return '/sign-in';
+  }
+
+  if (to.meta.publicOnly && user) {
+    return '/home';
+  }
+
+  return true;
+});
+
+export default router;
