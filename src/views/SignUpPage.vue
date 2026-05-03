@@ -99,7 +99,10 @@ import {
 } from '@ionic/vue';
 import { chevronBackOutline, eyeOffOutline, logoApple } from 'ionicons/icons';
 import { updateProfile } from 'firebase/auth';
+import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+
+const router = useRouter();
 
 const { signUpWithEmail, loginWithGoogle, loading, error, currentUser } = useAuth();
 

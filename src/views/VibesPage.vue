@@ -50,6 +50,9 @@
                 </span>
               </div>
               <div class="vibe-card-actions">
+                <button class="vibe-action-btn" @click.stop="router.push(`/vibes/${vibe.id}/sounds`)" aria-label="Manage sounds">
+                  <ion-icon :icon="musicalNotesOutline" />
+                </button>
                 <button class="vibe-action-btn" @click.stop="goEdit(vibe.id)" aria-label="Edit vibe">
                   <ion-icon :icon="pencilOutline" />
                 </button>
@@ -86,7 +89,7 @@ import {
   IonToolbar,
   alertController,
 } from '@ionic/vue';
-import { addOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
