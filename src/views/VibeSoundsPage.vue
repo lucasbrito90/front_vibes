@@ -83,7 +83,18 @@
                   </div>
                 </div>
 
-                <span class="sound-card-name">{{ sound.name }}</span>
+                <!-- Edit row: name + settings icon (only for attached sounds) -->
+                <div class="sound-card-footer">
+                  <span class="sound-card-name">{{ sound.name }}</span>
+                  <button
+                    v-if="isSelected(sound.id)"
+                    class="sound-card-edit-btn"
+                    aria-label="Edit sound settings"
+                    @click.stop="openEditModal(sound.id)"
+                  >
+                    <ion-icon :icon="settingsOutline" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -122,6 +133,7 @@ import {
   IonPage,
   IonSpinner,
   IonToolbar,
+  modalController,
   toastController,
 } from '@ionic/vue';
 import {
@@ -129,6 +141,7 @@ import {
   checkmarkOutline,
   chevronBackOutline,
   searchOutline,
+  settingsOutline,
 } from 'ionicons/icons';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -136,6 +149,7 @@ import { useSounds } from '@/composables/useSounds';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
 import { vibeSoundService } from '@/services/vibe-sound.service';
+import VibeSoundEditModal from '@/views/VibeSoundEditModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -213,6 +227,35 @@ function toggleSound(soundId: number): void {
     next.add(soundId);
   }
   selectedIds.value = next;
+}
+
+async function openEditModal(soundId: number): Promise<void> {
+  const vibeSound = vibeSounds.value.find((vs) => vs.id === soundId);
+  if (!vibeSound) return;
+
+  const modal = await modalController.create({
+    component: VibeSoundEditModal,
+    componentProps: {
+      vibeId: vibeId.value,
+      vibeSound,
+    },
+    // Sheet modal — snaps to 60% with handle
+    breakpoints: [0, 0.6, 0.85],
+    initialBreakpoint: 0.6,
+    handle: false, // we render our own handle bar
+  });
+
+  modal.onDidDismiss().then(({ data }) => {
+    if (data?.updated) {
+      // Patch local vibeSounds so UI reflects new values without a full re-fetch
+      const idx = vibeSounds.value.findIndex((vs) => vs.id === soundId);
+      if (idx !== -1) {
+        vibeSounds.value[idx] = { ...vibeSounds.value[idx], ...data.updated };
+      }
+    }
+  });
+
+  await modal.present();
 }
 
 // Number of changes pending (adds + removes)
@@ -491,15 +534,45 @@ async function handleSave(): Promise<void> {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 
-.sound-card-name {
-  display: block;
+.sound-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 8px;
+  gap: 4px;
+}
+
+.sound-card-name {
   font-size: 13px;
   font-weight: 600;
   color: var(--app-color-text-primary, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.sound-card-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: var(--app-color-surface, #f1f5f9);
+  color: var(--app-color-text-muted, #94a3b8);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.sound-card-edit-btn:active {
+  background: var(--ion-color-primary-tint, #d1faf3);
+  color: var(--ion-color-primary, #1dac92);
 }
 
 /* ── Save bar ────────────────────────────────────── */
