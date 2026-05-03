@@ -3,7 +3,8 @@
     <!-- Sheet handle -->
     <div class="modal-handle-bar" />
 
-    <ion-content class="modal-content" :scroll-y="false">
+    <!-- ion-content scrollable so footer buttons are always reachable in sheet modal -->
+    <ion-content class="modal-content">
       <!-- Sound identity -->
       <div class="modal-sound-header">
         <div class="modal-thumb-wrap">
@@ -67,38 +68,38 @@
         <span class="modal-order-badge">{{ vibeSound.sort_order + 1 }}</span>
       </div>
 
-      <!-- Error -->
+      <!-- Error (shown above buttons) -->
       <p v-if="saveError" class="modal-error">{{ saveError }}</p>
+
+      <!-- Footer inside ion-content — guarantees visibility in sheet modal -->
+      <div class="modal-footer">
+        <ion-button
+          expand="block"
+          class="modal-save-btn"
+          :disabled="saving"
+          @click="handleSave"
+        >
+          <ion-spinner
+            v-if="saving"
+            name="crescent"
+            slot="start"
+            style="width: 16px; height: 16px"
+          />
+          <ion-icon v-else :icon="checkmarkOutline" slot="start" />
+          {{ saving ? 'Saving…' : 'Save Changes' }}
+        </ion-button>
+
+        <ion-button
+          expand="block"
+          fill="clear"
+          class="modal-cancel-btn"
+          :disabled="saving"
+          @click="dismiss()"
+        >
+          Cancel
+        </ion-button>
+      </div>
     </ion-content>
-
-    <!-- Footer actions -->
-    <div class="modal-footer">
-      <ion-button
-        expand="block"
-        class="modal-save-btn"
-        :disabled="saving"
-        @click="handleSave"
-      >
-        <ion-spinner
-          v-if="saving"
-          name="crescent"
-          slot="start"
-          style="width: 16px; height: 16px"
-        />
-        <ion-icon v-else :icon="checkmarkOutline" slot="start" />
-        {{ saving ? 'Saving…' : 'Save Changes' }}
-      </ion-button>
-
-      <ion-button
-        expand="block"
-        fill="clear"
-        class="modal-cancel-btn"
-        :disabled="saving"
-        @click="dismiss()"
-      >
-        Cancel
-      </ion-button>
-    </div>
   </ion-page>
 </template>
 
