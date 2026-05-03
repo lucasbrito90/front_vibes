@@ -14,7 +14,9 @@ async function fetchSounds(): Promise<void> {
   error.value = null;
   try {
     sounds.value = await soundService.getSounds();
+    console.log('[useSounds] fetched:', sounds.value.length, sounds.value);
   } catch (err) {
+    console.error('[useSounds] error:', err);
     handleError(err);
   } finally {
     loading.value = false;

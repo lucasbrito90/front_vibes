@@ -43,7 +43,7 @@
       </div>
 
       <!-- Empty catalog -->
-      <div v-else-if="!filteredByCategory.length" class="sounds-state">
+      <div v-else-if="isCatalogEmpty" class="sounds-state">
         <p class="sounds-state-msg">No sounds found.</p>
       </div>
 
@@ -157,6 +157,10 @@ const selectedIds = ref<Set<number>>(new Set());
 
 onMounted(async () => {
   await Promise.all([fetchSounds(), fetchVibeSounds(vibeId.value)]);
+
+  console.log('[VibeSoundsPage] sounds loaded:', sounds.value.length, sounds.value);
+  console.log('[VibeSoundsPage] vibe sounds loaded:', vibeSounds.value);
+
   const ids = new Set(vibeSounds.value.map((s) => s.id));
   originalIds.value = ids;
   selectedIds.value = new Set(ids);
@@ -166,7 +170,10 @@ onMounted(async () => {
 const filteredByCategory = computed(() => {
   const q = searchQuery.value.toLowerCase().trim();
   const filtered = q
-    ? sounds.value.filter((s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q))
+    ? sounds.value.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q),
+      )
     : sounds.value;
 
   return filtered.reduce<Record<string, typeof sounds.value>>((acc, sound) => {
@@ -176,6 +183,9 @@ const filteredByCategory = computed(() => {
     return acc;
   }, {});
 });
+
+// Object has no .length — check keys instead
+const isCatalogEmpty = computed(() => Object.keys(filteredByCategory.value).length === 0);
 
 function isSelected(soundId: number): boolean {
   return selectedIds.value.has(soundId);
