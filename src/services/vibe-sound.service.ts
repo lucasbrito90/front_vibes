@@ -2,6 +2,8 @@ import { authService } from './auth.service';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+export type PlayMode = 'loop' | 'once' | 'interval';
+
 export interface VibeSound {
   id: number;
   name: string;
@@ -12,6 +14,8 @@ export interface VibeSound {
   volume: number;
   loop: boolean;
   sort_order: number;
+  play_mode: PlayMode;
+  repeat_interval_seconds: number | null;
   start_offset_seconds: number | null;
   play_duration_seconds: number | null;
   fade_in_seconds: number | null;
@@ -23,6 +27,8 @@ export interface AttachSoundPayload {
   volume?: number;
   loop?: boolean;
   sort_order?: number;
+  play_mode?: PlayMode;
+  repeat_interval_seconds?: number | null;
   start_offset_seconds?: number | null;
   play_duration_seconds?: number | null;
   fade_in_seconds?: number | null;
@@ -33,6 +39,8 @@ export interface UpdateVibeSoundPayload {
   volume?: number;
   loop?: boolean;
   sort_order?: number;
+  play_mode?: PlayMode;
+  repeat_interval_seconds?: number | null;
   start_offset_seconds?: number | null;
   play_duration_seconds?: number | null;
   fade_in_seconds?: number | null;

@@ -46,16 +46,38 @@
         </ion-range>
       </div>
 
-      <!-- Loop -->
-      <div class="modal-section modal-section-row">
-        <div class="modal-section-text">
-          <p class="modal-section-label">Loop</p>
-          <p class="modal-section-hint">Repeat this sound continuously</p>
+      <!-- Playback Mode -->
+      <div class="modal-section">
+        <div class="modal-section-header">
+          <span class="modal-section-label">Playback Mode</span>
         </div>
-        <ion-toggle
-          :checked="localLoop"
-          color="primary"
-          @ionChange="localLoop = ($event as CustomEvent).detail.checked"
+        <div class="modal-playmode-group">
+          <button
+            v-for="mode in playModes"
+            :key="mode.value"
+            class="modal-playmode-btn"
+            :class="{ 'modal-playmode-btn--active': localPlayMode === mode.value }"
+            @click="localPlayMode = mode.value"
+          >
+            {{ mode.label }}
+          </button>
+        </div>
+        <p class="modal-playmode-hint">{{ playModeHints[localPlayMode] }}</p>
+      </div>
+
+      <!-- Interval input (only shown when play_mode = interval) -->
+      <div v-if="localPlayMode === 'interval'" class="modal-section">
+        <div class="modal-section-header">
+          <span class="modal-section-label">Repeat every</span>
+          <span class="modal-section-value">{{ localRepeatInterval ?? '—' }}s</span>
+        </div>
+        <input
+          v-model.number="localRepeatInterval"
+          type="number"
+          min="1"
+          step="1"
+          placeholder="e.g. 30"
+          class="modal-timing-input modal-interval-input"
         />
       </div>
 
@@ -165,7 +187,6 @@ import {
   IonPage,
   IonRange,
   IonSpinner,
-  IonToggle,
   modalController,
 } from '@ionic/vue';
 import {
@@ -174,7 +195,7 @@ import {
   volumeLowOutline,
 } from 'ionicons/icons';
 import { ref } from 'vue';
-import { vibeSoundService, type VibeSound } from '@/services/vibe-sound.service';
+import { vibeSoundService, type PlayMode, type VibeSound } from '@/services/vibe-sound.service';
 
 const props = defineProps<{
   vibeId: number;
@@ -182,7 +203,22 @@ const props = defineProps<{
 }>();
 
 const localVolume = ref(props.vibeSound.volume ?? 80);
-const localLoop = ref(props.vibeSound.loop ?? true);
+
+// Playback mode
+const playModes: { value: PlayMode; label: string }[] = [
+  { value: 'loop',     label: 'Loop'     },
+  { value: 'once',     label: 'Once'     },
+  { value: 'interval', label: 'Interval' },
+];
+
+const playModeHints: Record<PlayMode, string> = {
+  loop:     'Plays continuously without stopping',
+  once:     'Plays one time, then stops',
+  interval: 'Repeats after a defined pause',
+};
+
+const localPlayMode = ref<PlayMode>(props.vibeSound.play_mode ?? 'loop');
+const localRepeatInterval = ref<number | null>(props.vibeSound.repeat_interval_seconds ?? null);
 
 // Timing stored as minutes in the UI; backend receives seconds
 const toMin = (sec: number | null): number | null =>
@@ -209,12 +245,13 @@ async function handleSave(): Promise<void> {
 
   try {
     const updated = await vibeSoundService.updateVibeSound(props.vibeId, props.vibeSound.id, {
-      volume: localVolume.value,
-      loop: localLoop.value,
-      start_offset_seconds:  toSec(localStartOffsetMin.value),
-      play_duration_seconds: toSec(localPlayDurationMin.value),
-      fade_in_seconds:       toSec(localFadeInMin.value),
-      fade_out_seconds:      toSec(localFadeOutMin.value),
+      volume:                   localVolume.value,
+      play_mode:                localPlayMode.value,
+      repeat_interval_seconds:  localPlayMode.value === 'interval' ? localRepeatInterval.value : null,
+      start_offset_seconds:     toSec(localStartOffsetMin.value),
+      play_duration_seconds:    toSec(localPlayDurationMin.value),
+      fade_in_seconds:          toSec(localFadeInMin.value),
+      fade_out_seconds:         toSec(localFadeOutMin.value),
     });
 
     await dismiss({ updated });
@@ -406,6 +443,43 @@ async function handleSave(): Promise<void> {
   font-size: 15px;
   font-weight: 500;
   height: 40px;
+}
+
+/* ── Playback Mode ───────────────────────────────── */
+.modal-playmode-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.modal-playmode-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 10px;
+  border: 1.5px solid var(--app-color-border, #e2e8f0);
+  background: var(--app-color-surface, #f1f5f9);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-color-text-secondary, #475569);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.modal-playmode-btn--active {
+  background: var(--ion-color-primary, #1dac92);
+  border-color: var(--ion-color-primary, #1dac92);
+  color: #fff;
+}
+
+.modal-playmode-hint {
+  font-size: 12px;
+  color: var(--app-color-text-muted, #94a3b8);
+  margin: 8px 0 0;
+}
+
+.modal-interval-input {
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* ── Timing ──────────────────────────────────────── */
