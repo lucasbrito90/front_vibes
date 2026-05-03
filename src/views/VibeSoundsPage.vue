@@ -95,16 +95,18 @@
     </ion-content>
 
     <!-- Save Sounds button -->
-    <div class="sounds-save-bar">
+    <div id="sounds-save-bar" class="sounds-save-bar">
+      <p v-if="saveError" class="sounds-save-error">{{ saveError }}</p>
       <ion-button
         expand="block"
         class="sounds-save-btn"
         :disabled="saving"
         @click="handleSave"
       >
-        <ion-icon :icon="checkmarkOutline" slot="start" />
-        Save Sounds
-        <span v-if="pendingCount > 0" class="sounds-save-badge">{{ pendingCount }}</span>
+        <ion-spinner v-if="saving" name="crescent" slot="start" style="width:18px;height:18px" />
+        <ion-icon v-else :icon="checkmarkOutline" slot="start" />
+        {{ saving ? 'Saving…' : 'Save Sounds' }}
+        <span v-if="!saving && pendingCount > 0" class="sounds-save-badge">{{ pendingCount }}</span>
       </ion-button>
     </div>
   </ion-page>
@@ -120,6 +122,7 @@ import {
   IonPage,
   IonSpinner,
   IonToolbar,
+  toastController,
 } from '@ionic/vue';
 import {
   checkmarkCircle,
@@ -132,6 +135,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useSounds } from '@/composables/useSounds';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
+import { vibeSoundService } from '@/services/vibe-sound.service';
 
 const route = useRoute();
 const router = useRouter();
@@ -149,19 +153,15 @@ const {
   fetchSounds,
 } = useSounds();
 
-const {
-  vibeSounds,
-  fetchVibeSounds,
-  attachSound,
-  removeVibeSound,
-} = useVibeSounds();
+const { vibeSounds, fetchVibeSounds } = useVibeSounds();
 
 const searchQuery = ref('');
 const saving = ref(false);
+const saveError = ref<string | null>(null);
 
-// IDs currently attached to the vibe (loaded from server)
+// IDs confirmed saved in the backend (source of truth)
 const originalIds = ref<Set<number>>(new Set());
-// IDs selected in the UI (can differ before saving)
+// IDs toggled in the UI before saving
 const selectedIds = ref<Set<number>>(new Set());
 
 onMounted(async () => {
@@ -170,10 +170,15 @@ onMounted(async () => {
   console.log('[VibeSoundsPage] sounds loaded:', sounds.value.length, sounds.value);
   console.log('[VibeSoundsPage] vibe sounds loaded:', vibeSounds.value);
 
+  syncFromBackend();
+});
+
+/** Sync both originalIds and selectedIds from the current vibeSounds ref. */
+function syncFromBackend(): void {
   const ids = new Set(vibeSounds.value.map((s) => s.id));
   originalIds.value = ids;
   selectedIds.value = new Set(ids);
-});
+}
 
 // Filtered sounds grouped by category
 const filteredByCategory = computed(() => {
@@ -222,20 +227,53 @@ const pendingCount = computed(() => {
   return count;
 });
 
+async function showToast(message: string, color: 'success' | 'danger'): Promise<void> {
+  const toast = await toastController.create({
+    message,
+    duration: 2500,
+    color,
+    position: 'bottom',
+    positionAnchor: 'sounds-save-bar',
+  });
+  await toast.present();
+}
+
 async function handleSave(): Promise<void> {
   saving.value = true;
+  saveError.value = null;
 
   const toAttach = [...selectedIds.value].filter((id) => !originalIds.value.has(id));
   const toRemove = [...originalIds.value].filter((id) => !selectedIds.value.has(id));
 
-  await Promise.all([
-    ...toAttach.map((id) => attachSound(vibeId.value, { sound_id: id })),
-    ...toRemove.map((id) => removeVibeSound(vibeId.value, id)),
-  ]);
+  try {
+    // Run all attach and remove requests in parallel.
+    // Using the service directly avoids the shared loading-ref race condition
+    // that occurs when the composable's attach/remove functions run concurrently.
+    await Promise.all([
+      ...toAttach.map((id) =>
+        vibeSoundService.attachSoundToVibe(vibeId.value, {
+          sound_id: id,
+          volume: 80,
+          loop: true,
+          sort_order: 0,
+        }),
+      ),
+      ...toRemove.map((id) => vibeSoundService.removeSoundFromVibe(vibeId.value, id)),
+    ]);
 
-  originalIds.value = new Set(selectedIds.value);
-  saving.value = false;
-  router.back();
+    // Re-fetch from backend to confirm persisted state, then sync UI
+    await fetchVibeSounds(vibeId.value);
+    syncFromBackend();
+
+    await showToast('Sounds saved!', 'success');
+    router.back();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to save sounds.';
+    saveError.value = msg;
+    await showToast(msg, 'danger');
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
@@ -465,6 +503,13 @@ async function handleSave(): Promise<void> {
 }
 
 /* ── Save bar ────────────────────────────────────── */
+.sounds-save-error {
+  font-size: 13px;
+  color: var(--ion-color-danger);
+  margin: 0 0 8px;
+  text-align: center;
+}
+
 .sounds-save-bar {
   position: fixed;
   bottom: 0;

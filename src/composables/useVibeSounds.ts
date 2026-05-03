@@ -17,6 +17,7 @@ function handleError(err: unknown): void {
 async function fetchVibeSounds(vibeId: number): Promise<void> {
   loading.value = true;
   error.value = null;
+  vibeSounds.value = []; // clear stale data from previous vibe immediately
   try {
     vibeSounds.value = await vibeSoundService.getVibeSounds(vibeId);
   } catch (err) {
