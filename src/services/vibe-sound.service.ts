@@ -12,6 +12,10 @@ export interface VibeSound {
   volume: number;
   loop: boolean;
   sort_order: number;
+  start_offset_seconds: number | null;
+  play_duration_seconds: number | null;
+  fade_in_seconds: number | null;
+  fade_out_seconds: number | null;
 }
 
 export interface AttachSoundPayload {
@@ -19,12 +23,20 @@ export interface AttachSoundPayload {
   volume?: number;
   loop?: boolean;
   sort_order?: number;
+  start_offset_seconds?: number | null;
+  play_duration_seconds?: number | null;
+  fade_in_seconds?: number | null;
+  fade_out_seconds?: number | null;
 }
 
 export interface UpdateVibeSoundPayload {
   volume?: number;
   loop?: boolean;
   sort_order?: number;
+  start_offset_seconds?: number | null;
+  play_duration_seconds?: number | null;
+  fade_in_seconds?: number | null;
+  fade_out_seconds?: number | null;
 }
 
 async function authHeaders(): Promise<HeadersInit> {

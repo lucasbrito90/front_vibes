@@ -68,6 +68,60 @@
         <span class="modal-order-badge">{{ vibeSound.sort_order + 1 }}</span>
       </div>
 
+      <!-- Timing section -->
+      <div class="modal-divider modal-divider-timing" />
+      <p class="modal-timing-heading">Timing <span class="modal-timing-unit">(minutes)</span></p>
+
+      <div class="modal-timing-grid">
+        <div class="modal-timing-field">
+          <label class="modal-timing-label">Start after</label>
+          <input
+            v-model.number="localStartOffsetMin"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            class="modal-timing-input"
+          />
+        </div>
+
+        <div class="modal-timing-field">
+          <label class="modal-timing-label">Play for</label>
+          <input
+            v-model.number="localPlayDurationMin"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="—"
+            class="modal-timing-input"
+          />
+        </div>
+
+        <div class="modal-timing-field">
+          <label class="modal-timing-label">Fade in</label>
+          <input
+            v-model.number="localFadeInMin"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            class="modal-timing-input"
+          />
+        </div>
+
+        <div class="modal-timing-field">
+          <label class="modal-timing-label">Fade out</label>
+          <input
+            v-model.number="localFadeOutMin"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+            class="modal-timing-input"
+          />
+        </div>
+      </div>
+
       <!-- Error (shown above buttons) -->
       <p v-if="saveError" class="modal-error">{{ saveError }}</p>
 
@@ -129,6 +183,19 @@ const props = defineProps<{
 
 const localVolume = ref(props.vibeSound.volume ?? 80);
 const localLoop = ref(props.vibeSound.loop ?? true);
+
+// Timing stored as minutes in the UI; backend receives seconds
+const toMin = (sec: number | null): number | null =>
+  sec != null ? Math.round(sec / 60) : null;
+
+const localStartOffsetMin = ref<number | null>(toMin(props.vibeSound.start_offset_seconds));
+const localPlayDurationMin = ref<number | null>(toMin(props.vibeSound.play_duration_seconds));
+const localFadeInMin = ref<number | null>(toMin(props.vibeSound.fade_in_seconds));
+const localFadeOutMin = ref<number | null>(toMin(props.vibeSound.fade_out_seconds));
+
+const toSec = (min: number | null | undefined): number | null =>
+  min != null && min !== undefined ? min * 60 : null;
+
 const saving = ref(false);
 const saveError = ref<string | null>(null);
 
@@ -144,6 +211,10 @@ async function handleSave(): Promise<void> {
     const updated = await vibeSoundService.updateVibeSound(props.vibeId, props.vibeSound.id, {
       volume: localVolume.value,
       loop: localLoop.value,
+      start_offset_seconds:  toSec(localStartOffsetMin.value),
+      play_duration_seconds: toSec(localPlayDurationMin.value),
+      fade_in_seconds:       toSec(localFadeInMin.value),
+      fade_out_seconds:      toSec(localFadeOutMin.value),
     });
 
     await dismiss({ updated });
@@ -335,5 +406,70 @@ async function handleSave(): Promise<void> {
   font-size: 15px;
   font-weight: 500;
   height: 40px;
+}
+
+/* ── Timing ──────────────────────────────────────── */
+.modal-divider-timing {
+  margin-top: 4px;
+}
+
+.modal-timing-heading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-color-text-primary, #0f172a);
+  margin: 16px 20px 12px;
+}
+
+.modal-timing-unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--app-color-text-muted, #94a3b8);
+  margin-left: 4px;
+}
+
+.modal-timing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 20px 8px;
+}
+
+.modal-timing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-timing-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-color-text-secondary, #475569);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-timing-input {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--app-color-border, #e2e8f0);
+  background: var(--app-color-surface, #f1f5f9);
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--app-color-text-primary, #0f172a);
+  text-align: center;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-timing-input:focus {
+  border-color: var(--ion-color-primary, #1dac92);
+  background: #fff;
+}
+
+.modal-timing-input::placeholder {
+  color: var(--app-color-text-muted, #94a3b8);
+  font-weight: 400;
 }
 </style>
