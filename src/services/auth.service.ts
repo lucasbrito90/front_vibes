@@ -2,6 +2,7 @@ import {
   GoogleAuthProvider,
   User,
   UserCredential,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   createUserWithEmailAndPassword,
@@ -81,6 +82,10 @@ function getCurrentUser(): User | null {
   return auth.currentUser;
 }
 
+async function requestPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+}
+
 export const authService = {
   loginWithGoogle,
   loginWithEmail,
@@ -88,4 +93,5 @@ export const authService = {
   logout,
   getCurrentUser,
   getIdToken,
+  requestPasswordReset,
 };

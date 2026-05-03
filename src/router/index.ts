@@ -61,6 +61,11 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'vibes/:id/sounds',
+        component: () => import('@/views/VibeSoundsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'settings',
         component: () => import('@/views/SettingsPage.vue'),
         meta: { requiresAuth: true },
