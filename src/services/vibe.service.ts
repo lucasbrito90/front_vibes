@@ -7,6 +7,7 @@ export interface Vibe {
   name: string;
   description: string | null;
   is_active: boolean;
+  sounds_count: number;
   created_at: string;
   updated_at: string;
 }

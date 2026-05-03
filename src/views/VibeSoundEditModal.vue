@@ -240,13 +240,24 @@ async function dismiss(data?: { updated?: VibeSound }): Promise<void> {
 }
 
 async function handleSave(): Promise<void> {
-  saving.value = true;
   saveError.value = null;
+
+  // Validate interval before hitting the API
+  if (localPlayMode.value === 'interval') {
+    const interval = localRepeatInterval.value;
+    if (!interval || interval < 1) {
+      saveError.value = 'Enter a repeat interval of at least 1 second.';
+      return;
+    }
+  }
+
+  saving.value = true;
 
   try {
     const updated = await vibeSoundService.updateVibeSound(props.vibeId, props.vibeSound.id, {
       volume:                   localVolume.value,
       play_mode:                localPlayMode.value,
+      // always send null when mode is not interval — avoids stale data
       repeat_interval_seconds:  localPlayMode.value === 'interval' ? localRepeatInterval.value : null,
       start_offset_seconds:     toSec(localStartOffsetMin.value),
       play_duration_seconds:    toSec(localPlayDurationMin.value),

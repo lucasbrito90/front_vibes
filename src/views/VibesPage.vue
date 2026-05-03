@@ -48,6 +48,7 @@
                 <span v-if="vibe.description" class="vibe-card-desc">
                   {{ vibe.description }}
                 </span>
+                <span class="vibe-card-sounds">{{ soundsSummary(vibe.sounds_count) }}</span>
               </div>
               <div class="vibe-card-actions">
                 <button class="vibe-action-btn" @click.stop="router.push(`/vibes/${vibe.id}/sounds`)" aria-label="Manage sounds">
@@ -106,6 +107,11 @@ const gradients = [
 ];
 
 onMounted(fetchVibes);
+
+function soundsSummary(count: number): string {
+  if (!count) return 'No sounds configured';
+  return count === 1 ? '1 sound • configured' : `${count} sounds • configured`;
+}
 
 function goEdit(id: number) {
   router.push(`/vibes/${id}/edit`);
@@ -282,6 +288,16 @@ async function handleDelete(id: number) {
   font-weight: 400;
   color: rgba(255, 255, 255, 0.75);
   letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vibe-card-sounds {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
