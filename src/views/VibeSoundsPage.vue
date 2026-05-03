@@ -7,7 +7,6 @@
             <ion-icon :icon="chevronBackOutline" slot="icon-only" />
           </ion-button>
         </ion-buttons>
-        <ion-title class="sounds-toolbar-title">Select Sounds</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -15,7 +14,10 @@
       <!-- Hero banner -->
       <div class="sounds-hero">
         <div class="sounds-hero-overlay" />
-        <h1 class="sounds-hero-title">Select Sounds</h1>
+        <div class="sounds-hero-text">
+          <h1 class="sounds-hero-title">Select Sounds</h1>
+          <p class="sounds-hero-subtitle">for "{{ vibeName }}"</p>
+        </div>
       </div>
 
       <!-- Search -->
@@ -56,31 +58,33 @@
         >
           <h2 class="sounds-category-title">{{ category }}</h2>
 
-          <div class="sounds-row">
-            <div
-              v-for="sound in group"
-              :key="sound.id"
-              class="sound-card"
-              :class="{ selected: isSelected(sound.id) }"
-              @click="toggleSound(sound.id)"
-            >
-              <!-- Thumbnail -->
-              <div class="sound-card-thumb">
-                <img
-                  v-if="sound.thumbnail_url"
-                  :src="sound.thumbnail_url"
-                  :alt="sound.name"
-                  class="sound-card-img"
-                />
-                <div v-else class="sound-card-placeholder" />
+          <div class="sounds-row-wrap">
+            <div class="sounds-row">
+              <div
+                v-for="sound in group"
+                :key="sound.id"
+                class="sound-card"
+                :class="{ selected: isSelected(sound.id) }"
+                @click="toggleSound(sound.id)"
+              >
+                <!-- Thumbnail -->
+                <div class="sound-card-thumb">
+                  <img
+                    v-if="sound.thumbnail_url"
+                    :src="sound.thumbnail_url"
+                    :alt="sound.name"
+                    class="sound-card-img"
+                  />
+                  <div v-else class="sound-card-placeholder" />
 
-                <!-- Selected overlay -->
-                <div v-if="isSelected(sound.id)" class="sound-card-selected-overlay">
-                  <ion-icon :icon="checkmarkCircle" class="sound-card-check" />
+                  <!-- Selected overlay -->
+                  <div v-if="isSelected(sound.id)" class="sound-card-selected-overlay">
+                    <ion-icon :icon="checkmarkCircle" class="sound-card-check" />
+                  </div>
                 </div>
-              </div>
 
-              <span class="sound-card-name">{{ sound.name }}</span>
+                <span class="sound-card-name">{{ sound.name }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -115,7 +119,6 @@ import {
   IonIcon,
   IonPage,
   IonSpinner,
-  IonTitle,
   IonToolbar,
 } from '@ionic/vue';
 import {
@@ -128,10 +131,16 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSounds } from '@/composables/useSounds';
 import { useVibeSounds } from '@/composables/useVibeSounds';
+import { useVibes } from '@/composables/useVibes';
 
 const route = useRoute();
 const router = useRouter();
 const vibeId = computed(() => Number(route.params.id));
+
+const { vibes } = useVibes();
+const vibeName = computed(
+  () => vibes.value.find((v) => v.id === vibeId.value)?.name ?? 'this vibe',
+);
 
 const {
   sounds,
@@ -264,13 +273,28 @@ async function handleSave(): Promise<void> {
   background: rgba(0, 0, 0, 0.25);
 }
 
-.sounds-hero-title {
+.sounds-hero-text {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sounds-hero-title {
   font-size: 28px;
   font-weight: 800;
   color: #fff;
   margin: 0;
   letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.sounds-hero-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  letter-spacing: 0.1px;
 }
 
 /* ── Search ──────────────────────────────────────── */
@@ -346,12 +370,29 @@ async function handleSave(): Promise<void> {
   padding: 0 20px;
 }
 
-/* Horizontal scroll row */
+/* Horizontal scroll row with right-edge fade */
+.sounds-row-wrap {
+  position: relative;
+}
+
+.sounds-row-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 4px;
+  width: 48px;
+  background: linear-gradient(to right, transparent, var(--app-color-bg, #fff));
+  pointer-events: none;
+  z-index: 1;
+}
+
 .sounds-row {
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding: 0 20px 4px;
+  /* left padding aligns with page; right peek reveals next card */
+  padding: 0 48px 4px 20px;
   scrollbar-width: none;
 }
 
@@ -362,14 +403,16 @@ async function handleSave(): Promise<void> {
 /* ── Sound card ──────────────────────────────────── */
 .sound-card {
   flex-shrink: 0;
-  width: 130px;
+  /* ~2.2 cards visible: (viewport - 20px left - 48px peek) / 2.2 */
+  width: calc((100vw - 20px - 48px) / 2.2);
+  max-width: 148px;
   cursor: pointer;
 }
 
 .sound-card-thumb {
   position: relative;
-  width: 130px;
-  height: 130px;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   border-radius: 14px;
   overflow: hidden;
   border: 2px solid transparent;
