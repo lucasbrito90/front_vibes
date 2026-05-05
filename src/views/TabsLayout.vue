@@ -1,24 +1,32 @@
 <template>
-  <ion-tabs>
-    <ion-router-outlet />
+  <!--
+    ion-page is required at the root of the tabs layout.
+    Without it, Ionic's view transition system cannot find the page
+    boundary and logs the "does not have the required <ion-page>" warning
+    on every tab switch. This matches the official Ionic Vue starter pattern.
+  -->
+  <ion-page>
+    <ion-tabs>
+      <ion-router-outlet />
 
-    <ion-tab-bar slot="bottom" class="app-tab-bar">
-      <ion-tab-button tab="home" href="/home" class="app-tab-btn">
-        <ion-icon :icon="homeOutline" class="app-tab-icon" />
-        <ion-label>Home</ion-label>
-      </ion-tab-button>
+      <ion-tab-bar slot="bottom" class="app-tab-bar">
+        <ion-tab-button tab="home" href="/home" class="app-tab-btn">
+          <ion-icon :icon="homeOutline" class="app-tab-icon" />
+          <ion-label>Home</ion-label>
+        </ion-tab-button>
 
-      <ion-tab-button tab="vibes" href="/vibes" class="app-tab-btn">
-        <ion-icon :icon="musicalNotesOutline" class="app-tab-icon" />
-        <ion-label>My Vibes</ion-label>
-      </ion-tab-button>
+        <ion-tab-button tab="vibes" href="/vibes" class="app-tab-btn">
+          <ion-icon :icon="musicalNotesOutline" class="app-tab-icon" />
+          <ion-label>My Vibes</ion-label>
+        </ion-tab-button>
 
-      <ion-tab-button tab="settings" href="/settings" class="app-tab-btn">
-        <ion-icon :icon="settingsOutline" class="app-tab-icon" />
-        <ion-label>Settings</ion-label>
-      </ion-tab-button>
-    </ion-tab-bar>
-  </ion-tabs>
+        <ion-tab-button tab="settings" href="/settings" class="app-tab-btn">
+          <ion-icon :icon="settingsOutline" class="app-tab-icon" />
+          <ion-label>Settings</ion-label>
+        </ion-tab-button>
+      </ion-tab-bar>
+    </ion-tabs>
+  </ion-page>
 </template>
 
 <script setup lang="ts">
@@ -28,6 +36,7 @@ import {
   IonTabButton,
   IonIcon,
   IonLabel,
+  IonPage,
   IonRouterOutlet,
 } from '@ionic/vue';
 import { homeOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icons';
