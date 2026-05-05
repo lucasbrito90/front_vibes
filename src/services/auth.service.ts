@@ -17,16 +17,22 @@ async function syncUserWithBackend(idToken: string): Promise<void> {
     return;
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/auth/firebase`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-      Accept: 'application/json',
-    },
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/firebase`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        Accept: 'application/json',
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error('Failed to validate Firebase token on backend');
+    if (!response.ok) {
+      // Log but do not throw — Firebase auth succeeded; backend sync is best-effort.
+      console.warn('[auth] Backend sync returned', response.status);
+    }
+  } catch (err) {
+    // Network failure — still not a reason to abort a successful Firebase login.
+    console.warn('[auth] Backend sync failed (network):', err);
   }
 }
 
