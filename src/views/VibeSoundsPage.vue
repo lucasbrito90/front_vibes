@@ -101,6 +101,26 @@
         </div>
       </div>
 
+      <!-- ── DEV: Execution Plan debug panel ─────────────────────────── -->
+      <div v-if="vibeSounds.length" class="dev-panel">
+        <div class="dev-panel-header">
+          <span class="dev-panel-badge">DEV</span>
+          <span class="dev-panel-title">Execution Plan</span>
+          <span class="dev-panel-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="dev-layer" v-for="layer in executionPlan" :key="layer.soundId">
+          <p class="dev-layer-summary">{{ layer.humanReadableSummary }}</p>
+          <div class="dev-layer-meta">
+            <span>start: {{ layer.startsAtSeconds }}s</span>
+            <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
+            <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
+            <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
+            <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
+          </div>
+        </div>
+      </div>
+      <!-- ── END DEV ──────────────────────────────────────────────────── -->
+
       <!-- Bottom spacing for save button -->
       <div style="height: 100px" />
     </ion-content>
@@ -143,11 +163,12 @@ import {
   searchOutline,
   settingsOutline,
 } from 'ionicons/icons';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useSounds } from '@/composables/useSounds';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
+import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { vibeSoundService } from '@/services/vibe-sound.service';
 import VibeSoundEditModal from '@/views/VibeSoundEditModal.vue';
 
@@ -169,6 +190,11 @@ const {
 
 const { vibeSounds, fetchVibeSounds } = useVibeSounds();
 
+const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
+
+// Rebuild the execution plan whenever the attached sounds change
+watch(vibeSounds, (sounds) => buildPlan(sounds), { immediate: false });
+
 const searchQuery = ref('');
 const saving = ref(false);
 const saveError = ref<string | null>(null);
@@ -185,6 +211,7 @@ onMounted(async () => {
   console.log('[VibeSoundsPage] vibe sounds loaded:', vibeSounds.value);
 
   syncFromBackend();
+  buildPlan(vibeSounds.value);
 });
 
 /** Sync both originalIds and selectedIds from the current vibeSounds ref. */
@@ -616,5 +643,71 @@ async function handleSave(): Promise<void> {
   font-size: 13px;
   font-weight: 700;
   color: #fff;
+}
+
+/* ── DEV: Execution Plan panel ──────────────────────── */
+.dev-panel {
+  margin: 24px 20px 0;
+  border: 1.5px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 14px 16px 8px;
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.dev-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dev-panel-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  background: #f59e0b;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.dev-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.dev-panel-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: #b45309;
+}
+
+.dev-layer {
+  border-top: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 10px 0 6px;
+}
+
+.dev-layer-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: #78350f;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.dev-layer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dev-layer-meta span {
+  font-size: 11px;
+  font-family: monospace;
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 </style>
