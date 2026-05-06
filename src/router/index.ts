@@ -31,6 +31,14 @@ const routes: Array<RouteRecordRaw> = [
     meta: { publicOnly: true },
   },
 
+  // ── Full-screen authenticated routes (no tab bar) ────────────────────────
+  // These live outside TabsLayout so no tab bar appears over them.
+  {
+    path: '/vibes/:id/player',
+    component: () => import('@/views/VibePlayerPage.vue'),
+    meta: { requiresAuth: true },
+  },
+
   // ── Authenticated routes (tab bar visible) ────────────────────────────────
   // All authenticated pages live inside TabsLayout so Ionic's ion-router-outlet
   // can manage the full navigation stack (push/pop) without outlet conflicts.
