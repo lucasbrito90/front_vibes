@@ -1,48 +1,70 @@
 /**
- * audio-player.service.ts — Phase 1
- *
- * Loop layers only. Manages HTMLAudioElement + delayed-start + duration timers.
+ * audio-player.service.ts — Phase 3 (loop + once + interval + fades)
  *
  * ## Pause vs Stop
- * - **pauseAll**: `audio.pause()`, clears timeouts but keeps remaining delays in ms so
- *   resume can reschedule. Does NOT reset `currentTime` or clear `src`.
- * - **stopAll**: full teardown per layer — timers cleared, `currentTime = 0`, `src` cleared.
+ * - pauseAll: pauses audio, clears timeouts and fade RAF, stores remaining ms for resume.
+ *   Does NOT reset currentTime or clear src on pause.
+ * - stopLayer/stopAll: hard teardown — timers cleared, fades cancelled, currentTime = 0, src cleared.
  *
- * ## Delayed start + pause (Phase 1)
- * When a delayed start is pending, `pauseAll` clears the timeout and stores the remaining
- * delay in `pendingStartRemainingMs`. `resumeAll` reschedules with that remaining time.
+ * ## Fade + pause/resume (Phase 3 — intentional simplicity)
+ * - Active fade-in or fade-out RAF chains are cancelled on pause; playback resumes at whatever
+ *   volume the element already has (frozen). We do not reconstruct the fade envelope.
+ * - Remaining layer wall-clock lifetime is stored in pendingDurationRemainingMs; on resume a
+ *   single timeout calls stopLayer — fade-out is not re-scheduled after pause (no sample-perfect
+ *   fade resume).
  *
- * ## Limitation
- * While globally paused, natural timer expiry is expressed only via saved remaining ms;
- * wall-clock drift between pause/resume is negligible for UX.
+ * ## Interval mode — fades
+ * - Each tick runs fade-in when fadeInSeconds > 0.
+ * - Per-tick fade-out is not implemented (short clips); layer-level duration still uses fade-out
+ *   when stopping the whole layer while audio is playing.
+ *
+ * ## Interval mode — other limitations
+ * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended` never fires,
+ *   the chain stalls.
  */
 
+import type { PlayMode } from './vibe-sound.service';
 import type { VibeExecutionLayer } from './player-engine.service';
+import { hasValidExecutionFileUrl } from './player-engine.service';
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
 interface ManagedLayer {
   soundId: number;
   layer: VibeExecutionLayer;
+
   audio: HTMLAudioElement | null;
+
   startTimerId: ReturnType<typeof setTimeout> | null;
   durationTimerId: ReturnType<typeof setTimeout> | null;
-  /** Set while delayed-start timeout is scheduled (before audio exists). */
+  /** interval: silence gap before next tick */
+  intervalTimerId: ReturnType<typeof setTimeout> | null;
+
+  /** Active fade-in or fade-out animation frame (never both). */
+  fadeRafId: number | null;
+
+  /** Wall-clock instant when the layer must be fully stopped (audio start + duration). */
+  layerAbsoluteStopEpochMs: number | null;
+
   startFiresAtEpochMs: number | null;
-  /** Set while duration auto-stop timeout is scheduled. */
   durationFiresAtEpochMs: number | null;
-  /** After pause interrupted a pending delayed start. */
+  intervalFiresAtEpochMs: number | null;
+
   pendingStartRemainingMs: number | null;
-  /** After pause interrupted an active duration countdown. */
   pendingDurationRemainingMs: number | null;
+  pendingIntervalRemainingMs: number | null;
+
+  /** once: remove on stopLayer */
+  onceEndedHandler: (() => void) | null;
+
+  intervalTickEndedHandler: (() => void) | null;
+  intervalTickErrorHandler: (() => void) | null;
 }
 
 const _layers = new Map<number, ManagedLayer>();
 
-/** True after pauseAll until resumeAll; cleared by stopAll / playPlan / restartPlan. */
 let _sessionPaused = false;
 
-/** Fired once when the last managed layer is removed (natural end, stopLayer, or stopAll). */
 let _sessionEndedCallback: (() => void) | null = null;
 
 export function setSessionEndedCallback(cb: (() => void) | null): void {
@@ -56,61 +78,388 @@ function _notifySessionEndedIfEmpty(): void {
   }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+function _clampVolume(vol100: number): number {
+  return Math.max(0, Math.min(1, vol100 / 100));
+}
+
+function _clampUnit(vol: number): number {
+  return Math.max(0, Math.min(1, vol));
+}
+
+/** Cancel linear fade RAF for this layer (fade-in or fade-out). */
+function _clearFadeAnimations(managed: ManagedLayer): void {
+  if (managed.fadeRafId !== null) {
+    cancelAnimationFrame(managed.fadeRafId);
+    managed.fadeRafId = null;
+  }
+}
+
+/**
+ * Ramp element volume from 0 → target using requestAnimationFrame.
+ * Clears any prior fade RAF on this layer first.
+ * (`managed` owns the RAF id for cancellation — not sample-perfect across pause.)
+ */
+function applyFadeIn(
+  audio: HTMLAudioElement,
+  targetVolume: number,
+  fadeInSeconds: number,
+  managed: ManagedLayer,
+): void {
+  _clearFadeAnimations(managed);
+
+  const target = _clampUnit(targetVolume);
+
+  if (fadeInSeconds <= 0) {
+    audio.volume = target;
+    return;
+  }
+
+  audio.volume = 0;
+  const startMs = performance.now();
+  const durationMs = fadeInSeconds * 1_000;
+
+  const tick = (now: number): void => {
+    if (!_layers.has(managed.soundId) || managed.audio !== audio) {
+      managed.fadeRafId = null;
+      return;
+    }
+    const elapsed = now - startMs;
+    const u = durationMs <= 0 ? 1 : Math.min(1, elapsed / durationMs);
+    audio.volume = _clampUnit(target * u);
+    if (u >= 1) {
+      managed.fadeRafId = null;
+      return;
+    }
+    managed.fadeRafId = requestAnimationFrame(tick);
+  };
+
+  managed.fadeRafId = requestAnimationFrame(tick);
+}
+
+/**
+ * Ramp element volume from current → 0 using requestAnimationFrame, then run onComplete.
+ */
+function applyFadeOut(
+  audio: HTMLAudioElement,
+  fadeOutSeconds: number,
+  onComplete: () => void,
+  managed: ManagedLayer,
+): void {
+  _clearFadeAnimations(managed);
+
+  const startVol = _clampUnit(audio.volume);
+
+  if (fadeOutSeconds <= 0 || startVol <= 0) {
+    audio.volume = 0;
+    onComplete();
+    return;
+  }
+
+  const startMs = performance.now();
+  const durationMs = fadeOutSeconds * 1_000;
+
+  const tick = (now: number): void => {
+    if (!_layers.has(managed.soundId) || managed.audio !== audio) {
+      managed.fadeRafId = null;
+      return;
+    }
+    const elapsed = now - startMs;
+    const u = durationMs <= 0 ? 1 : Math.min(1, elapsed / durationMs);
+    audio.volume = _clampUnit(startVol * (1 - u));
+    if (u >= 1) {
+      managed.fadeRafId = null;
+      audio.volume = 0;
+      onComplete();
+      return;
+    }
+    managed.fadeRafId = requestAnimationFrame(tick);
+  };
+
+  managed.fadeRafId = requestAnimationFrame(tick);
+}
 
 function _logPlayFailure(layer: VibeExecutionLayer, error: unknown): void {
   console.warn('[AudioPlayer] Failed to play layer', {
     soundId:   layer.soundId,
     soundName: layer.soundName,
     fileUrl:   layer.fileUrl,
+    playMode:  layer.playMode as PlayMode,
     error,
   });
 }
 
-function _createAndPlay(layer: VibeExecutionLayer, managed: ManagedLayer): void {
-  managed.pendingStartRemainingMs = null;
+function _clearStartTimer(managed: ManagedLayer): void {
+  if (managed.startTimerId !== null) {
+    clearTimeout(managed.startTimerId);
+    managed.startTimerId = null;
+  }
+}
 
-  const audio = new Audio(layer.fileUrl);
-  audio.loop   = true;
-  audio.volume = Math.max(0, Math.min(1, layer.volume / 100));
-  managed.audio = audio;
+function _clearDurationTimer(managed: ManagedLayer): void {
+  if (managed.durationTimerId !== null) {
+    clearTimeout(managed.durationTimerId);
+    managed.durationTimerId = null;
+  }
+}
 
-  audio.play().catch((error) => _logPlayFailure(layer, error));
+function _clearIntervalTimer(managed: ManagedLayer): void {
+  if (managed.intervalTimerId !== null) {
+    clearTimeout(managed.intervalTimerId);
+    managed.intervalTimerId = null;
+  }
+}
 
-  if (layer.durationSeconds != null) {
-    const durMs = layer.durationSeconds * 1_000;
-    managed.durationFiresAtEpochMs = Date.now() + durMs;
+function _detachIntervalTickListeners(managed: ManagedLayer): void {
+  const audio = managed.audio;
+  if (!audio) return;
+
+  if (managed.intervalTickEndedHandler) {
+    audio.removeEventListener('ended', managed.intervalTickEndedHandler);
+    managed.intervalTickEndedHandler = null;
+  }
+  if (managed.intervalTickErrorHandler) {
+    audio.removeEventListener('error', managed.intervalTickErrorHandler);
+    managed.intervalTickErrorHandler = null;
+  }
+}
+
+function _scheduleLayerLifetime(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  managed.layerAbsoluteStopEpochMs = null;
+
+  if (layer.durationSeconds == null) return;
+
+  _clearDurationTimer(managed);
+
+  const durMs = layer.durationSeconds * 1_000;
+  managed.layerAbsoluteStopEpochMs = Date.now() + durMs;
+
+  const fadeOutMs =
+    layer.fadeOutSeconds > 0 ? Math.min(layer.fadeOutSeconds * 1_000, durMs) : 0;
+
+  if (fadeOutMs <= 0) {
+    managed.durationFiresAtEpochMs = managed.layerAbsoluteStopEpochMs;
     managed.durationTimerId = setTimeout(() => {
-      managed.durationTimerId      = null;
+      managed.durationTimerId        = null;
       managed.durationFiresAtEpochMs = null;
+      managed.layerAbsoluteStopEpochMs = null;
       stopLayer(layer.soundId);
     }, durMs);
+    return;
+  }
+
+  const fadeStartDelayMs = durMs - fadeOutMs;
+
+  managed.durationFiresAtEpochMs = Date.now() + fadeStartDelayMs;
+
+  managed.durationTimerId = setTimeout(() => {
+    managed.durationTimerId        = null;
+    managed.durationFiresAtEpochMs = null;
+
+    if (!_layers.has(layer.soundId)) return;
+
+    const audio = managed.audio;
+    if (!audio) {
+      managed.layerAbsoluteStopEpochMs = null;
+      stopLayer(layer.soundId);
+      return;
+    }
+
+    const fadeSec = fadeOutMs / 1_000;
+    applyFadeOut(audio, fadeSec, () => {
+      stopLayer(layer.soundId);
+    }, managed);
+  }, fadeStartDelayMs);
+}
+
+function _beginLayerAfterDelay(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  managed.startTimerId        = null;
+  managed.startFiresAtEpochMs = null;
+  managed.pendingStartRemainingMs = null;
+
+  if (_sessionPaused) return;
+
+  _scheduleLayerLifetime(layer, managed);
+
+  switch (layer.playMode) {
+    case 'loop':
+      _startLoopAudio(layer, managed);
+      break;
+    case 'once':
+      _startOnceAudio(layer, managed);
+      break;
+    case 'interval':
+      _intervalPlayTick(layer, managed);
+      break;
   }
 }
 
-function _enqueueLoopLayers(layers: VibeExecutionLayer[]): void {
-  _sessionPaused = false;
-  const loopLayers = layers.filter((l) => l.playMode === 'loop');
-  for (const layer of loopLayers) {
-    playLayer(layer);
+function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  const audio = new Audio(layer.fileUrl);
+  audio.loop = true;
+  const target = _clampVolume(layer.volume);
+  managed.audio = audio;
+
+  if (layer.fadeInSeconds > 0) {
+    audio.volume = 0;
+    audio.play().catch((error) => _logPlayFailure(layer, error));
+    applyFadeIn(audio, target, layer.fadeInSeconds, managed);
+  } else {
+    audio.volume = target;
+    audio.play().catch((error) => _logPlayFailure(layer, error));
   }
 }
 
-// ── Per-layer lifecycle ─────────────────────────────────────────────────────────
+function _startOnceAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  const audio = new Audio(layer.fileUrl);
+  audio.loop = false;
+  const target = _clampVolume(layer.volume);
+  managed.audio = audio;
+
+  const handler = (): void => {
+    if (managed.onceEndedHandler !== handler) return;
+    managed.onceEndedHandler = null;
+    audio.removeEventListener('ended', handler);
+    stopLayer(layer.soundId);
+  };
+
+  managed.onceEndedHandler = handler;
+  audio.addEventListener('ended', handler);
+
+  if (layer.fadeInSeconds > 0) {
+    audio.volume = 0;
+    audio.play().catch((error) => _logPlayFailure(layer, error));
+    applyFadeIn(audio, target, layer.fadeInSeconds, managed);
+  } else {
+    audio.volume = target;
+    audio.play().catch((error) => _logPlayFailure(layer, error));
+  }
+}
+
+function _scheduleNextIntervalGap(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  const gapSec = layer.repeatIntervalSeconds ?? 0;
+  const gapMs  = gapSec * 1_000;
+
+  if (gapMs < 1_000) return;
+
+  _clearIntervalTimer(managed);
+
+  managed.intervalFiresAtEpochMs = Date.now() + gapMs;
+  managed.intervalTimerId = setTimeout(() => {
+    managed.intervalTimerId        = null;
+    managed.intervalFiresAtEpochMs = null;
+    if (!_layers.has(layer.soundId) || _sessionPaused) return;
+    _intervalPlayTick(layer, managed);
+  }, gapMs);
+}
+
+function _intervalPlayTick(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  _clearIntervalTimer(managed);
+  managed.intervalFiresAtEpochMs = null;
+
+  if (_sessionPaused) return;
+
+  /* Normal path: gap elapsed → previous tick already torn down */
+  if (managed.audio !== null) {
+    _tearDownIntervalTickAudio(managed);
+  }
+
+  const audio = new Audio(layer.fileUrl);
+  audio.loop = false;
+  const target = _clampVolume(layer.volume);
+
+  const onEnded = (): void => {
+    _tearDownIntervalTickAudio(managed);
+    if (!_layers.has(layer.soundId) || _sessionPaused) return;
+    _scheduleNextIntervalGap(layer, managed);
+  };
+
+  const onError = (): void => {
+    _tearDownIntervalTickAudio(managed);
+    if (!_layers.has(layer.soundId) || _sessionPaused) return;
+    _scheduleNextIntervalGap(layer, managed);
+  };
+
+  managed.intervalTickEndedHandler = onEnded;
+  managed.intervalTickErrorHandler = onError;
+  audio.addEventListener('ended', onEnded);
+  audio.addEventListener('error', onError);
+
+  managed.audio = audio;
+
+  if (layer.fadeInSeconds > 0) {
+    audio.volume = 0;
+    audio.play().catch((error) => {
+      _logPlayFailure(layer, error);
+      onError();
+    });
+    applyFadeIn(audio, target, layer.fadeInSeconds, managed);
+  } else {
+    audio.volume = target;
+    audio.play().catch((error) => {
+      _logPlayFailure(layer, error);
+      onError();
+    });
+  }
+}
+
+function _tearDownIntervalTickAudio(managed: ManagedLayer): void {
+  _clearFadeAnimations(managed);
+  const audio = managed.audio;
+  _detachIntervalTickListeners(managed);
+
+  if (audio) {
+    audio.pause();
+    audio.src = '';
+    managed.audio = null;
+  }
+}
+
+// ── Public per-layer API ──────────────────────────────────────────────────────
 
 function playLayer(layer: VibeExecutionLayer): void {
   stopLayer(layer.soundId);
 
+  if (!hasValidExecutionFileUrl(layer.fileUrl)) {
+    console.warn('[AudioPlayer] Skipping layer — invalid fileUrl', {
+      soundId:   layer.soundId,
+      soundName: layer.soundName,
+      fileUrl:   layer.fileUrl,
+      playMode:  layer.playMode as PlayMode,
+    });
+    return;
+  }
+
+  if (layer.playMode === 'interval') {
+    const ri = layer.repeatIntervalSeconds;
+    if (ri == null || ri < 1) {
+      console.warn('[AudioPlayer] Skipping interval layer — invalid repeatIntervalSeconds', {
+        soundId:   layer.soundId,
+        soundName: layer.soundName,
+        fileUrl:   layer.fileUrl,
+        playMode:  'interval' as const,
+      });
+      return;
+    }
+  }
+
   const managed: ManagedLayer = {
-    soundId:                  layer.soundId,
+    soundId:                      layer.soundId,
     layer,
-    audio:                    null,
-    startTimerId:             null,
-    durationTimerId:          null,
-    startFiresAtEpochMs:      null,
-    durationFiresAtEpochMs:   null,
-    pendingStartRemainingMs:  null,
-    pendingDurationRemainingMs: null,
+    audio:                        null,
+    startTimerId:                 null,
+    durationTimerId:              null,
+    intervalTimerId:              null,
+    fadeRafId:                    null,
+    layerAbsoluteStopEpochMs:     null,
+    startFiresAtEpochMs:          null,
+    durationFiresAtEpochMs:       null,
+    intervalFiresAtEpochMs:       null,
+    pendingStartRemainingMs:      null,
+    pendingDurationRemainingMs:   null,
+    pendingIntervalRemainingMs:   null,
+    onceEndedHandler:             null,
+    intervalTickEndedHandler:     null,
+    intervalTickErrorHandler:     null,
   };
 
   _layers.set(layer.soundId, managed);
@@ -121,12 +470,11 @@ function playLayer(layer: VibeExecutionLayer): void {
     managed.startTimerId = setTimeout(() => {
       managed.startTimerId        = null;
       managed.startFiresAtEpochMs = null;
-      if (!_sessionPaused) {
-        _createAndPlay(layer, managed);
-      }
+      if (!_layers.has(layer.soundId)) return;
+      _beginLayerAfterDelay(layer, managed);
     }, delayMs);
   } else {
-    _createAndPlay(layer, managed);
+    _beginLayerAfterDelay(layer, managed);
   }
 }
 
@@ -134,25 +482,32 @@ function stopLayer(soundId: number): void {
   const managed = _layers.get(soundId);
   if (!managed) return;
 
-  if (managed.startTimerId !== null) {
-    clearTimeout(managed.startTimerId);
-    managed.startTimerId = null;
-  }
-
-  if (managed.durationTimerId !== null) {
-    clearTimeout(managed.durationTimerId);
-    managed.durationTimerId = null;
-  }
+  _clearFadeAnimations(managed);
+  _clearStartTimer(managed);
+  _clearDurationTimer(managed);
+  _clearIntervalTimer(managed);
 
   managed.startFiresAtEpochMs      = null;
   managed.durationFiresAtEpochMs   = null;
+  managed.intervalFiresAtEpochMs   = null;
+  managed.layerAbsoluteStopEpochMs = null;
   managed.pendingStartRemainingMs  = null;
   managed.pendingDurationRemainingMs = null;
+  managed.pendingIntervalRemainingMs = null;
 
-  if (managed.audio !== null) {
-    managed.audio.pause();
-    managed.audio.currentTime = 0;
-    managed.audio.src = '';
+  const audio = managed.audio;
+
+  if (managed.onceEndedHandler && audio) {
+    audio.removeEventListener('ended', managed.onceEndedHandler);
+    managed.onceEndedHandler = null;
+  }
+
+  _detachIntervalTickListeners(managed);
+
+  if (audio) {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.src = '';
     managed.audio = null;
   }
 
@@ -164,13 +519,39 @@ function stopLayer(soundId: number): void {
 
 function playPlan(layers: VibeExecutionLayer[]): void {
   stopAll();
-  _enqueueLoopLayers(layers);
+  _sessionPaused = false;
+  for (const layer of layers) {
+    playLayer(layer);
+  }
 }
 
-/** Same effect as playPlan in Phase 1 (explicit API for callers). */
 function restartPlan(layers: VibeExecutionLayer[]): void {
-  stopAll();
-  _enqueueLoopLayers(layers);
+  playPlan(layers);
+}
+
+/**
+ * After pause: restore a single hard stop timer from remaining wall-clock lifetime.
+ * Does not re-apply fade-out ramp (Phase 3 simplicity).
+ */
+function _resumeLayerDurationAfterPause(managed: ManagedLayer, layer: VibeExecutionLayer): void {
+  const remDur = managed.pendingDurationRemainingMs;
+  if (remDur === null) return;
+
+  managed.pendingDurationRemainingMs = null;
+
+  if (remDur <= 0) {
+    managed.layerAbsoluteStopEpochMs = null;
+    stopLayer(layer.soundId);
+    return;
+  }
+
+  managed.layerAbsoluteStopEpochMs = Date.now() + remDur;
+  managed.durationTimerId = setTimeout(() => {
+    managed.durationTimerId          = null;
+    managed.durationFiresAtEpochMs   = null;
+    managed.layerAbsoluteStopEpochMs = null;
+    stopLayer(layer.soundId);
+  }, remDur);
 }
 
 function pauseAll(): void {
@@ -179,9 +560,10 @@ function pauseAll(): void {
   _sessionPaused = true;
 
   for (const managed of _layers.values()) {
+    const layer = managed.layer;
+
     if (managed.startTimerId !== null) {
-      clearTimeout(managed.startTimerId);
-      managed.startTimerId = null;
+      _clearStartTimer(managed);
       if (managed.startFiresAtEpochMs !== null) {
         managed.pendingStartRemainingMs = Math.max(0, managed.startFiresAtEpochMs - Date.now());
         managed.startFiresAtEpochMs     = null;
@@ -189,11 +571,26 @@ function pauseAll(): void {
     }
 
     if (managed.durationTimerId !== null) {
-      clearTimeout(managed.durationTimerId);
-      managed.durationTimerId = null;
-      if (managed.durationFiresAtEpochMs !== null) {
-        managed.pendingDurationRemainingMs = Math.max(0, managed.durationFiresAtEpochMs - Date.now());
-        managed.durationFiresAtEpochMs     = null;
+      _clearDurationTimer(managed);
+    }
+    managed.durationFiresAtEpochMs = null;
+
+    if (managed.layerAbsoluteStopEpochMs !== null) {
+      managed.pendingDurationRemainingMs = Math.max(
+        0,
+        managed.layerAbsoluteStopEpochMs - Date.now(),
+      );
+    } else {
+      managed.pendingDurationRemainingMs = null;
+    }
+
+    _clearFadeAnimations(managed);
+
+    if (managed.intervalTimerId !== null) {
+      _clearIntervalTimer(managed);
+      if (managed.intervalFiresAtEpochMs !== null) {
+        managed.pendingIntervalRemainingMs = Math.max(0, managed.intervalFiresAtEpochMs - Date.now());
+        managed.intervalFiresAtEpochMs     = null;
       }
     }
 
@@ -209,38 +606,54 @@ function resumeAll(): void {
   _sessionPaused = false;
 
   for (const managed of _layers.values()) {
-    if (managed.audio !== null) {
-      const rem = managed.pendingDurationRemainingMs;
-      managed.pendingDurationRemainingMs = null;
+    const layer = managed.layer;
 
-      if (rem !== null && rem > 0) {
-        managed.durationFiresAtEpochMs = Date.now() + rem;
-        managed.durationTimerId = setTimeout(() => {
-          managed.durationTimerId        = null;
-          managed.durationFiresAtEpochMs = null;
-          stopLayer(managed.soundId);
-        }, rem);
-      }
-
-      managed.audio.play().catch((error) => _logPlayFailure(managed.layer, error));
-    } else {
-      const remStart = managed.pendingStartRemainingMs;
+    // ── Delayed start still pending ─────────────────────────────
+    if (!managed.audio && managed.pendingStartRemainingMs !== null) {
+      const ms = managed.pendingStartRemainingMs;
       managed.pendingStartRemainingMs = null;
-
-      if (remStart !== null && remStart > 0) {
-        managed.startFiresAtEpochMs = Date.now() + remStart;
+      if (ms > 0) {
+        managed.startFiresAtEpochMs = Date.now() + ms;
         managed.startTimerId = setTimeout(() => {
           managed.startTimerId        = null;
           managed.startFiresAtEpochMs = null;
-          if (!_sessionPaused) {
-            _createAndPlay(managed.layer, managed);
-          }
-        }, remStart);
-      } else if (remStart !== null && remStart <= 0) {
-        if (!_sessionPaused) {
-          _createAndPlay(managed.layer, managed);
-        }
+          if (!_layers.has(layer.soundId)) return;
+          _beginLayerAfterDelay(layer, managed);
+        }, ms);
+      } else {
+        _beginLayerAfterDelay(layer, managed);
       }
+      continue;
+    }
+
+    // ── Interval: waiting in gap (no tick audio) ───────────────
+    if (layer.playMode === 'interval' && managed.audio === null && managed.pendingIntervalRemainingMs !== null) {
+      const ms = managed.pendingIntervalRemainingMs;
+      managed.pendingIntervalRemainingMs = null;
+
+      _resumeLayerDurationAfterPause(managed, layer);
+      if (!_layers.has(layer.soundId)) continue;
+
+      if (ms > 0) {
+        managed.intervalFiresAtEpochMs = Date.now() + ms;
+        managed.intervalTimerId = setTimeout(() => {
+          managed.intervalTimerId        = null;
+          managed.intervalFiresAtEpochMs = null;
+          if (!_layers.has(layer.soundId) || _sessionPaused) return;
+          _intervalPlayTick(layer, managed);
+        }, ms);
+      } else if (!_sessionPaused) {
+        _intervalPlayTick(layer, managed);
+      }
+      continue;
+    }
+
+    // ── Active audio (loop / once / interval mid-tick) ─────────
+    if (managed.audio !== null) {
+      _resumeLayerDurationAfterPause(managed, layer);
+      if (!_layers.has(layer.soundId)) continue;
+
+      managed.audio.play().catch((error) => _logPlayFailure(layer, error));
     }
   }
 }

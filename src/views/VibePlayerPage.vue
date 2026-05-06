@@ -42,8 +42,8 @@
           <button
             v-else
             class="player-control-btn"
-            :class="{ 'player-control-btn--disabled': !hasLoopSounds }"
-            :disabled="!hasLoopSounds"
+            :class="{ 'player-control-btn--disabled': !canUsePlaybackControls }"
+            :disabled="!canUsePlaybackControls"
             :aria-label="centerAriaLabel"
             @click="togglePlayback"
           >
@@ -56,7 +56,7 @@
 
         <!-- ── Bottom info panel ─────────────────────── -->
         <div class="player-bottom">
-          <!-- Warning (no sounds / no loop sounds) -->
+          <!-- Warning (no sounds / nothing playable) -->
           <p v-if="!loading && warningText" class="player-warning">
             {{ warningText }}
           </p>
@@ -68,9 +68,32 @@
           <div class="player-status-row">
             <span
               class="player-status-dot"
-              :class="{ 'player-status-dot--active': playbackState === 'playing' }"
+              :class="statusDotClass"
             />
             <span class="player-status-text">{{ statusText }}</span>
+          </div>
+
+          <!-- DEV: Execution Plan (keep visible for debugging) -->
+          <div v-if="!loading" class="player-dev-panel">
+            <div class="player-dev-panel-header">
+              <span class="player-dev-badge">DEV</span>
+              <span class="player-dev-title">DEV Execution Plan</span>
+              <span class="player-dev-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
+            </div>
+            <div v-if="!executionPlan.length" class="player-dev-empty">No layers (build plan after load).</div>
+            <div v-for="layer in executionPlan" :key="layer.soundId" class="player-dev-layer">
+              <p class="player-dev-layer-summary">{{ layer.humanReadableSummary }}</p>
+              <div class="player-dev-layer-meta">
+                <span>start: {{ layer.startsAtSeconds }}s</span>
+                <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
+                <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
+                <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
+                <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
+                <span :class="{ 'player-dev-unplayable': !isExecutionLayerPlayable(layer) }">
+                  {{ isExecutionLayerPlayable(layer) ? 'playable' : 'skipped (invalid URL or interval)' }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -88,6 +111,7 @@ import {
   IonPage,
   IonPopover,
   IonSpinner,
+  toastController,
 } from '@ionic/vue';
 import {
   chevronBackOutline,
@@ -102,6 +126,7 @@ import { useAudioPlayer } from '@/composables/useAudioPlayer';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
+import { isExecutionLayerPlayable } from '@/services/player-engine.service';
 
 // ── Route / Router ────────────────────────────────────────────────────────────
 
@@ -139,16 +164,22 @@ const vibe = computed(() =>
 
 // ── Execution plan helpers ────────────────────────────────────────────────────
 
-const loopLayers = computed(() =>
-  executionPlan.value.filter((l) => l.playMode === 'loop'),
-);
+const playableLayers = computed(() => executionPlan.value.filter(isExecutionLayerPlayable));
 
-const hasLoopSounds = computed(() => loopLayers.value.length > 0);
+const hasPlayableLayers = computed(() => playableLayers.value.length > 0);
+
+/** Allow pause/resume/stop while session active even if config became invalid mid-flight. */
+const canUsePlaybackControls = computed(
+  () =>
+    hasPlayableLayers.value
+    || playbackState.value === 'playing'
+    || playbackState.value === 'paused',
+);
 
 const warningText = computed((): string | null => {
   if (loading.value) return null;
   if (!vibeSounds.value.length) return 'No sounds configured';
-  if (!hasLoopSounds.value) return 'No loop sounds available for Phase 1';
+  if (!hasPlayableLayers.value) return 'No playable sounds for this phase';
   return null;
 });
 
@@ -184,27 +215,71 @@ function formatElapsed(s: number): string {
 }
 
 const statusText = computed((): string => {
-  const t = formatElapsed(elapsedSeconds.value);
-  if (playbackState.value === 'playing') return `Playing • ${t}`;
-  if (playbackState.value === 'paused') return `Paused • ${t}`;
+  if (playbackState.value === 'playing') {
+    return `Playing • ${formatElapsed(elapsedSeconds.value)}`;
+  }
+  if (playbackState.value === 'paused') {
+    return `Paused • ${formatElapsed(elapsedSeconds.value)}`;
+  }
   return 'Ready';
 });
+
+/** Dot reflects service-backed playback state (playing vs paused vs idle). */
+const statusDotClass = computed((): Record<string, boolean> => ({
+  'player-status-dot--active': playbackState.value === 'playing',
+  'player-status-dot--paused': playbackState.value === 'paused',
+}));
 
 const centerIcon = computed(() =>
   playbackState.value === 'playing' ? pauseOutline : playOutline,
 );
 
 const centerAriaLabel = computed((): string => {
+  if (!loading.value && !canUsePlaybackControls.value) return 'Playback unavailable';
   if (playbackState.value === 'playing') return 'Pause';
   if (playbackState.value === 'paused') return 'Resume';
   return 'Play';
 });
 
-function togglePlayback(): void {
-  if (!hasLoopSounds.value) return;
+async function showPlaybackToast(message: string): Promise<void> {
+  const toast = await toastController.create({
+    message,
+    duration: 2_800,
+    position: 'bottom',
+    color: 'medium',
+  });
+  await toast.present();
+}
+
+async function togglePlayback(): Promise<void> {
+  if (loading.value) return;
+
+  if (!vibeSounds.value.length) {
+    await showPlaybackToast('No sounds configured');
+    return;
+  }
+
+  if (!hasPlayableLayers.value) {
+    await showPlaybackToast('No playable sounds available');
+    return;
+  }
 
   if (playbackState.value === 'idle') {
-    playPlan(loopLayers.value);
+    const totalLayers     = executionPlan.value.length;
+    const playableCount   = playableLayers.value.length;
+    const started         = playPlan(executionPlan.value);
+
+    if (!started) {
+      await showPlaybackToast(
+        playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
+      );
+      return;
+    }
+
+    if (playableCount < totalLayers) {
+      await showPlaybackToast('Some sounds could not be played');
+    }
+
     beginSessionClock();
   } else if (playbackState.value === 'playing') {
     pauseAll();
@@ -215,9 +290,34 @@ function togglePlayback(): void {
   }
 }
 
-function handleRestartVibe(): void {
-  if (!hasLoopSounds.value) return;
-  restartPlan(loopLayers.value);
+async function handleRestartVibe(): Promise<void> {
+  if (loading.value) return;
+
+  if (!vibeSounds.value.length) {
+    await showPlaybackToast('No sounds configured');
+    return;
+  }
+
+  if (!hasPlayableLayers.value) {
+    await showPlaybackToast('No playable sounds available');
+    return;
+  }
+
+  const totalLayers   = executionPlan.value.length;
+  const playableCount = playableLayers.value.length;
+  const started       = restartPlan(executionPlan.value);
+
+  if (!started) {
+    await showPlaybackToast(
+      playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
+    );
+    return;
+  }
+
+  if (playableCount < totalLayers) {
+    await showPlaybackToast('Some sounds could not be played');
+  }
+
   beginSessionClock();
 }
 
@@ -436,6 +536,11 @@ onUnmounted(() => {
   box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
 }
 
+.player-status-dot--paused {
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.55);
+}
+
 .player-menu-ion-content {
   --padding-top: 0;
   --padding-bottom: 0;
@@ -446,5 +551,84 @@ onUnmounted(() => {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.75);
   letter-spacing: 0.1px;
+}
+
+/* ── DEV Execution Plan (debug) ───────────────────────── */
+.player-dev-panel {
+  margin-top: 20px;
+  border: 1.5px dashed rgba(245, 158, 11, 0.55);
+  border-radius: 12px;
+  padding: 12px 14px 10px;
+  background: rgba(0, 0, 0, 0.38);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.player-dev-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.player-dev-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #fff;
+  background: #f59e0b;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.player-dev-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(253, 230, 138, 0.95);
+}
+
+.player-dev-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: rgba(251, 191, 36, 0.85);
+}
+
+.player-dev-empty {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 6px;
+}
+
+.player-dev-layer {
+  border-top: 1px solid rgba(245, 158, 11, 0.22);
+  padding: 10px 0 8px;
+}
+
+.player-dev-layer-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.player-dev-layer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.player-dev-layer-meta span {
+  font-size: 11px;
+  font-family: monospace;
+  color: rgba(253, 230, 138, 0.92);
+  background: rgba(245, 158, 11, 0.14);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.player-dev-unplayable {
+  color: rgba(248, 113, 113, 0.95) !important;
+  background: rgba(248, 113, 113, 0.12) !important;
 }
 </style>

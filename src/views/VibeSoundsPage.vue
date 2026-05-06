@@ -105,7 +105,7 @@
       <div v-if="vibeSounds.length" class="dev-panel">
         <div class="dev-panel-header">
           <span class="dev-panel-badge">DEV</span>
-          <span class="dev-panel-title">Execution Plan</span>
+          <span class="dev-panel-title">DEV Execution Plan</span>
           <span class="dev-panel-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
         </div>
         <div class="dev-layer" v-for="layer in executionPlan" :key="layer.soundId">

@@ -1,5 +1,5 @@
 /**
- * useAudioPlayer — Phase 1
+ * useAudioPlayer — Phase 2 (loop + once + interval)
  *
  * Reactive playback state + session timer helpers around audioPlayerService.
  */
@@ -69,9 +69,10 @@ setSessionEndedCallback(() => {
   resetElapsed();
 });
 
-function playPlan(layers: VibeExecutionLayer[]): void {
+function playPlan(layers: VibeExecutionLayer[]): boolean {
   audioPlayerService.playPlan(layers);
   syncFromService();
+  return audioPlayerService.hasActiveLayers();
 }
 
 function pauseAll(): void {
@@ -90,9 +91,10 @@ function stopAll(): void {
   resetElapsed();
 }
 
-function restartPlan(layers: VibeExecutionLayer[]): void {
+function restartPlan(layers: VibeExecutionLayer[]): boolean {
   audioPlayerService.restartPlan(layers);
   syncFromService();
+  return audioPlayerService.hasActiveLayers();
 }
 
 export function useAudioPlayer() {
