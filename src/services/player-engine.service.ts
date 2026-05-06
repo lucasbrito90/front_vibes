@@ -44,6 +44,33 @@ export interface VibeExecutionLayer {
   humanReadableSummary: string;
 }
 
+/** Empty / whitespace-only URLs cannot be played. */
+export function hasValidExecutionFileUrl(fileUrl: string): boolean {
+  const t = typeof fileUrl === 'string' ? fileUrl.trim() : '';
+  if (!t) return false;
+  try {
+    new URL(t);
+    return true;
+  } catch {
+    try {
+      new URL(t, 'https://placeholder.invalid/');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** Layers the runtime will attach (valid URL + interval rules). */
+export function isExecutionLayerPlayable(layer: VibeExecutionLayer): boolean {
+  if (!hasValidExecutionFileUrl(layer.fileUrl)) return false;
+  if (layer.playMode === 'interval') {
+    const ri = layer.repeatIntervalSeconds;
+    return ri != null && ri >= 1;
+  }
+  return true;
+}
+
 // ── Time formatting helper ────────────────────────────────────────────────────
 
 /**

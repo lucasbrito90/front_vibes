@@ -32,6 +32,7 @@
             :key="vibe.id"
             class="vibe-card"
             :style="{ background: gradients[i % gradients.length] }"
+            @click="router.push(`/vibes/${vibe.id}/player`)"
           >
             <div class="vibe-card-overlay" />
 
