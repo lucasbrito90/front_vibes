@@ -1,14 +1,20 @@
 /**
  * audio-player.service.ts — Phase 1
  *
- * Pure imperative service that manages HTMLAudioElement instances and their
- * associated timers per sound layer. Intentionally does not know about Vue
- * reactivity — all reactive state lives in useAudioPlayer.ts.
+ * Loop layers only. Manages HTMLAudioElement + delayed-start + duration timers.
  *
- * Phase 1 scope: loop layers only.
- * Timers are tracked for:
- *   - delayed start  (startsAtSeconds > 0)
- *   - auto-stop      (durationSeconds != null, even for loop layers)
+ * ## Pause vs Stop
+ * - **pauseAll**: `audio.pause()`, clears timeouts but keeps remaining delays in ms so
+ *   resume can reschedule. Does NOT reset `currentTime` or clear `src`.
+ * - **stopAll**: full teardown per layer — timers cleared, `currentTime = 0`, `src` cleared.
+ *
+ * ## Delayed start + pause (Phase 1)
+ * When a delayed start is pending, `pauseAll` clears the timeout and stores the remaining
+ * delay in `pendingStartRemainingMs`. `resumeAll` reschedules with that remaining time.
+ *
+ * ## Limitation
+ * While globally paused, natural timer expiry is expressed only via saved remaining ms;
+ * wall-clock drift between pause/resume is negligible for UX.
  */
 
 import type { VibeExecutionLayer } from './player-engine.service';
@@ -17,126 +23,252 @@ import type { VibeExecutionLayer } from './player-engine.service';
 
 interface ManagedLayer {
   soundId: number;
-  /** Null while the start is still pending (delayed by startsAtSeconds). */
+  layer: VibeExecutionLayer;
   audio: HTMLAudioElement | null;
-  /** setTimeout ID for the delayed start; null when already started. */
   startTimerId: ReturnType<typeof setTimeout> | null;
-  /** setTimeout ID for the auto-stop after durationSeconds; null if no limit. */
   durationTimerId: ReturnType<typeof setTimeout> | null;
+  /** Set while delayed-start timeout is scheduled (before audio exists). */
+  startFiresAtEpochMs: number | null;
+  /** Set while duration auto-stop timeout is scheduled. */
+  durationFiresAtEpochMs: number | null;
+  /** After pause interrupted a pending delayed start. */
+  pendingStartRemainingMs: number | null;
+  /** After pause interrupted an active duration countdown. */
+  pendingDurationRemainingMs: number | null;
 }
 
-/** One entry per active or pending layer, keyed by soundId. */
 const _layers = new Map<number, ManagedLayer>();
+
+/** True after pauseAll until resumeAll; cleared by stopAll / playPlan / restartPlan. */
+let _sessionPaused = false;
+
+/** Fired once when the last managed layer is removed (natural end, stopLayer, or stopAll). */
+let _sessionEndedCallback: (() => void) | null = null;
+
+export function setSessionEndedCallback(cb: (() => void) | null): void {
+  _sessionEndedCallback = cb;
+}
+
+function _notifySessionEndedIfEmpty(): void {
+  if (!_layers.size) {
+    _sessionPaused = false;
+    _sessionEndedCallback?.();
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function _logPlayFailure(layer: VibeExecutionLayer, error: unknown): void {
+  console.warn('[AudioPlayer] Failed to play layer', {
+    soundId:   layer.soundId,
+    soundName: layer.soundName,
+    fileUrl:   layer.fileUrl,
+    error,
+  });
+}
+
 function _createAndPlay(layer: VibeExecutionLayer, managed: ManagedLayer): void {
-  managed.startTimerId = null;
+  managed.pendingStartRemainingMs = null;
 
   const audio = new Audio(layer.fileUrl);
   audio.loop   = true;
   audio.volume = Math.max(0, Math.min(1, layer.volume / 100));
   managed.audio = audio;
 
-  audio.play().catch((error) => {
-    console.warn('[AudioPlayer] Failed to play layer', {
-      soundId:   layer.soundId,
-      soundName: layer.soundName,
-      fileUrl:   layer.fileUrl,
-      error,
-    });
-  });
+  audio.play().catch((error) => _logPlayFailure(layer, error));
 
-  // Schedule auto-stop if the layer has a finite duration
   if (layer.durationSeconds != null) {
+    const durMs = layer.durationSeconds * 1_000;
+    managed.durationFiresAtEpochMs = Date.now() + durMs;
     managed.durationTimerId = setTimeout(() => {
+      managed.durationTimerId      = null;
+      managed.durationFiresAtEpochMs = null;
       stopLayer(layer.soundId);
-    }, layer.durationSeconds * 1_000);
+    }, durMs);
   }
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
+function _enqueueLoopLayers(layers: VibeExecutionLayer[]): void {
+  _sessionPaused = false;
+  const loopLayers = layers.filter((l) => l.playMode === 'loop');
+  for (const layer of loopLayers) {
+    playLayer(layer);
+  }
+}
 
-/**
- * Start (or schedule) playback for a single layer.
- * If a layer with the same soundId is already managed, it is stopped first.
- */
+// ── Per-layer lifecycle ─────────────────────────────────────────────────────────
+
 function playLayer(layer: VibeExecutionLayer): void {
-  // Prevent duplicate layers for the same sound
   stopLayer(layer.soundId);
 
   const managed: ManagedLayer = {
-    soundId:         layer.soundId,
-    audio:           null,
-    startTimerId:    null,
-    durationTimerId: null,
+    soundId:                  layer.soundId,
+    layer,
+    audio:                    null,
+    startTimerId:             null,
+    durationTimerId:          null,
+    startFiresAtEpochMs:      null,
+    durationFiresAtEpochMs:   null,
+    pendingStartRemainingMs:  null,
+    pendingDurationRemainingMs: null,
   };
 
   _layers.set(layer.soundId, managed);
 
   if (layer.startsAtSeconds > 0) {
-    // Delayed start — timer reference is stored so stopLayer can cancel it
-    managed.startTimerId = setTimeout(
-      () => _createAndPlay(layer, managed),
-      layer.startsAtSeconds * 1_000,
-    );
+    const delayMs = layer.startsAtSeconds * 1_000;
+    managed.startFiresAtEpochMs = Date.now() + delayMs;
+    managed.startTimerId = setTimeout(() => {
+      managed.startTimerId        = null;
+      managed.startFiresAtEpochMs = null;
+      if (!_sessionPaused) {
+        _createAndPlay(layer, managed);
+      }
+    }, delayMs);
   } else {
     _createAndPlay(layer, managed);
   }
 }
 
-/**
- * Stop a specific layer and clear ALL its associated timers.
- * Safe to call even if the soundId is not currently managed.
- *
- * This is the single place where timer cleanup happens — both stopLayer
- * and stopAll go through here.
- */
 function stopLayer(soundId: number): void {
   const managed = _layers.get(soundId);
   if (!managed) return;
 
-  // Cancel pending delayed-start timer so audio never starts later
   if (managed.startTimerId !== null) {
     clearTimeout(managed.startTimerId);
     managed.startTimerId = null;
   }
 
-  // Cancel pending auto-stop timer
   if (managed.durationTimerId !== null) {
     clearTimeout(managed.durationTimerId);
     managed.durationTimerId = null;
   }
 
-  // Stop and release the audio element (if it was already created)
+  managed.startFiresAtEpochMs      = null;
+  managed.durationFiresAtEpochMs   = null;
+  managed.pendingStartRemainingMs  = null;
+  managed.pendingDurationRemainingMs = null;
+
   if (managed.audio !== null) {
     managed.audio.pause();
-    managed.audio.src = ''; // allow GC and cancel any in-flight network request
+    managed.audio.currentTime = 0;
+    managed.audio.src = '';
     managed.audio = null;
   }
 
   _layers.delete(soundId);
+  _notifySessionEndedIfEmpty();
 }
 
-/**
- * Stop ALL active/pending layers and clear every timer.
- * After this call the internal map is empty and no audio will ever start.
- */
+// ── Session API ─────────────────────────────────────────────────────────────────
+
+function playPlan(layers: VibeExecutionLayer[]): void {
+  stopAll();
+  _enqueueLoopLayers(layers);
+}
+
+/** Same effect as playPlan in Phase 1 (explicit API for callers). */
+function restartPlan(layers: VibeExecutionLayer[]): void {
+  stopAll();
+  _enqueueLoopLayers(layers);
+}
+
+function pauseAll(): void {
+  if (!_layers.size) return;
+
+  _sessionPaused = true;
+
+  for (const managed of _layers.values()) {
+    if (managed.startTimerId !== null) {
+      clearTimeout(managed.startTimerId);
+      managed.startTimerId = null;
+      if (managed.startFiresAtEpochMs !== null) {
+        managed.pendingStartRemainingMs = Math.max(0, managed.startFiresAtEpochMs - Date.now());
+        managed.startFiresAtEpochMs     = null;
+      }
+    }
+
+    if (managed.durationTimerId !== null) {
+      clearTimeout(managed.durationTimerId);
+      managed.durationTimerId = null;
+      if (managed.durationFiresAtEpochMs !== null) {
+        managed.pendingDurationRemainingMs = Math.max(0, managed.durationFiresAtEpochMs - Date.now());
+        managed.durationFiresAtEpochMs     = null;
+      }
+    }
+
+    if (managed.audio !== null) {
+      managed.audio.pause();
+    }
+  }
+}
+
+function resumeAll(): void {
+  if (!_sessionPaused || !_layers.size) return;
+
+  _sessionPaused = false;
+
+  for (const managed of _layers.values()) {
+    if (managed.audio !== null) {
+      const rem = managed.pendingDurationRemainingMs;
+      managed.pendingDurationRemainingMs = null;
+
+      if (rem !== null && rem > 0) {
+        managed.durationFiresAtEpochMs = Date.now() + rem;
+        managed.durationTimerId = setTimeout(() => {
+          managed.durationTimerId        = null;
+          managed.durationFiresAtEpochMs = null;
+          stopLayer(managed.soundId);
+        }, rem);
+      }
+
+      managed.audio.play().catch((error) => _logPlayFailure(managed.layer, error));
+    } else {
+      const remStart = managed.pendingStartRemainingMs;
+      managed.pendingStartRemainingMs = null;
+
+      if (remStart !== null && remStart > 0) {
+        managed.startFiresAtEpochMs = Date.now() + remStart;
+        managed.startTimerId = setTimeout(() => {
+          managed.startTimerId        = null;
+          managed.startFiresAtEpochMs = null;
+          if (!_sessionPaused) {
+            _createAndPlay(managed.layer, managed);
+          }
+        }, remStart);
+      } else if (remStart !== null && remStart <= 0) {
+        if (!_sessionPaused) {
+          _createAndPlay(managed.layer, managed);
+        }
+      }
+    }
+  }
+}
+
 function stopAll(): void {
-  // Copy keys before iterating — stopLayer mutates the map
-  for (const soundId of [..._layers.keys()]) {
+  _sessionPaused = false;
+  const ids = [..._layers.keys()];
+  if (!ids.length) return;
+  for (const soundId of ids) {
     stopLayer(soundId);
   }
 }
 
-/** True if at least one layer is active or pending. */
 function hasActiveLayers(): boolean {
   return _layers.size > 0;
 }
 
+function isSessionPaused(): boolean {
+  return _sessionPaused;
+}
+
 export const audioPlayerService = {
-  playLayer,
-  stopLayer,
+  playPlan,
+  restartPlan,
+  pauseAll,
+  resumeAll,
   stopAll,
+  stopLayer,
   hasActiveLayers,
+  isSessionPaused,
 };

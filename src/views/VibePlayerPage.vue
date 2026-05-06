@@ -8,12 +8,29 @@
 
         <!-- ── Header ───────────────────────────────── -->
         <div class="player-header">
-          <button class="player-icon-btn" aria-label="Back" @click="handleBack">
+          <button type="button" class="player-icon-btn" aria-label="Back" @click="handleBack">
             <ion-icon :icon="chevronBackOutline" />
           </button>
-          <button class="player-icon-btn" aria-label="Options" @click="() => {}">
+          <button
+            type="button"
+            class="player-icon-btn"
+            :id="menuTriggerId"
+            aria-label="Options"
+          >
             <ion-icon :icon="ellipsisVertical" />
           </button>
+          <ion-popover :trigger="menuTriggerId" dismiss-on-select="true">
+            <ion-content class="player-menu-ion-content">
+              <ion-list lines="full">
+                <ion-item button :detail="false" lines="full" @click="handleRestartVibe">
+                  Restart vibe
+                </ion-item>
+                <ion-item button :detail="false" lines="none" @click="handleStopVibe">
+                  Stop vibe
+                </ion-item>
+              </ion-list>
+            </ion-content>
+          </ion-popover>
         </div>
 
         <!-- ── Center: Play / Pause ──────────────────── -->
@@ -27,11 +44,11 @@
             class="player-control-btn"
             :class="{ 'player-control-btn--disabled': !hasLoopSounds }"
             :disabled="!hasLoopSounds"
-            :aria-label="isPlaying ? 'Pause' : 'Play'"
+            :aria-label="centerAriaLabel"
             @click="togglePlayback"
           >
             <ion-icon
-              :icon="isPlaying ? pauseOutline : playOutline"
+              :icon="centerIcon"
               class="player-control-icon"
             />
           </button>
@@ -49,7 +66,10 @@
           <p class="player-sounds-text">{{ soundsSummary }}</p>
 
           <div class="player-status-row">
-            <span class="player-status-dot" :class="{ 'player-status-dot--active': isPlaying }" />
+            <span
+              class="player-status-dot"
+              :class="{ 'player-status-dot--active': playbackState === 'playing' }"
+            />
             <span class="player-status-text">{{ statusText }}</span>
           </div>
         </div>
@@ -60,7 +80,15 @@
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonIcon, IonPage, IonSpinner } from '@ionic/vue';
+import {
+  IonContent,
+  IonIcon,
+  IonItem,
+  IonList,
+  IonPage,
+  IonPopover,
+  IonSpinner,
+} from '@ionic/vue';
 import {
   chevronBackOutline,
   ellipsisVertical,
@@ -86,7 +114,20 @@ const vibeId = computed(() => Number(route.params.id));
 const { vibes, selectedVibe, fetchVibe } = useVibes();
 const { vibeSounds, fetchVibeSounds }    = useVibeSounds();
 const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
-const { isPlaying, playPlan, stopAll }        = useAudioPlayer();
+const {
+  playbackState,
+  elapsedSeconds,
+  playPlan,
+  pauseAll,
+  resumeAll,
+  stopAll,
+  restartPlan,
+  beginSessionClock,
+  pauseElapsedTicker,
+  resumeElapsedTicker,
+} = useAudioPlayer();
+
+const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
 const loading = ref(false);
 
@@ -129,10 +170,7 @@ const soundsSummary = computed((): string => {
   return `${count} sounds • ${shown} +${remaining}`;
 });
 
-// ── Session timer ─────────────────────────────────────────────────────────────
-
-const elapsedSeconds = ref(0);
-let timerRef: ReturnType<typeof setInterval> | null = null;
+// ── Session timer display ─────────────────────────────────────────────────────
 
 function formatElapsed(s: number): string {
   if (s < 3600) {
@@ -145,36 +183,52 @@ function formatElapsed(s: number): string {
   return `${h}h ${String(m).padStart(2, '0')}m`;
 }
 
-const statusText = computed((): string =>
-  isPlaying.value ? `Playing • ${formatElapsed(elapsedSeconds.value)}` : 'Ready',
+const statusText = computed((): string => {
+  const t = formatElapsed(elapsedSeconds.value);
+  if (playbackState.value === 'playing') return `Playing • ${t}`;
+  if (playbackState.value === 'paused') return `Paused • ${t}`;
+  return 'Ready';
+});
+
+const centerIcon = computed(() =>
+  playbackState.value === 'playing' ? pauseOutline : playOutline,
 );
 
-function startTimer(): void {
-  elapsedSeconds.value = 0;
-  timerRef = setInterval(() => { elapsedSeconds.value++; }, 1000);
-}
-
-function clearTimer(): void {
-  if (timerRef) { clearInterval(timerRef); timerRef = null; }
-}
-
-// ── Playback control ──────────────────────────────────────────────────────────
+const centerAriaLabel = computed((): string => {
+  if (playbackState.value === 'playing') return 'Pause';
+  if (playbackState.value === 'paused') return 'Resume';
+  return 'Play';
+});
 
 function togglePlayback(): void {
-  if (isPlaying.value) {
-    stopAll();
-    clearTimer();
-  } else {
+  if (!hasLoopSounds.value) return;
+
+  if (playbackState.value === 'idle') {
     playPlan(loopLayers.value);
-    startTimer();
+    beginSessionClock();
+  } else if (playbackState.value === 'playing') {
+    pauseAll();
+    pauseElapsedTicker();
+  } else {
+    resumeAll();
+    resumeElapsedTicker();
   }
+}
+
+function handleRestartVibe(): void {
+  if (!hasLoopSounds.value) return;
+  restartPlan(loopLayers.value);
+  beginSessionClock();
+}
+
+function handleStopVibe(): void {
+  stopAll();
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 function handleBack(): void {
   stopAll();
-  clearTimer();
   router.back();
 }
 
@@ -207,7 +261,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopAll();
-  clearTimer();
   clearPlan();
 });
 </script>
@@ -383,10 +436,7 @@ onUnmounted(() => {
   box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
 }
 
-.player-status-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
-  letter-spacing: 0.1px;
+.player-menu-ion-content {
+  --padding-top: 0;
+  --padding-bottom: 0;
 }
-</style>

@@ -1,55 +1,112 @@
 /**
  * useAudioPlayer — Phase 1
  *
- * Thin reactive wrapper around audioPlayerService.
- * Owns only: isPlaying reactive ref.
- * All timer and audio-element management lives in audio-player.service.ts.
- *
- * Phase 1 scope: loop layers only.
- * Intentionally ignores: interval, once, fade in/out, background audio.
+ * Reactive playback state + session timer helpers around audioPlayerService.
  */
 
 import { ref } from 'vue';
-import { audioPlayerService } from '@/services/audio-player.service';
+import {
+  audioPlayerService,
+  setSessionEndedCallback,
+} from '@/services/audio-player.service';
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
 
-const isPlaying = ref(false);
+export type PlaybackState = 'idle' | 'playing' | 'paused';
 
-/**
- * Start playback for all loop layers in the execution plan.
- * Any previously managed audio and timers are stopped first.
- */
-function playPlan(layers: VibeExecutionLayer[]): void {
-  audioPlayerService.stopAll();
+const playbackState = ref<PlaybackState>('idle');
 
-  const loopLayers = layers.filter((l) => l.playMode === 'loop');
-  if (!loopLayers.length) return;
+/** Wall-clock session elapsed (1 Hz); paused freezes increments via clearInterval. */
+const elapsedSeconds = ref(0);
+let timerRef: ReturnType<typeof setInterval> | null = null;
 
-  loopLayers.forEach((layer) => audioPlayerService.playLayer(layer));
-
-  isPlaying.value = true;
+function syncFromService(): void {
+  if (!audioPlayerService.hasActiveLayers()) {
+    playbackState.value = 'idle';
+    return;
+  }
+  playbackState.value = audioPlayerService.isSessionPaused() ? 'paused' : 'playing';
 }
 
-/**
- * Stop a single layer (and its timers).
- * Updates isPlaying to false if no layers remain active.
- */
-function stopLayer(soundId: number): void {
-  audioPlayerService.stopLayer(soundId);
-
-  if (!audioPlayerService.hasActiveLayers()) {
-    isPlaying.value = false;
+function clearTimer(): void {
+  if (timerRef) {
+    clearInterval(timerRef);
+    timerRef = null;
   }
 }
 
-/**
- * Stop ALL active layers and timers.
- */
+/** Start / resume interval ticks without resetting elapsed. */
+function startElapsedTicker(): void {
+  clearTimer();
+  timerRef = setInterval(() => {
+    elapsedSeconds.value++;
+  }, 1_000);
+}
+
+/** Freeze elapsed ticker — preserves elapsedSeconds. */
+function pauseElapsedTicker(): void {
+  clearTimer();
+}
+
+function resetElapsed(): void {
+  elapsedSeconds.value = 0;
+  clearTimer();
+}
+
+/** Fresh session: elapsed → 0 and ticker starts. */
+function beginSessionClock(): void {
+  elapsedSeconds.value = 0;
+  startElapsedTicker();
+}
+
+/** After pause: continue ticking from current elapsed. */
+function resumeElapsedTicker(): void {
+  startElapsedTicker();
+}
+
+// When every audio layer ends (duration expiry / teardown), snap UI to Ready.
+setSessionEndedCallback(() => {
+  playbackState.value = 'idle';
+  resetElapsed();
+});
+
+function playPlan(layers: VibeExecutionLayer[]): void {
+  audioPlayerService.playPlan(layers);
+  syncFromService();
+}
+
+function pauseAll(): void {
+  audioPlayerService.pauseAll();
+  syncFromService();
+}
+
+function resumeAll(): void {
+  audioPlayerService.resumeAll();
+  syncFromService();
+}
+
 function stopAll(): void {
   audioPlayerService.stopAll();
-  isPlaying.value = false;
+  playbackState.value = 'idle';
+  resetElapsed();
+}
+
+function restartPlan(layers: VibeExecutionLayer[]): void {
+  audioPlayerService.restartPlan(layers);
+  syncFromService();
 }
 
 export function useAudioPlayer() {
-  return { isPlaying, playPlan, stopLayer, stopAll };
+  return {
+    playbackState,
+    elapsedSeconds,
+    playPlan,
+    pauseAll,
+    resumeAll,
+    stopAll,
+    restartPlan,
+    beginSessionClock,
+    pauseElapsedTicker,
+    resumeElapsedTicker,
+    resetElapsed,
+  };
 }
