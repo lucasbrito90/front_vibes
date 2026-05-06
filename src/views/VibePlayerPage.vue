@@ -150,6 +150,7 @@ const {
   beginSessionClock,
   pauseElapsedTicker,
   resumeElapsedTicker,
+  setCurrentVibe,
 } = useAudioPlayer();
 
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
@@ -280,6 +281,14 @@ async function togglePlayback(): Promise<void> {
       await showPlaybackToast('Some sounds could not be played');
     }
 
+    // Publish context so the MiniPlayer can display this vibe when user navigates away.
+    const soundCount = vibeSounds.value.length;
+    setCurrentVibe(
+      vibeId.value,
+      vibe.value?.name ?? '',
+      `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+    );
+
     beginSessionClock();
   } else if (playbackState.value === 'playing') {
     pauseAll();
@@ -318,6 +327,14 @@ async function handleRestartVibe(): Promise<void> {
     await showPlaybackToast('Some sounds could not be played');
   }
 
+  // Keep vibe context current after restart.
+  const soundCount = vibeSounds.value.length;
+  setCurrentVibe(
+    vibeId.value,
+    vibe.value?.name ?? '',
+    `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+  );
+
   beginSessionClock();
 }
 
@@ -328,7 +345,8 @@ function handleStopVibe(): void {
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 function handleBack(): void {
-  stopAll();
+  // Do NOT stop playback — the MiniPlayer keeps the session alive while the
+  // user browses other screens. Explicit stop is only via handleStopVibe().
   router.back();
 }
 
@@ -360,7 +378,9 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  stopAll();
+  // Do NOT call stopAll() — audio must persist for the MiniPlayer after
+  // navigating away. The execution plan can be cleared safely because it
+  // will be rebuilt via buildPlan() if the user returns to this page.
   clearPlan();
 });
 </script>
