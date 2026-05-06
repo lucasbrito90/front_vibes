@@ -440,3 +440,11 @@ onUnmounted(() => {
   --padding-top: 0;
   --padding-bottom: 0;
 }
+
+.player-status-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.1px;
+}
+</style>
