@@ -50,10 +50,11 @@ import {
   stopCircleOutline,
 } from 'ionicons/icons';
 import { computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useAudioPlayer } from '@/composables/useAudioPlayer';
 
+const route  = useRoute();
 const router = useRouter();
 
 const {
@@ -72,7 +73,9 @@ const {
 
 const isVisible = computed(
   () =>
-    currentVibeId.value !== null
+    // Hidden on routes that define hideMiniPlayer: true (e.g. sounds, player).
+    !route.meta.hideMiniPlayer
+    && currentVibeId.value !== null
     && (playbackState.value === 'playing' || playbackState.value === 'paused'),
 );
 
@@ -133,12 +136,13 @@ function navigateToPlayer(): void {
   left: 0;
   right: 0;
   /*
-   * Positioned immediately above the tab bar.
-   * Uses Ionic's --ion-safe-area-bottom (set by Capacitor/Cordova on device)
-   * with env() as fallback so it stays flush on both browser and native.
+   * Sits directly above the tab bar.
+   * --app-tab-bar-height (56px) is injected by TabsLayout so this value is
+   * always in sync with the actual tab bar height. env(safe-area-inset-bottom)
+   * accounts for the home-indicator area on notched devices.
    * Height 62px must match MINI_PLAYER_HEIGHT in TabsLayout.vue.
    */
-  bottom: calc(56px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  bottom: calc(var(--app-tab-bar-height, 56px) + env(safe-area-inset-bottom, 0px));
   z-index: 200;
   height: 62px;
 
@@ -149,7 +153,7 @@ function navigateToPlayer(): void {
 
   background: var(--app-color-bg, #ffffff);
   border-top: 1px solid var(--app-color-border, #cbd5e1);
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+  /* No box-shadow — keeps the bar visually attached to the tab bar. */
 
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;

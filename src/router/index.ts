@@ -3,6 +3,20 @@ import { RouteRecordRaw } from 'vue-router';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/services/firebase';
 
+// Extend Vue Router's RouteMeta so custom flags are type-safe everywhere.
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean;
+    publicOnly?: boolean;
+    /**
+     * When true, the global Mini Player bar is hidden on this route
+     * even if audio is still playing. Used for pages that have their own
+     * full-screen or fixed-bottom UI that would clash with the mini player.
+     */
+    hideMiniPlayer?: boolean;
+  }
+}
+
 const routes: Array<RouteRecordRaw> = [
   // ── Public-only routes (no tab bar) ────────────────────────────────────────
   {
@@ -71,7 +85,7 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'vibes/:id/sounds',
         component: () => import('@/views/VibeSoundsPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, hideMiniPlayer: true },
       },
       {
         path: 'settings',

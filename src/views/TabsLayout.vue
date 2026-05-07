@@ -49,46 +49,45 @@ import {
 } from '@ionic/vue';
 import { homeOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 
 import MiniPlayer from '@/components/MiniPlayer.vue';
 import { useAudioPlayer } from '@/composables/useAudioPlayer';
 
+const route = useRoute();
 const { playbackState } = useAudioPlayer();
 
-/** Height of the mini player bar injected as a CSS custom property so that
- *  child ion-content elements can offset their bottom padding. */
-/** Height of the mini player bar. Must match the `height` in MiniPlayer.vue. */
+/** Must match the `height` in MiniPlayer.vue. */
 const MINI_PLAYER_HEIGHT = 62; // px
-
-/** Height of the tab bar visible content (without safe area). */
-const TAB_BAR_HEIGHT = 56; // px
+const TAB_BAR_HEIGHT     = 56; // px
 
 /**
- * CSS variables injected on the root ion-page so any descendant can access:
+ * CSS variables cascaded from the root ion-page to all descendants:
  *
- * --app-mini-player-height   62px when playing/paused, 0px when idle.
- *
- * --app-mini-player-bottom-offset
- *   Full offset from the viewport bottom to use as `bottom:` for any
- *   fixed element that must sit above both the tab bar AND the mini player.
- *   = tab-bar-height + safe-area-inset-bottom + mini-player-height
- *   When mini player is hidden this collapses to tab-bar + safe-area,
- *   so the element sits just above the tab bar.
+ * --app-tab-bar-height        Always 56px — lets MiniPlayer reference it.
+ * --app-mini-player-height    62px when mini player is actually visible,
+ *                             0px when idle OR when the route hides it.
+ *                             Used by the global --padding-bottom rule below
+ *                             so only routes that show the mini player get
+ *                             the extra scroll clearance.
  */
 const miniPlayerCssVar = computed(() => {
-  const h = playbackState.value !== 'idle' ? MINI_PLAYER_HEIGHT : 0;
+  const isHidden =
+    playbackState.value === 'idle' || !!route.meta.hideMiniPlayer;
+  const h = isHidden ? 0 : MINI_PLAYER_HEIGHT;
   return {
+    '--app-tab-bar-height':    `${TAB_BAR_HEIGHT}px`,
     '--app-mini-player-height': `${h}px`,
-    '--app-mini-player-bottom-offset':
-      `calc(${TAB_BAR_HEIGHT}px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px)) + ${h}px)`,
   };
 });
 </script>
 
 <!--
-  Global (non-scoped): offset ion-content bottom padding so scrollable pages
-  are not obscured by the mini player. The CSS custom property is set on the
-  ancestor ion-page by the computed style binding above and cascades down.
+  Global (non-scoped): add bottom scroll-clearance equal to the mini player
+  height. --app-mini-player-height is 0px when idle or when the route sets
+  hideMiniPlayer:true, so the extra padding only applies on routes where the
+  mini player is actually rendered. Ionic's own --offset-bottom already covers
+  the tab bar height (56px); this adds only the mini player height on top.
 -->
 <style>
 ion-content {
@@ -102,8 +101,14 @@ ion-content {
   --color: var(--app-color-text-muted, #94a3b8);
   --color-selected: var(--ion-color-primary, #1dac92);
   border-top: 1px solid var(--app-color-border, #cbd5e1);
+  /*
+   * height: 56px is the visual content height.
+   * Safe-area padding for the home indicator is handled internally by
+   * Ionic's ion-tab-bar shadow DOM (--ion-safe-area-bottom), so we do NOT
+   * add padding-bottom here to avoid double-counting that would push the
+   * mini player above the tab bar on notched devices.
+   */
   height: 56px;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .app-tab-btn {
