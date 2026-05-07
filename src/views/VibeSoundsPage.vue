@@ -615,26 +615,7 @@ async function handleSave(): Promise<void> {
   bottom: 0;
   left: 0;
   right: 0;
-  /*
-   * padding-bottom pushes the button content upward to clear both the tab bar
-   * and the mini player (when visible).
-   *
-   * Breakdown:
-   *   56px  — tab bar height (the bar background covers the tab bar area)
-   *   --app-mini-player-height — 62px when playing/paused, 0px when idle
-   *   --ion-safe-area-bottom  — device safe area (home indicator, etc.)
-   *   12px  — base bottom breathing room
-   *
-   * When mini player is hidden:  button sits just above the tab bar.
-   * When mini player is visible: button sits just above the mini player.
-   * The mini player (z-index 200) renders in front of this bar (z-index 100).
-   */
-  padding: 12px 20px calc(
-    56px
-    + var(--app-mini-player-height, 0px)
-    + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px))
-    + 12px
-  );
+  padding: 12px 20px calc(12px + var(--ion-safe-area-bottom, 0px));
   background: var(--app-color-bg, #fff);
   border-top: 1px solid var(--app-color-border, #e2e8f0);
   z-index: 100;
