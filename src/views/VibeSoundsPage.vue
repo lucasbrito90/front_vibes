@@ -612,13 +612,22 @@ async function handleSave(): Promise<void> {
 
 .sounds-save-bar {
   position: fixed;
-  bottom: 0;
+  /*
+   * --app-mini-player-bottom-offset is injected by TabsLayout:
+   *   calc(56px + safe-area + mini-player-height)
+   * When mini player is hidden this equals tab-bar + safe-area,
+   * placing the bar just above the tab bar.
+   * When mini player is visible this places the bar just above the mini player.
+   * Fallback: 56px (tab bar only) if the variable isn't in scope.
+   */
+  bottom: var(--app-mini-player-bottom-offset, 56px);
   left: 0;
   right: 0;
-  padding: 12px 20px calc(12px + var(--ion-safe-area-bottom, 0px));
+  padding: 12px 20px 12px;
   background: var(--app-color-bg, #fff);
   border-top: 1px solid var(--app-color-border, #e2e8f0);
-  z-index: 100;
+  /* Must be above the mini player (z-index 200). */
+  z-index: 300;
 }
 
 .sounds-save-btn {

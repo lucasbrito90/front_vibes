@@ -133,24 +133,23 @@ function navigateToPlayer(): void {
   left: 0;
   right: 0;
   /*
-   * Sits directly above the 56px tab bar.
-   * The tab bar itself adds env(safe-area-inset-bottom) internally,
-   * so this fixed position accounts for it.
+   * Positioned immediately above the tab bar.
+   * Uses Ionic's --ion-safe-area-bottom (set by Capacitor/Cordova on device)
+   * with env() as fallback so it stays flush on both browser and native.
+   * Height 62px must match MINI_PLAYER_HEIGHT in TabsLayout.vue.
    */
-  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(56px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
   z-index: 200;
+  height: 62px;
 
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 16px;
-  height: 62px;
 
-  background: rgba(15, 15, 22, 0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+  background: var(--app-color-bg, #ffffff);
+  border-top: 1px solid var(--app-color-border, #cbd5e1);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
 
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -169,7 +168,7 @@ function navigateToPlayer(): void {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: var(--app-color-text-primary, #121826);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,7 +180,7 @@ function navigateToPlayer(): void {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--app-color-text-secondary, #64748b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -190,28 +189,28 @@ function navigateToPlayer(): void {
 /* ── State dot ───────────────────────────────────────────── */
 .mini-player-dot {
   flex-shrink: 0;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--app-color-border, #cbd5e1);
   transition: background 0.3s;
 }
 
 .mini-player-dot--playing {
-  background: #4ade80;
-  box-shadow: 0 0 5px rgba(74, 222, 128, 0.65);
+  background: var(--ion-color-success, #64c086);
+  box-shadow: 0 0 5px rgba(100, 192, 134, 0.55);
 }
 
 .mini-player-dot--paused {
-  background: #fbbf24;
-  box-shadow: 0 0 5px rgba(251, 191, 36, 0.50);
+  background: var(--ion-color-warning, #facc15);
+  box-shadow: 0 0 4px rgba(250, 204, 21, 0.45);
 }
 
 /* ── Controls ────────────────────────────────────────────── */
 .mini-player-controls {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
@@ -219,30 +218,35 @@ function navigateToPlayer(): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.10);
-  color: #fff;
-  font-size: 20px;
+  font-size: 19px;
   cursor: pointer;
   padding: 0;
   transition: background 0.15s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
+
+  /* Play / pause — primary colour */
+  background: var(--ion-color-primary, #1dac92);
+  color: #ffffff;
 }
 
 .mini-player-btn:active {
   transform: scale(0.90);
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--ion-color-primary-shade, #1a987f);
 }
 
+/* Stop button — subtle danger surface */
 .mini-player-btn--stop {
-  color: rgba(255, 100, 100, 0.85);
+  background: rgba(247, 85, 85, 0.10);
+  color: var(--ion-color-danger, #f75555);
 }
 
 .mini-player-btn--stop:active {
-  background: rgba(255, 100, 100, 0.15);
+  background: rgba(247, 85, 85, 0.20);
+  transform: scale(0.90);
 }
 
 /* ── Slide-up / slide-down transition ───────────────────── */

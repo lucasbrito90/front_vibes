@@ -57,12 +57,32 @@ const { playbackState } = useAudioPlayer();
 
 /** Height of the mini player bar injected as a CSS custom property so that
  *  child ion-content elements can offset their bottom padding. */
-const MINI_PLAYER_HEIGHT = 62; // px — must match MiniPlayer.vue height
+/** Height of the mini player bar. Must match the `height` in MiniPlayer.vue. */
+const MINI_PLAYER_HEIGHT = 62; // px
 
-const miniPlayerCssVar = computed(() => ({
-  '--app-mini-player-height':
-    playbackState.value !== 'idle' ? `${MINI_PLAYER_HEIGHT}px` : '0px',
-}));
+/** Height of the tab bar visible content (without safe area). */
+const TAB_BAR_HEIGHT = 56; // px
+
+/**
+ * CSS variables injected on the root ion-page so any descendant can access:
+ *
+ * --app-mini-player-height   62px when playing/paused, 0px when idle.
+ *
+ * --app-mini-player-bottom-offset
+ *   Full offset from the viewport bottom to use as `bottom:` for any
+ *   fixed element that must sit above both the tab bar AND the mini player.
+ *   = tab-bar-height + safe-area-inset-bottom + mini-player-height
+ *   When mini player is hidden this collapses to tab-bar + safe-area,
+ *   so the element sits just above the tab bar.
+ */
+const miniPlayerCssVar = computed(() => {
+  const h = playbackState.value !== 'idle' ? MINI_PLAYER_HEIGHT : 0;
+  return {
+    '--app-mini-player-height': `${h}px`,
+    '--app-mini-player-bottom-offset':
+      `calc(${TAB_BAR_HEIGHT}px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px)) + ${h}px)`,
+  };
+});
 </script>
 
 <!--

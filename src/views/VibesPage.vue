@@ -326,8 +326,8 @@ async function handleDelete(id: number) {
   background: rgba(239, 68, 68, 0.42);
 }
 
-/* FAB offset from the tab bar */
+/* FAB keeps a 16px gap above the mini player (or above the tab bar when hidden). */
 .vibes-fab {
-  --bottom: 72px;
+  --bottom: calc(var(--app-mini-player-height, 0px) + 16px);
 }
 </style>
