@@ -87,7 +87,7 @@
               <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
 
               <span class="player-dev-state-key">hasActiveLayers</span>
-              <strong class="player-dev-state-val">{{ hasActiveLayers() }}</strong>
+              <strong class="player-dev-state-val">{{ hasActiveLayers }}</strong>
 
               <span class="player-dev-state-key">executionPlan</span>
               <strong class="player-dev-state-val">{{ executionPlan.length }} layers</strong>
@@ -193,7 +193,8 @@ import {
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { useAudioPlayer } from '@/composables/useAudioPlayer';
+import { storeToRefs } from 'pinia';
+import { usePlayerStore } from '@/stores/player.store';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
@@ -216,22 +217,14 @@ const vibeId = computed(() => Number(route.params.id));
 const { vibes, selectedVibe, fetchVibe } = useVibes();
 const { vibeSounds, fetchVibeSounds }    = useVibeSounds();
 const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
+
+const store = usePlayerStore();
 const {
   playbackState,
   elapsedSeconds,
-  playPlan,
-  pauseAll,
-  resumeAll,
-  stopAll,
-  restartPlan,
-  beginSessionClock,
-  pauseElapsedTicker,
-  resumeElapsedTicker,
-  setCurrentVibe,
-  clearCurrentVibe,
   hasActiveLayers,
   currentVibeId,
-} = useAudioPlayer();
+} = storeToRefs(store);
 
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
@@ -417,21 +410,20 @@ async function togglePlayback(): Promise<void> {
     const playableCount = playableLayers.value.length;
     const soundCount    = vibeSounds.value.length;
 
-    // Set vibe context BEFORE starting audio.
-    // This ensures the Mini Player and composable state are immediately
-    // correct and cannot be wiped by any internal callback race that occurs
-    // during playPlan() (e.g. stopAll() firing _sessionEndedCallback).
-    setCurrentVibe(
+    // Set vibe context BEFORE starting audio so the Mini Player is
+    // immediately visible on the next reactive flush, before native
+    // preload/loop completes asynchronously.
+    store.setCurrentVibe(
       vibeId.value,
       vibe.value?.name ?? '',
       `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
     );
 
-    const started = playPlan(executionPlan.value);
+    const started = store.playPlan(executionPlan.value);
 
     if (!started) {
       // All layers failed validation — revert vibe context.
-      clearCurrentVibe();
+      store.clearCurrentVibe();
       await showPlaybackToast(
         playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
       );
@@ -442,13 +434,11 @@ async function togglePlayback(): Promise<void> {
       await showPlaybackToast('Some sounds could not be played');
     }
 
-    beginSessionClock();
+    store.beginSessionClock();
   } else if (playbackState.value === 'playing') {
-    pauseAll();
-    pauseElapsedTicker();
+    store.pausePlayback();   // pauses audio + elapsed ticker
   } else {
-    resumeAll();
-    resumeElapsedTicker();
+    store.resumePlayback();  // resumes audio + elapsed ticker
   }
 }
 
@@ -469,17 +459,16 @@ async function handleRestartVibe(): Promise<void> {
   const playableCount = playableLayers.value.length;
   const soundCount    = vibeSounds.value.length;
 
-  // Set vibe context BEFORE restarting audio (same reason as togglePlayback).
-  setCurrentVibe(
+  store.setCurrentVibe(
     vibeId.value,
     vibe.value?.name ?? '',
     `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
   );
 
-  const started = restartPlan(executionPlan.value);
+  const started = store.restartPlayback(executionPlan.value);
 
   if (!started) {
-    clearCurrentVibe();
+    store.clearCurrentVibe();
     await showPlaybackToast(
       playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
     );
@@ -490,11 +479,11 @@ async function handleRestartVibe(): Promise<void> {
     await showPlaybackToast('Some sounds could not be played');
   }
 
-  beginSessionClock();
+  store.beginSessionClock();
 }
 
 function handleStopVibe(): void {
-  stopAll();
+  store.stopPlayback();
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────

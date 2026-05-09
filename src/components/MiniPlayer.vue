@@ -50,24 +50,21 @@ import {
   stopCircleOutline,
 } from 'ionicons/icons';
 import { computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 
-import { useAudioPlayer } from '@/composables/useAudioPlayer';
+import { usePlayerStore } from '@/stores/player.store';
 
 const route  = useRoute();
 const router = useRouter();
 
+const store = usePlayerStore();
 const {
   playbackState,
   currentVibeId,
   currentVibeName,
   currentSoundSummary,
-  pauseAll,
-  resumeAll,
-  stopAll,
-  pauseElapsedTicker,
-  resumeElapsedTicker,
-} = useAudioPlayer();
+} = storeToRefs(store);
 
 // ── Visibility ────────────────────────────────────────────────────────────────
 
@@ -109,16 +106,14 @@ const playPauseLabel = computed(() =>
 
 function handlePlayPause(): void {
   if (playbackState.value === 'playing') {
-    pauseAll();
-    pauseElapsedTicker();
+    store.pausePlayback();
   } else {
-    resumeAll();
-    resumeElapsedTicker();
+    store.resumePlayback();
   }
 }
 
 function handleStop(): void {
-  stopAll();
+  store.stopPlayback();
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
