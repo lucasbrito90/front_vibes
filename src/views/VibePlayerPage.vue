@@ -79,6 +79,7 @@
               <span class="player-dev-badge player-dev-badge--state">STATE</span>
               <span class="player-dev-title">Player State</span>
             </div>
+            <p class="player-dev-state-hint">Main player only — use the central ▶ button to test MiniPlayer.</p>
             <div class="player-dev-state-grid">
               <span class="player-dev-state-key">platform</span>
               <strong class="player-dev-state-val">{{ _isNativePlatform ? '📱 native' : '🌐 web' }}</strong>
@@ -103,12 +104,36 @@
             </div>
           </div>
 
-          <!-- DEV: Native Audio POC — single loop layer test -->
+          <!-- DEV: Execution Plan (keep visible for debugging) -->
+          <div v-if="!loading" class="player-dev-panel">
+            <div class="player-dev-panel-header">
+              <span class="player-dev-badge">DEV</span>
+              <span class="player-dev-title">DEV Execution Plan</span>
+              <span class="player-dev-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
+            </div>
+            <div v-if="!executionPlan.length" class="player-dev-empty">No layers (build plan after load).</div>
+            <div v-for="layer in executionPlan" :key="layer.soundId" class="player-dev-layer">
+              <p class="player-dev-layer-summary">{{ layer.humanReadableSummary }}</p>
+              <div class="player-dev-layer-meta">
+                <span>start: {{ layer.startsAtSeconds }}s</span>
+                <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
+                <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
+                <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
+                <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
+                <span :class="{ 'player-dev-unplayable': !isExecutionLayerPlayable(layer) }">
+                  {{ isExecutionLayerPlayable(layer) ? 'playable' : 'skipped (invalid URL or interval)' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- DEV: Native Audio POC — isolated test (does NOT affect real player state) -->
           <div v-if="!loading && pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
             <div class="player-dev-panel-header">
-              <span class="player-dev-badge player-dev-badge--poc">DEV</span>
-              <span class="player-dev-title">Native Audio POC</span>
+              <span class="player-dev-badge player-dev-badge--poc">POC</span>
+              <span class="player-dev-title">Native Audio POC — isolated test</span>
             </div>
+            <p class="player-dev-poc-warning">⚠ This does NOT control the real player or MiniPlayer.</p>
             <p class="player-dev-layer-summary">
               {{ pocLoopLayer.soundName }} — vol {{ pocLoopLayer.volume }}/100
             </p>
@@ -144,33 +169,11 @@
 
           <div v-else-if="!loading && !pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
             <div class="player-dev-panel-header">
-              <span class="player-dev-badge player-dev-badge--poc">DEV</span>
-              <span class="player-dev-title">Native Audio POC</span>
+              <span class="player-dev-badge player-dev-badge--poc">POC</span>
+              <span class="player-dev-title">Native Audio POC — isolated test</span>
             </div>
+            <p class="player-dev-poc-warning">⚠ This does NOT control the real player or MiniPlayer.</p>
             <p class="player-dev-empty">No loop layer available in execution plan.</p>
-          </div>
-
-          <!-- DEV: Execution Plan (keep visible for debugging) -->
-          <div v-if="!loading" class="player-dev-panel">
-            <div class="player-dev-panel-header">
-              <span class="player-dev-badge">DEV</span>
-              <span class="player-dev-title">DEV Execution Plan</span>
-              <span class="player-dev-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
-            </div>
-            <div v-if="!executionPlan.length" class="player-dev-empty">No layers (build plan after load).</div>
-            <div v-for="layer in executionPlan" :key="layer.soundId" class="player-dev-layer">
-              <p class="player-dev-layer-summary">{{ layer.humanReadableSummary }}</p>
-              <div class="player-dev-layer-meta">
-                <span>start: {{ layer.startsAtSeconds }}s</span>
-                <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
-                <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
-                <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
-                <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
-                <span :class="{ 'player-dev-unplayable': !isExecutionLayerPlayable(layer) }">
-                  {{ isExecutionLayerPlayable(layer) ? 'playable' : 'skipped (invalid URL or interval)' }}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -921,6 +924,21 @@ onUnmounted(() => {
 
 .player-dev-badge--state {
   background: #6366f1;
+}
+
+.player-dev-state-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: rgba(199, 210, 254, 0.7);
+  font-style: italic;
+}
+
+/* POC warning text */
+.player-dev-poc-warning {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(253, 186, 116, 0.95);
 }
 
 .player-dev-state-grid {
