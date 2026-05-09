@@ -1,37 +1,54 @@
 /**
- * audio-player.service.ts — Phase 3 (loop + once + interval + fades)
+ * audio-player.service.ts — Phase 4 (native loop + HTML once/interval + fades)
+ *
+ * ## Audio backend per play mode
+ * - loop:     @capgo/native-audio on native platforms (Android/iOS).
+ *             Falls back to HTMLAudioElement on web (ionic serve).
+ * - once:     HTMLAudioElement (unchanged).
+ * - interval: HTMLAudioElement (unchanged).
+ *
+ * ## Native loop lifecycle
+ * - preload() + loop() on start. pause() / resume() / stop()+unload() for control.
+ * - All NativeAudio calls are fire-and-forget (async) to preserve the synchronous
+ *   public API. Errors are logged but do not crash the session.
+ * - If preload or loop fails, the layer falls back to HTMLAudioElement.
  *
  * ## Pause vs Stop
- * - pauseAll: pauses audio, clears timeouts and fade RAF, stores remaining ms for resume.
- *   Does NOT reset currentTime or clear src on pause.
- * - stopLayer/stopAll: hard teardown — timers cleared, fades cancelled, currentTime = 0, src cleared.
+ * - pauseAll: pauses audio (native + HTML), clears timeouts and fade RAF, stores
+ *   remaining ms for resume. Does NOT reset currentTime or clear src on pause.
+ * - stopLayer/stopAll: hard teardown — timers cleared, fades cancelled, native
+ *   stop+unload (or HTML currentTime=0/src='').
  *
  * ## Fade + pause/resume (Phase 3 — intentional simplicity)
- * - Active fade-in or fade-out RAF chains are cancelled on pause; playback resumes at whatever
- *   volume the element already has (frozen). We do not reconstruct the fade envelope.
- * - Remaining layer wall-clock lifetime is stored in pendingDurationRemainingMs; on resume a
- *   single timeout calls stopLayer — fade-out is not re-scheduled after pause (no sample-perfect
- *   fade resume).
- *
- * ## Interval mode — fades
- * - Each tick runs fade-in when fadeInSeconds > 0.
- * - Per-tick fade-out is not implemented (short clips); layer-level duration still uses fade-out
- *   when stopping the whole layer while audio is playing.
+ * - Active fade-in or fade-out RAF chains are cancelled on pause; playback resumes at
+ *   whatever volume the element already has (frozen). Fade envelope is not reconstructed.
+ * - Fade in/out for native loop layers is NOT yet implemented (Phase 4 scope limit).
  *
  * ## Interval mode — other limitations
- * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended` never fires,
- *   the chain stalls.
+ * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended`
+ *   never fires the chain stalls.
  */
 
+import { Capacitor } from '@capacitor/core';
+import { NativeAudio } from '@capgo/native-audio';
 import type { PlayMode } from './vibe-sound.service';
 import type { VibeExecutionLayer } from './player-engine.service';
 import { hasValidExecutionFileUrl } from './player-engine.service';
+
+/** True when running inside a native Capacitor app (Android / iOS). */
+const _isNativePlatform = Capacitor.isNativePlatform();
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
 interface ManagedLayer {
   soundId: number;
   layer: VibeExecutionLayer;
+
+  /**
+   * True when this layer is backed by @capgo/native-audio instead of HTMLAudioElement.
+   * Set synchronously in _startLoopAudio before the async native calls begin.
+   */
+  isNative: boolean;
 
   audio: HTMLAudioElement | null;
 
@@ -203,6 +220,96 @@ function _logPlayFailure(layer: VibeExecutionLayer, error: unknown): void {
   });
 }
 
+// ── Native audio helpers (@capgo/native-audio) ────────────────────────────────
+
+/** assetIds of layers successfully preloaded on the native side. */
+const _nativeLayers = new Set<string>();
+
+function _nativeAssetId(soundId: number): string {
+  return `vibe-layer-${soundId}`;
+}
+
+/**
+ * Converts 0–100 backend volume to the 0.1–1.0 range expected by NativeAudio.
+ * The plugin does not support true silence via volume; stopping is used instead.
+ */
+function _toNativeVolume(vol100: number): number {
+  return Math.max(0.1, Math.min(1, vol100 / 100));
+}
+
+function _logNativeFailure(fn: string, assetId: string, error: unknown): void {
+  console.warn(`[AudioPlayer] NativeAudio.${fn}(${assetId}) failed`, error);
+}
+
+/** Stops and unloads a native asset. Fire-and-forget safe. */
+async function _stopNativeAsset(assetId: string): Promise<void> {
+  if (!_nativeLayers.has(assetId)) return;
+  try { await NativeAudio.stop({ assetId }); } catch { /* already stopped */ }
+  try { await NativeAudio.unload({ assetId }); } catch { /* already unloaded */ }
+  _nativeLayers.delete(assetId);
+}
+
+/**
+ * Preloads and starts native looping for a layer.
+ * Falls back to HTMLAudioElement if any native step fails.
+ */
+async function _startLoopAudioNative(
+  layer: VibeExecutionLayer,
+  managed: ManagedLayer,
+): Promise<void> {
+  const assetId = _nativeAssetId(layer.soundId);
+
+  // Unload stale asset from a previous play (e.g. restart)
+  if (_nativeLayers.has(assetId)) {
+    await _stopNativeAsset(assetId);
+  }
+
+  // Guard: layer may have been stopped while we awaited above
+  if (!_layers.has(layer.soundId)) return;
+
+  try {
+    await NativeAudio.preload({
+      assetId,
+      assetPath: layer.fileUrl,
+      isUrl: true,
+      volume: _toNativeVolume(layer.volume),
+      audioChannelNum: 1,
+    });
+    _nativeLayers.add(assetId);
+  } catch (err) {
+    _logNativeFailure('preload', assetId, err);
+    if (_layers.has(layer.soundId)) {
+      // Preload failed — fall back to HTMLAudioElement for this layer
+      managed.isNative = false;
+      _startLoopAudioHtml(layer, managed);
+    }
+    return;
+  }
+
+  if (!_layers.has(layer.soundId)) {
+    // Layer was stopped while preloading — clean up the native asset
+    void _stopNativeAsset(assetId);
+    return;
+  }
+
+  try {
+    await NativeAudio.loop({ assetId });
+    // Race-condition guard: if the session was paused while we were preloading,
+    // immediately pause the native player so state stays consistent.
+    if (_sessionPaused && _nativeLayers.has(assetId)) {
+      void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race)', assetId, e));
+    }
+  } catch (err) {
+    _logNativeFailure('loop', assetId, err);
+    _nativeLayers.delete(assetId);
+    if (_layers.has(layer.soundId)) {
+      // loop() failed — fall back to HTMLAudioElement
+      managed.isNative = false;
+      _startLoopAudioHtml(layer, managed);
+    }
+  }
+}
+
 function _clearStartTimer(managed: ManagedLayer): void {
   if (managed.startTimerId !== null) {
     clearTimeout(managed.startTimerId);
@@ -308,7 +415,12 @@ function _beginLayerAfterDelay(layer: VibeExecutionLayer, managed: ManagedLayer)
   }
 }
 
-function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+/**
+ * HTMLAudioElement loop implementation — used as fallback on web and when
+ * native preload/loop fails.
+ * Fade in/out is fully supported here (Phase 3).
+ */
+function _startLoopAudioHtml(layer: VibeExecutionLayer, managed: ManagedLayer): void {
   const audio = new Audio(layer.fileUrl);
   audio.loop = true;
   const target = _clampVolume(layer.volume);
@@ -321,6 +433,22 @@ function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
   } else {
     audio.volume = target;
     audio.play().catch((error) => _logPlayFailure(layer, error));
+  }
+}
+
+/**
+ * Starts loop playback. On native platforms uses @capgo/native-audio;
+ * on web falls back to HTMLAudioElement. Also falls back to HTML if any
+ * native step fails.
+ *
+ * NOTE: fade in/out is not yet implemented for native loop layers.
+ */
+function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  if (_isNativePlatform) {
+    managed.isNative = true;
+    void _startLoopAudioNative(layer, managed);
+  } else {
+    _startLoopAudioHtml(layer, managed);
   }
 }
 
@@ -469,6 +597,7 @@ function playLayer(layer: VibeExecutionLayer): void {
   const managed: ManagedLayer = {
     soundId:                      layer.soundId,
     layer,
+    isNative:                     false,
     audio:                        null,
     startTimerId:                 null,
     durationTimerId:              null,
@@ -519,20 +648,25 @@ function stopLayer(soundId: number): void {
   managed.pendingDurationRemainingMs = null;
   managed.pendingIntervalRemainingMs = null;
 
-  const audio = managed.audio;
+  if (managed.isNative) {
+    // Fire-and-forget: stop + unload the native asset asynchronously
+    void _stopNativeAsset(_nativeAssetId(soundId));
+  } else {
+    const audio = managed.audio;
 
-  if (managed.onceEndedHandler && audio) {
-    audio.removeEventListener('ended', managed.onceEndedHandler);
-    managed.onceEndedHandler = null;
-  }
+    if (managed.onceEndedHandler && audio) {
+      audio.removeEventListener('ended', managed.onceEndedHandler);
+      managed.onceEndedHandler = null;
+    }
 
-  _detachIntervalTickListeners(managed);
+    _detachIntervalTickListeners(managed);
 
-  if (audio) {
-    audio.pause();
-    audio.currentTime = 0;
-    audio.src = '';
-    managed.audio = null;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+      managed.audio = null;
+    }
   }
 
   _layers.delete(soundId);
@@ -618,7 +752,12 @@ function pauseAll(): void {
       }
     }
 
-    if (managed.audio !== null) {
+    if (managed.isNative) {
+      const assetId = _nativeAssetId(managed.soundId);
+      if (_nativeLayers.has(assetId)) {
+        void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause', assetId, e));
+      }
+    } else if (managed.audio !== null) {
       managed.audio.pause();
     }
   }
@@ -672,7 +811,19 @@ function resumeAll(): void {
       continue;
     }
 
-    // ── Active audio (loop / once / interval mid-tick) ─────────
+    // ── Active native loop ────────────────────────────────────
+    if (managed.isNative) {
+      _resumeLayerDurationAfterPause(managed, layer);
+      if (!_layers.has(layer.soundId)) continue;
+
+      const assetId = _nativeAssetId(layer.soundId);
+      if (_nativeLayers.has(assetId)) {
+        void NativeAudio.resume({ assetId }).catch((e) => _logNativeFailure('resume', assetId, e));
+      }
+      continue;
+    }
+
+    // ── Active audio (HTML: once / interval mid-tick / loop fallback) ──────
     if (managed.audio !== null) {
       _resumeLayerDurationAfterPause(managed, layer);
       if (!_layers.has(layer.soundId)) continue;
