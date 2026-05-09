@@ -398,8 +398,27 @@ function _scheduleLayerLifetime(layer: VibeExecutionLayer, managed: ManagedLayer
 
     const audio = managed.audio;
     if (!audio) {
-      managed.layerAbsoluteStopEpochMs = null;
-      stopLayer(layer.soundId);
+      /*
+       * No HTMLAudioElement — this is a native loop layer.
+       *
+       * Fade-out is not yet implemented for native audio.
+       * We must NOT stop immediately: the outer timer fired at
+       * (durMs - fadeOutMs), so we still owe the layer another fadeOutMs
+       * before the configured durationSeconds has truly elapsed.
+       * Schedule the remaining stop so the total lifetime = durMs.
+       *
+       * Stopping at (durMs - fadeOutMs) was the original (broken) behaviour
+       * that caused native layers to be torn down far too early — in extreme
+       * cases (fadeOutSeconds >= durationSeconds → fadeStartDelayMs = 0) the
+       * layer was destroyed on the very next event-loop tick, before the UI
+       * could even render the 'playing' state, making the Mini Player
+       * invisible and playbackState flip back to 'idle' immediately.
+       */
+      managed.durationTimerId = setTimeout(() => {
+        managed.durationTimerId          = null;
+        managed.layerAbsoluteStopEpochMs = null;
+        if (_layers.has(layer.soundId)) stopLayer(layer.soundId);
+      }, fadeOutMs);
       return;
     }
 
@@ -877,6 +896,22 @@ function isSessionPaused(): boolean {
   return _sessionPaused;
 }
 
+/**
+ * Returns the number of layers that would pass playLayer() validation.
+ * Used by the store for optimistic state updates: if countValidLayers() > 0
+ * the store can set playbackState = 'playing' before the async native operations
+ * complete, ensuring the Mini Player appears on the first reactive flush.
+ */
+function countValidLayers(layers: VibeExecutionLayer[]): number {
+  return layers.filter((layer) => {
+    if (!hasValidExecutionFileUrl(layer.fileUrl)) return false;
+    if (layer.playMode === 'interval') {
+      return layer.repeatIntervalSeconds != null && layer.repeatIntervalSeconds >= 1;
+    }
+    return true;
+  }).length;
+}
+
 export const audioPlayerService = {
   playPlan,
   restartPlan,
@@ -886,4 +921,5 @@ export const audioPlayerService = {
   stopLayer,
   hasActiveLayers,
   isSessionPaused,
+  countValidLayers,
 };

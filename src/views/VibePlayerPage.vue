@@ -73,27 +73,33 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
-          <!-- DEV: Composable state — visible on device without ADB -->
+          <!-- DEV: Player state — visible on device without ADB -->
           <div v-if="!loading" class="player-dev-panel player-dev-panel--state">
             <div class="player-dev-panel-header">
               <span class="player-dev-badge player-dev-badge--state">STATE</span>
-              <span class="player-dev-title">Composable State</span>
+              <span class="player-dev-title">Player State</span>
             </div>
             <div class="player-dev-state-grid">
+              <span class="player-dev-state-key">platform</span>
+              <strong class="player-dev-state-val">{{ _isNativePlatform ? '📱 native' : '🌐 web' }}</strong>
+
               <span class="player-dev-state-key">playbackState</span>
               <strong class="player-dev-state-val" :class="`player-dev-state--${playbackState}`">{{ playbackState }}</strong>
 
               <span class="player-dev-state-key">currentVibeId</span>
               <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
 
-              <span class="player-dev-state-key">hasActiveLayers</span>
-              <strong class="player-dev-state-val">{{ hasActiveLayers }}</strong>
+              <span class="player-dev-state-key">store.hasActive</span>
+              <strong class="player-dev-state-val" :class="hasActiveLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ hasActiveLayers }}</strong>
 
-              <span class="player-dev-state-key">executionPlan</span>
-              <strong class="player-dev-state-val">{{ executionPlan.length }} layers</strong>
+              <span class="player-dev-state-key">svc.hasActive</span>
+              <strong class="player-dev-state-val" :class="diagServiceLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ diagServiceLayers }}</strong>
 
-              <span class="player-dev-state-key">playable</span>
-              <strong class="player-dev-state-val">{{ playableLayers.length }}</strong>
+              <span class="player-dev-state-key">lastPlayPlan</span>
+              <strong class="player-dev-state-val">{{ diagLastPlayResult === null ? '—' : diagLastPlayResult }}</strong>
+
+              <span class="player-dev-state-key">plan / playable</span>
+              <strong class="player-dev-state-val">{{ executionPlan.length }} / {{ playableLayers.length }}</strong>
             </div>
           </div>
 
@@ -192,6 +198,7 @@ import {
 } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { Capacitor } from '@capacitor/core';
 
 import { storeToRefs } from 'pinia';
 import { usePlayerStore } from '@/stores/player.store';
@@ -204,6 +211,7 @@ import {
   resumeLoopLayer,
   stopLoopLayer,
 } from '@/services/native-audio-poc.service';
+import { audioPlayerService } from '@/services/audio-player.service';
 import { isExecutionLayerPlayable } from '@/services/player-engine.service';
 
 // ── Route / Router ────────────────────────────────────────────────────────────
@@ -229,6 +237,19 @@ const {
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
 const loading = ref(false);
+
+// ── DEV diagnostics ───────────────────────────────────────────────────────────
+// These refs are updated on a 1 Hz tick so the STATE panel shows live values
+// from the audio service, which are not reactive on their own.
+
+const _isNativePlatform = Capacitor.isNativePlatform();
+
+/** Live value from audioPlayerService (polled, not reactive). */
+const diagServiceLayers = ref(false);
+/** Last value returned by store.playPlan(). */
+const diagLastPlayResult = ref<boolean | null>(null);
+
+let _diagTickId: ReturnType<typeof setInterval> | null = null;
 
 // Prefer the already-loaded vibe from the list; fall back to selectedVibe
 const vibe = computed(() =>
@@ -420,6 +441,8 @@ async function togglePlayback(): Promise<void> {
     );
 
     const started = store.playPlan(executionPlan.value);
+    diagLastPlayResult.value = started;
+    diagServiceLayers.value  = audioPlayerService.hasActiveLayers();
 
     if (!started) {
       // All layers failed validation — revert vibe context.
@@ -519,6 +542,12 @@ onMounted(async () => {
   ]);
   buildPlan(vibeSounds.value);
   loading.value = false;
+
+  // Poll service state at 1 Hz so the DEV STATE panel shows live values
+  // without ADB — non-reactive service state requires polling.
+  _diagTickId = setInterval(() => {
+    diagServiceLayers.value = audioPlayerService.hasActiveLayers();
+  }, 1_000);
 });
 
 onUnmounted(() => {
@@ -526,6 +555,11 @@ onUnmounted(() => {
   // navigating away. The execution plan can be cleared safely because it
   // will be rebuilt via buildPlan() if the user returns to this page.
   clearPlan();
+
+  if (_diagTickId !== null) {
+    clearInterval(_diagTickId);
+    _diagTickId = null;
+  }
 });
 </script>
 

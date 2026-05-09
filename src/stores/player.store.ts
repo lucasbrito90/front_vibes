@@ -106,16 +106,34 @@ export const usePlayerStore = defineStore('player', () => {
 
   /**
    * Start a new playback session from an execution plan.
-   * Returns true if at least one layer was registered successfully.
+   * Returns true if at least one layer passes validation.
    *
    * Callers must call setCurrentVibe() BEFORE this so the vibe context is
    * visible to the Mini Player from the very first reactive flush.
+   *
+   * ## Optimistic update
+   * State is set to 'playing' / hasActiveLayers = true BEFORE calling the
+   * audio service, based on the count of valid layers in the input. This is
+   * critical for native loop layers: preload + loop are async (fire-and-forget)
+   * so the service's hasActiveLayers() would still return true, but the
+   * _scheduleLayerLifetime timer (especially when fadeStartDelayMs = 0) can
+   * fire on the very next event-loop tick and destroy the layer before Vue
+   * has a chance to render the 'playing' state.
+   * By committing the state before the service runs, the first reactive flush
+   * always shows the correct state.
+   * If all layers fail validation inside the service, _sessionEndedCallback
+   * will fire synchronously and reset everything to 'idle' correctly.
    */
   function playPlan(layers: VibeExecutionLayer[]): boolean {
+    const valid = audioPlayerService.countValidLayers(layers);
+    if (valid === 0) return false;
+
+    // Optimistic update: commit playing state before starting the audio engine.
+    hasActiveLayers.value = true;
+    playbackState.value   = 'playing';
+
     audioPlayerService.playPlan(layers);
-    hasActiveLayers.value = audioPlayerService.hasActiveLayers();
-    playbackState.value   = hasActiveLayers.value ? 'playing' : 'idle';
-    return hasActiveLayers.value;
+    return true;
   }
 
   function pausePlayback(): void {
@@ -144,13 +162,17 @@ export const usePlayerStore = defineStore('player', () => {
 
   /**
    * Restart playback from the beginning without changing vibe context.
-   * Returns true if at least one layer was registered.
+   * Returns true if at least one layer passes validation.
    */
   function restartPlayback(layers: VibeExecutionLayer[]): boolean {
+    const valid = audioPlayerService.countValidLayers(layers);
+    if (valid === 0) return false;
+
+    hasActiveLayers.value = true;
+    playbackState.value   = 'playing';
+
     audioPlayerService.restartPlan(layers);
-    hasActiveLayers.value = audioPlayerService.hasActiveLayers();
-    playbackState.value   = hasActiveLayers.value ? 'playing' : 'idle';
-    return hasActiveLayers.value;
+    return true;
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
