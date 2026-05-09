@@ -82,6 +82,17 @@ const _layers = new Map<number, ManagedLayer>();
 
 let _sessionPaused = false;
 
+/**
+ * Set to true during playPlan()/restartPlan() to suppress the session-ended
+ * callback while the old layers are being torn down and new ones are being
+ * registered. Without this guard, the callback fires as soon as stopAll()
+ * clears the previous layers — before the new playLayer() calls have run —
+ * which causes clearCurrentVibe() to execute in the middle of a plan rebuild,
+ * leaving currentVibeId = null even though new layers are added a few
+ * milliseconds later. This prevents the Mini Player from appearing.
+ */
+let _playPlanInProgress = false;
+
 let _sessionEndedCallback: (() => void) | null = null;
 
 export function setSessionEndedCallback(cb: (() => void) | null): void {
@@ -103,9 +114,15 @@ export function setSessionEndedCallback(cb: (() => void) | null): void {
  *
  * The callback fires correctly in the normal stop path because stopAll()
  * explicitly sets _sessionPaused = false before calling stopLayer().
+ *
+ * Condition 3 (_playPlanInProgress): suppressed while playPlan() rebuilds the
+ * session. stopAll() is called at the start of playPlan() to tear down the
+ * previous plan; without this guard the callback fires between teardown and
+ * the new playLayer() registrations, causing clearCurrentVibe() to execute in
+ * the middle of a restart — which makes the Mini Player disappear.
  */
 function _notifySessionEndedIfEmpty(): void {
-  if (!_layers.size && !_sessionPaused) {
+  if (!_layers.size && !_sessionPaused && !_playPlanInProgress) {
     _sessionEndedCallback?.();
   }
 }
@@ -676,10 +693,20 @@ function stopLayer(soundId: number): void {
 // ── Session API ─────────────────────────────────────────────────────────────────
 
 function playPlan(layers: VibeExecutionLayer[]): void {
-  stopAll();
-  _sessionPaused = false;
-  for (const layer of layers) {
-    playLayer(layer);
+  // Suppress the session-ended callback while tearing down the previous plan
+  // and registering new layers. The callback is re-evaluated at the end so
+  // it fires correctly if ALL new layers fail validation (nothing in _layers).
+  _playPlanInProgress = true;
+  try {
+    stopAll();
+    _sessionPaused = false;
+    for (const layer of layers) {
+      playLayer(layer);
+    }
+  } finally {
+    _playPlanInProgress = false;
+    // Fire now if every layer was skipped due to validation errors.
+    _notifySessionEndedIfEmpty();
   }
 }
 

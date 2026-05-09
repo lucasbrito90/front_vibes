@@ -101,8 +101,17 @@ setSessionEndedCallback(() => {
 
 function playPlan(layers: VibeExecutionLayer[]): boolean {
   audioPlayerService.playPlan(layers);
-  syncFromService();
-  return audioPlayerService.hasActiveLayers();
+  const hasLayers = audioPlayerService.hasActiveLayers();
+  // Explicitly set playbackState here rather than relying solely on
+  // syncFromService, so that even if the session-ended callback fired
+  // during plan teardown and reset state to 'idle', we restore it
+  // correctly before returning to the caller (VibePlayerPage).
+  if (hasLayers) {
+    playbackState.value = audioPlayerService.isSessionPaused() ? 'paused' : 'playing';
+  } else {
+    playbackState.value = 'idle';
+  }
+  return hasLayers;
 }
 
 function pauseAll(): void {
@@ -124,8 +133,13 @@ function stopAll(): void {
 
 function restartPlan(layers: VibeExecutionLayer[]): boolean {
   audioPlayerService.restartPlan(layers);
-  syncFromService();
-  return audioPlayerService.hasActiveLayers();
+  const hasLayers = audioPlayerService.hasActiveLayers();
+  if (hasLayers) {
+    playbackState.value = audioPlayerService.isSessionPaused() ? 'paused' : 'playing';
+  } else {
+    playbackState.value = 'idle';
+  }
+  return hasLayers;
 }
 
 export function useAudioPlayer() {
