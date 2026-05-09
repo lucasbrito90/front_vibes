@@ -73,6 +73,30 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
+          <!-- DEV: Composable state — visible on device without ADB -->
+          <div v-if="!loading" class="player-dev-panel player-dev-panel--state">
+            <div class="player-dev-panel-header">
+              <span class="player-dev-badge player-dev-badge--state">STATE</span>
+              <span class="player-dev-title">Composable State</span>
+            </div>
+            <div class="player-dev-state-grid">
+              <span class="player-dev-state-key">playbackState</span>
+              <strong class="player-dev-state-val" :class="`player-dev-state--${playbackState}`">{{ playbackState }}</strong>
+
+              <span class="player-dev-state-key">currentVibeId</span>
+              <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
+
+              <span class="player-dev-state-key">hasActiveLayers</span>
+              <strong class="player-dev-state-val">{{ hasActiveLayers() }}</strong>
+
+              <span class="player-dev-state-key">executionPlan</span>
+              <strong class="player-dev-state-val">{{ executionPlan.length }} layers</strong>
+
+              <span class="player-dev-state-key">playable</span>
+              <strong class="player-dev-state-val">{{ playableLayers.length }}</strong>
+            </div>
+          </div>
+
           <!-- DEV: Native Audio POC — single loop layer test -->
           <div v-if="!loading && pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
             <div class="player-dev-panel-header">
@@ -204,6 +228,9 @@ const {
   pauseElapsedTicker,
   resumeElapsedTicker,
   setCurrentVibe,
+  clearCurrentVibe,
+  hasActiveLayers,
+  currentVibeId,
 } = useAudioPlayer();
 
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
@@ -386,11 +413,25 @@ async function togglePlayback(): Promise<void> {
   }
 
   if (playbackState.value === 'idle') {
-    const totalLayers     = executionPlan.value.length;
-    const playableCount   = playableLayers.value.length;
-    const started         = playPlan(executionPlan.value);
+    const totalLayers   = executionPlan.value.length;
+    const playableCount = playableLayers.value.length;
+    const soundCount    = vibeSounds.value.length;
+
+    // Set vibe context BEFORE starting audio.
+    // This ensures the Mini Player and composable state are immediately
+    // correct and cannot be wiped by any internal callback race that occurs
+    // during playPlan() (e.g. stopAll() firing _sessionEndedCallback).
+    setCurrentVibe(
+      vibeId.value,
+      vibe.value?.name ?? '',
+      `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+    );
+
+    const started = playPlan(executionPlan.value);
 
     if (!started) {
+      // All layers failed validation — revert vibe context.
+      clearCurrentVibe();
       await showPlaybackToast(
         playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
       );
@@ -400,14 +441,6 @@ async function togglePlayback(): Promise<void> {
     if (playableCount < totalLayers) {
       await showPlaybackToast('Some sounds could not be played');
     }
-
-    // Publish context so the MiniPlayer can display this vibe when user navigates away.
-    const soundCount = vibeSounds.value.length;
-    setCurrentVibe(
-      vibeId.value,
-      vibe.value?.name ?? '',
-      `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    );
 
     beginSessionClock();
   } else if (playbackState.value === 'playing') {
@@ -434,9 +467,19 @@ async function handleRestartVibe(): Promise<void> {
 
   const totalLayers   = executionPlan.value.length;
   const playableCount = playableLayers.value.length;
-  const started       = restartPlan(executionPlan.value);
+  const soundCount    = vibeSounds.value.length;
+
+  // Set vibe context BEFORE restarting audio (same reason as togglePlayback).
+  setCurrentVibe(
+    vibeId.value,
+    vibe.value?.name ?? '',
+    `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+  );
+
+  const started = restartPlan(executionPlan.value);
 
   if (!started) {
+    clearCurrentVibe();
     await showPlaybackToast(
       playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
     );
@@ -446,14 +489,6 @@ async function handleRestartVibe(): Promise<void> {
   if (playableCount < totalLayers) {
     await showPlaybackToast('Some sounds could not be played');
   }
-
-  // Keep vibe context current after restart.
-  const soundCount = vibeSounds.value.length;
-  setCurrentVibe(
-    vibeId.value,
-    vibe.value?.name ?? '',
-    `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-  );
 
   beginSessionClock();
 }
@@ -854,4 +889,36 @@ onUnmounted(() => {
   color: rgba(252, 165, 165, 0.95);
   border-color: rgba(248, 113, 113, 0.3);
 }
+
+/* ── DEV Composable State panel ───────────────────────── */
+.player-dev-panel--state {
+  border-color: rgba(99, 102, 241, 0.55);
+  max-height: none;
+}
+
+.player-dev-badge--state {
+  background: #6366f1;
+}
+
+.player-dev-state-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 5px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.player-dev-state-key {
+  color: rgba(199, 210, 254, 0.65);
+  white-space: nowrap;
+}
+
+.player-dev-state-val {
+  color: rgba(224, 231, 255, 0.9);
+}
+
+.player-dev-state--idle    { color: rgba(199, 210, 254, 0.5); }
+.player-dev-state--playing { color: #34d399; }
+.player-dev-state--paused  { color: #fbbf24; }
 </style>

@@ -142,6 +142,11 @@ function restartPlan(layers: VibeExecutionLayer[]): boolean {
   return hasLayers;
 }
 
+/** Pass-through for diagnostic use in DEV panels. */
+function hasActiveLayers(): boolean {
+  return audioPlayerService.hasActiveLayers();
+}
+
 export function useAudioPlayer() {
   return {
     // ── Playback state ──────────────────────────────────────
@@ -156,6 +161,7 @@ export function useAudioPlayer() {
     pauseElapsedTicker,
     resumeElapsedTicker,
     resetElapsed,
+    hasActiveLayers,
 
     // ── Vibe context for MiniPlayer ─────────────────────────
     currentVibeId,
