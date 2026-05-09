@@ -71,9 +71,24 @@ export function setSessionEndedCallback(cb: (() => void) | null): void {
   _sessionEndedCallback = cb;
 }
 
+/**
+ * Fires the session-ended callback only when ALL of the following are true:
+ *   1. No layers remain in the map.
+ *   2. The session is NOT currently paused.
+ *
+ * Condition 2 is critical for lifecycle awareness: when the app goes to
+ * background we call pauseAll() which keeps layers in the map but sets
+ * _sessionPaused = true. However, if an `ended` event that was already
+ * queued by the browser fires AFTER pauseAll() ran, stopLayer() will
+ * remove the last layer while _sessionPaused is still true. Without the
+ * guard, _sessionEndedCallback (which clears currentVibeId and sets
+ * playbackState → idle) would fire, making the mini player disappear.
+ *
+ * The callback fires correctly in the normal stop path because stopAll()
+ * explicitly sets _sessionPaused = false before calling stopLayer().
+ */
 function _notifySessionEndedIfEmpty(): void {
-  if (!_layers.size) {
-    _sessionPaused = false;
+  if (!_layers.size && !_sessionPaused) {
     _sessionEndedCallback?.();
   }
 }
@@ -317,6 +332,15 @@ function _startOnceAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
 
   const handler = (): void => {
     if (managed.onceEndedHandler !== handler) return;
+    /*
+     * Guard: if the session is paused, the `ended` event may have been
+     * enqueued in the browser event loop before pauseAll() ran (the clip
+     * was finishing exactly as the app went to background). Do NOT tear
+     * down the layer here — resumeAll() will handle it correctly later.
+     * Without this guard, stopLayer() would be called while _sessionPaused
+     * is true, and _notifySessionEndedIfEmpty would clear the vibe context.
+     */
+    if (_sessionPaused) return;
     managed.onceEndedHandler = null;
     audio.removeEventListener('ended', handler);
     stopLayer(layer.soundId);

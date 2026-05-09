@@ -73,6 +73,53 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
+          <!-- DEV: Native Audio POC — single loop layer test -->
+          <div v-if="!loading && pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
+            <div class="player-dev-panel-header">
+              <span class="player-dev-badge player-dev-badge--poc">DEV</span>
+              <span class="player-dev-title">Native Audio POC</span>
+            </div>
+            <p class="player-dev-layer-summary">
+              {{ pocLoopLayer.soundName }} — vol {{ pocLoopLayer.volume }}/100
+            </p>
+
+            <div class="player-dev-poc-controls">
+              <button class="player-dev-poc-btn" :disabled="pocBusy || pocState === 'playing'" @click="pocPlay">
+                ▶ Play
+              </button>
+              <button class="player-dev-poc-btn" :disabled="pocBusy || pocState !== 'playing'" @click="pocPause">
+                ⏸ Pause
+              </button>
+              <button class="player-dev-poc-btn" :disabled="pocBusy || pocState !== 'paused'" @click="pocResume">
+                ▶▶ Resume
+              </button>
+              <button class="player-dev-poc-btn player-dev-poc-btn--stop" :disabled="pocBusy || pocState === 'idle'" @click="pocStop">
+                ■ Stop
+              </button>
+            </div>
+
+            <!-- Status row -->
+            <div class="player-dev-poc-status">
+              <span class="player-dev-poc-state-label">state:</span>
+              <strong class="player-dev-poc-state-value" :class="`player-dev-poc-state--${pocState}`">
+                {{ pocBusy ? 'busy…' : pocState }}
+              </strong>
+            </div>
+
+            <!-- Last operation result (ok or error) -->
+            <div v-if="pocLastLog" class="player-dev-poc-log" :class="{ 'player-dev-poc-log--error': pocLastError }">
+              {{ pocLastLog }}
+            </div>
+          </div>
+
+          <div v-else-if="!loading && !pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
+            <div class="player-dev-panel-header">
+              <span class="player-dev-badge player-dev-badge--poc">DEV</span>
+              <span class="player-dev-title">Native Audio POC</span>
+            </div>
+            <p class="player-dev-empty">No loop layer available in execution plan.</p>
+          </div>
+
           <!-- DEV: Execution Plan (keep visible for debugging) -->
           <div v-if="!loading" class="player-dev-panel">
             <div class="player-dev-panel-header">
@@ -126,6 +173,12 @@ import { useAudioPlayer } from '@/composables/useAudioPlayer';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
+import {
+  playLoopLayer,
+  pauseLoopLayer,
+  resumeLoopLayer,
+  stopLoopLayer,
+} from '@/services/native-audio-poc.service';
 import { isExecutionLayerPlayable } from '@/services/player-engine.service';
 
 // ── Route / Router ────────────────────────────────────────────────────────────
@@ -241,6 +294,73 @@ const centerAriaLabel = computed((): string => {
   if (playbackState.value === 'paused') return 'Resume';
   return 'Play';
 });
+
+// ── DEV: Native Audio POC ─────────────────────────────────────────────────────
+
+/** First playable loop layer in the execution plan, or null if none exists. */
+const pocLoopLayer = computed(() =>
+  executionPlan.value.find(
+    (l) => l.playMode === 'loop' && isExecutionLayerPlayable(l),
+  ) ?? null,
+);
+
+type PocState = 'idle' | 'playing' | 'paused';
+const pocState   = ref<PocState>('idle');
+const pocBusy    = ref(false);
+const pocLastLog = ref<string | null>(null);
+const pocLastError = ref(false);
+
+function _pocLog(msg: string, isError = false): void {
+  pocLastLog.value   = msg;
+  pocLastError.value = isError;
+}
+
+async function _pocRun(
+  label: string,
+  fn: () => Promise<void>,
+  nextState: PocState,
+): Promise<void> {
+  if (pocBusy.value) return;
+  const layer = pocLoopLayer.value;
+  if (!layer) return;
+  pocBusy.value = true;
+  _pocLog(`${label}…`);
+  try {
+    await fn();
+    pocState.value = nextState;
+    _pocLog(`${label} OK`);
+  } catch (err) {
+    _pocLog(`${label} FAILED: ${String(err)}`, true);
+  } finally {
+    pocBusy.value = false;
+  }
+}
+
+async function pocPlay(): Promise<void> {
+  const layer = pocLoopLayer.value;
+  if (!layer) return;
+  await _pocRun('play', () => playLoopLayer(layer), 'playing');
+}
+
+async function pocPause(): Promise<void> {
+  const layer = pocLoopLayer.value;
+  if (!layer) return;
+  await _pocRun('pause', () => pauseLoopLayer(layer), 'paused');
+}
+
+async function pocResume(): Promise<void> {
+  const layer = pocLoopLayer.value;
+  if (!layer) return;
+  await _pocRun('resume', () => resumeLoopLayer(layer), 'playing');
+}
+
+async function pocStop(): Promise<void> {
+  const layer = pocLoopLayer.value;
+  if (!layer) return;
+  await _pocRun('stop', () => stopLoopLayer(layer), 'idle');
+}
+
+// ── Toast helper ──────────────────────────────────────────────────────────────
 
 async function showPlaybackToast(message: string): Promise<void> {
   const toast = await toastController.create({
@@ -650,5 +770,88 @@ onUnmounted(() => {
 .player-dev-unplayable {
   color: rgba(248, 113, 113, 0.95) !important;
   background: rgba(248, 113, 113, 0.12) !important;
+}
+
+/* ── Native Audio POC styles ──────────────────────────── */
+
+.player-dev-panel--poc {
+  border-color: rgba(99, 202, 183, 0.35);
+  background: rgba(16, 60, 55, 0.55);
+}
+
+.player-dev-badge--poc {
+  background: #0d9488;
+}
+
+.player-dev-poc-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.player-dev-poc-btn {
+  flex: 1 1 auto;
+  min-width: 72px;
+  padding: 8px 10px;
+  border: 1px solid rgba(99, 202, 183, 0.45);
+  border-radius: 8px;
+  background: rgba(13, 148, 136, 0.22);
+  color: rgba(153, 246, 228, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.player-dev-poc-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.player-dev-poc-btn--stop {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(220, 38, 38, 0.18);
+  color: rgba(252, 165, 165, 0.95);
+}
+
+.player-dev-poc-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.player-dev-poc-state-label {
+  color: rgba(153, 246, 228, 0.6);
+}
+
+.player-dev-poc-state-value {
+  font-size: 13px;
+}
+
+.player-dev-poc-state--idle    { color: rgba(153, 246, 228, 0.5); }
+.player-dev-poc-state--playing { color: #34d399; }
+.player-dev-poc-state--paused  { color: #fbbf24; }
+
+.player-dev-poc-log {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: monospace;
+  line-height: 1.5;
+  word-break: break-all;
+  background: rgba(13, 148, 136, 0.15);
+  color: rgba(153, 246, 228, 0.9);
+  border: 1px solid rgba(99, 202, 183, 0.2);
+}
+
+.player-dev-poc-log--error {
+  background: rgba(220, 38, 38, 0.15);
+  color: rgba(252, 165, 165, 0.95);
+  border-color: rgba(248, 113, 113, 0.3);
 }
 </style>
