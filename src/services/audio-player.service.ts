@@ -1,37 +1,57 @@
 /**
- * audio-player.service.ts — Phase 3 (loop + once + interval + fades)
+ * audio-player.service.ts — Phase 4 (native loop + HTML once/interval + fades)
+ *
+ * ## Audio backend per play mode
+ * - loop:     @capgo/native-audio on native platforms (Android/iOS).
+ *             Falls back to HTMLAudioElement on web (ionic serve).
+ * - once:     HTMLAudioElement (unchanged).
+ * - interval: HTMLAudioElement (unchanged).
+ *
+ * ## Native loop lifecycle
+ * - preload() + loop() on start. pause() / resume() / stop()+unload() for control.
+ * - All NativeAudio calls are fire-and-forget (async) to preserve the synchronous
+ *   public API. Errors are logged but do not crash the session.
+ * - If preload or loop fails, the layer falls back to HTMLAudioElement.
  *
  * ## Pause vs Stop
- * - pauseAll: pauses audio, clears timeouts and fade RAF, stores remaining ms for resume.
- *   Does NOT reset currentTime or clear src on pause.
- * - stopLayer/stopAll: hard teardown — timers cleared, fades cancelled, currentTime = 0, src cleared.
+ * - pauseAll: pauses audio (native + HTML), clears timeouts and fade RAF, stores
+ *   remaining ms for resume. Does NOT reset currentTime or clear src on pause.
+ * - stopLayer/stopAll: hard teardown — timers cleared, fades cancelled, native
+ *   stop+unload (or HTML currentTime=0/src='').
  *
  * ## Fade + pause/resume (Phase 3 — intentional simplicity)
- * - Active fade-in or fade-out RAF chains are cancelled on pause; playback resumes at whatever
- *   volume the element already has (frozen). We do not reconstruct the fade envelope.
- * - Remaining layer wall-clock lifetime is stored in pendingDurationRemainingMs; on resume a
- *   single timeout calls stopLayer — fade-out is not re-scheduled after pause (no sample-perfect
- *   fade resume).
- *
- * ## Interval mode — fades
- * - Each tick runs fade-in when fadeInSeconds > 0.
- * - Per-tick fade-out is not implemented (short clips); layer-level duration still uses fade-out
- *   when stopping the whole layer while audio is playing.
+ * - Active fade-in or fade-out RAF chains are cancelled on pause; playback resumes at
+ *   whatever volume the element already has (frozen). Fade envelope is not reconstructed.
+ * - Fade in/out for native loop layers is NOT yet implemented (Phase 4 scope limit).
  *
  * ## Interval mode — other limitations
- * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended` never fires,
- *   the chain stalls.
+ * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended`
+ *   never fires the chain stalls.
  */
 
+import { Capacitor } from '@capacitor/core';
+import { NativeAudio } from '@capgo/native-audio';
 import type { PlayMode } from './vibe-sound.service';
 import type { VibeExecutionLayer } from './player-engine.service';
 import { hasValidExecutionFileUrl } from './player-engine.service';
+import { createLogger } from '@/utils/player-debug';
+
+const log = createLogger('AudioService');
+
+/** True when running inside a native Capacitor app (Android / iOS). */
+const _isNativePlatform = Capacitor.isNativePlatform();
 
 // ── Internal state ────────────────────────────────────────────────────────────
 
 interface ManagedLayer {
   soundId: number;
   layer: VibeExecutionLayer;
+
+  /**
+   * True when this layer is backed by @capgo/native-audio instead of HTMLAudioElement.
+   * Set synchronously in _startLoopAudio before the async native calls begin.
+   */
+  isNative: boolean;
 
   audio: HTMLAudioElement | null;
 
@@ -65,6 +85,31 @@ const _layers = new Map<number, ManagedLayer>();
 
 let _sessionPaused = false;
 
+/**
+ * Set to true during playPlan()/restartPlan() to suppress the session-ended
+ * callback while the old layers are being torn down and new ones are being
+ * registered. Without this guard, the callback fires as soon as stopAll()
+ * clears the previous layers — before the new playLayer() calls have run —
+ * which causes clearCurrentVibe() to execute in the middle of a plan rebuild,
+ * leaving currentVibeId = null even though new layers are added a few
+ * milliseconds later. This prevents the Mini Player from appearing.
+ */
+let _playPlanInProgress = false;
+
+/**
+ * Set to true during explicit stopAll() calls initiated by the user (e.g.
+ * store.stopPlayback()). This suppresses the session-ended callback so that
+ * the Pinia store's stopPlayback() action is the single place that resets
+ * playbackState/currentVibeId — avoiding the double clearCurrentVibe() that
+ * was visible in the logs when stopAll() triggered the callback synchronously
+ * from within stopLayer(), then stopPlayback() cleared the state again.
+ *
+ * The session-ended callback is still fired for NATURAL endings:
+ * - duration timers that fire while the session is active
+ * - all layers finishing naturally without an explicit stop
+ */
+let _stopAllExplicit = false;
+
 let _sessionEndedCallback: (() => void) | null = null;
 
 export function setSessionEndedCallback(cb: (() => void) | null): void {
@@ -86,9 +131,21 @@ export function setSessionEndedCallback(cb: (() => void) | null): void {
  *
  * The callback fires correctly in the normal stop path because stopAll()
  * explicitly sets _sessionPaused = false before calling stopLayer().
+ *
+ * Condition 3 (_playPlanInProgress): suppressed while playPlan() rebuilds the
+ * session. stopAll() is called at the start of playPlan() to tear down the
+ * previous plan; without this guard the callback fires between teardown and
+ * the new playLayer() registrations, causing clearCurrentVibe() to execute in
+ * the middle of a restart — which makes the Mini Player disappear.
  */
 function _notifySessionEndedIfEmpty(): void {
-  if (!_layers.size && !_sessionPaused) {
+  if (!_layers.size && !_sessionPaused && !_playPlanInProgress && !_stopAllExplicit) {
+    log.debug('sessionEnded — firing callback (natural end)', {
+      layers:     _layers.size,
+      paused:     _sessionPaused,
+      inProgress: _playPlanInProgress,
+      explicit:   _stopAllExplicit,
+    });
     _sessionEndedCallback?.();
   }
 }
@@ -203,6 +260,112 @@ function _logPlayFailure(layer: VibeExecutionLayer, error: unknown): void {
   });
 }
 
+// ── Native audio helpers (@capgo/native-audio) ────────────────────────────────
+
+/** assetIds of layers successfully preloaded on the native side. */
+const _nativeLayers = new Set<string>();
+
+function _nativeAssetId(soundId: number): string {
+  return `vibe-layer-${soundId}`;
+}
+
+/**
+ * Converts 0–100 backend volume to the 0.1–1.0 range expected by NativeAudio.
+ * The plugin does not support true silence via volume; stopping is used instead.
+ */
+function _toNativeVolume(vol100: number): number {
+  return Math.max(0.1, Math.min(1, vol100 / 100));
+}
+
+function _logNativeFailure(fn: string, assetId: string, error: unknown): void {
+  console.warn(`[AudioPlayer] NativeAudio.${fn}(${assetId}) failed`, error);
+}
+
+/** Stops and unloads a native asset. Fire-and-forget safe. */
+async function _stopNativeAsset(assetId: string): Promise<void> {
+  if (!_nativeLayers.has(assetId)) return;
+  try { await NativeAudio.stop({ assetId }); } catch { /* already stopped */ }
+  try { await NativeAudio.unload({ assetId }); } catch { /* already unloaded */ }
+  _nativeLayers.delete(assetId);
+}
+
+/**
+ * Preloads and starts native looping for a layer.
+ * Falls back to HTMLAudioElement if any native step fails.
+ */
+async function _startLoopAudioNative(
+  layer: VibeExecutionLayer,
+  managed: ManagedLayer,
+): Promise<void> {
+  const assetId = _nativeAssetId(layer.soundId);
+  log.debug('native preload — start', { soundId: layer.soundId, assetId });
+
+  // Unload stale asset from a previous play (e.g. restart)
+  if (_nativeLayers.has(assetId)) {
+    log.debug('native preload — unloading stale asset', { assetId });
+    await _stopNativeAsset(assetId);
+  }
+
+  // Guard: layer may have been stopped while we awaited above
+  if (!_layers.has(layer.soundId)) {
+    log.warn('native preload — layer removed while awaiting stop, aborting', { soundId: layer.soundId });
+    return;
+  }
+
+  try {
+    await NativeAudio.preload({
+      assetId,
+      assetPath: layer.fileUrl,
+      isUrl: true,
+      volume: _toNativeVolume(layer.volume),
+      audioChannelNum: 1,
+    });
+    _nativeLayers.add(assetId);
+    log.debug('native preload — OK', { assetId, nativeCount: _nativeLayers.size });
+  } catch (err) {
+    _logNativeFailure('preload', assetId, err);
+    log.warn('native preload — FAILED, falling back to HTML', { assetId, err: String(err) });
+    if (_layers.has(layer.soundId)) {
+      // Preload failed — fall back to HTMLAudioElement for this layer
+      managed.isNative = false;
+      _startLoopAudioHtml(layer, managed, 'preload-failed');
+    }
+    return;
+  }
+
+  if (!_layers.has(layer.soundId)) {
+    // Layer was stopped while preloading — clean up the native asset
+    log.warn('native preload — layer removed while preloading, unloading asset', { assetId });
+    void _stopNativeAsset(assetId);
+    return;
+  }
+
+  try {
+    await NativeAudio.loop({ assetId });
+    log.debug('native loop — started', {
+      assetId,
+      soundId:      layer.soundId,
+      sessionPaused: _sessionPaused,
+      layersSize:   _layers.size,
+    });
+    // Race-condition guard: if the session was paused while we were preloading,
+    // immediately pause the native player so state stays consistent.
+    if (_sessionPaused && _nativeLayers.has(assetId)) {
+      log.debug('native loop — session was paused during preload, pausing immediately', { assetId });
+      void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race)', assetId, e));
+    }
+  } catch (err) {
+    _logNativeFailure('loop', assetId, err);
+    log.warn('native loop — FAILED, falling back to HTML', { assetId, err: String(err) });
+    _nativeLayers.delete(assetId);
+    if (_layers.has(layer.soundId)) {
+      // loop() failed — fall back to HTMLAudioElement
+      managed.isNative = false;
+      _startLoopAudioHtml(layer, managed, 'loop-failed');
+    }
+  }
+}
+
 function _clearStartTimer(managed: ManagedLayer): void {
   if (managed.startTimerId !== null) {
     clearTimeout(managed.startTimerId);
@@ -274,8 +437,27 @@ function _scheduleLayerLifetime(layer: VibeExecutionLayer, managed: ManagedLayer
 
     const audio = managed.audio;
     if (!audio) {
-      managed.layerAbsoluteStopEpochMs = null;
-      stopLayer(layer.soundId);
+      /*
+       * No HTMLAudioElement — this is a native loop layer.
+       *
+       * Fade-out is not yet implemented for native audio.
+       * We must NOT stop immediately: the outer timer fired at
+       * (durMs - fadeOutMs), so we still owe the layer another fadeOutMs
+       * before the configured durationSeconds has truly elapsed.
+       * Schedule the remaining stop so the total lifetime = durMs.
+       *
+       * Stopping at (durMs - fadeOutMs) was the original (broken) behaviour
+       * that caused native layers to be torn down far too early — in extreme
+       * cases (fadeOutSeconds >= durationSeconds → fadeStartDelayMs = 0) the
+       * layer was destroyed on the very next event-loop tick, before the UI
+       * could even render the 'playing' state, making the Mini Player
+       * invisible and playbackState flip back to 'idle' immediately.
+       */
+      managed.durationTimerId = setTimeout(() => {
+        managed.durationTimerId          = null;
+        managed.layerAbsoluteStopEpochMs = null;
+        if (_layers.has(layer.soundId)) stopLayer(layer.soundId);
+      }, fadeOutMs);
       return;
     }
 
@@ -308,7 +490,17 @@ function _beginLayerAfterDelay(layer: VibeExecutionLayer, managed: ManagedLayer)
   }
 }
 
-function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+/**
+ * HTMLAudioElement loop implementation — used as fallback on web and when
+ * native preload/loop fails.
+ * Fade in/out is fully supported here (Phase 3).
+ */
+function _startLoopAudioHtml(
+  layer: VibeExecutionLayer,
+  managed: ManagedLayer,
+  reason: 'web-platform' | 'preload-failed' | 'loop-failed' = 'web-platform',
+): void {
+  log.debug('HTML loop — start', { soundId: layer.soundId, reason });
   const audio = new Audio(layer.fileUrl);
   audio.loop = true;
   const target = _clampVolume(layer.volume);
@@ -321,6 +513,24 @@ function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
   } else {
     audio.volume = target;
     audio.play().catch((error) => _logPlayFailure(layer, error));
+  }
+}
+
+/**
+ * Starts loop playback. On native platforms uses @capgo/native-audio;
+ * on web falls back to HTMLAudioElement. Also falls back to HTML if any
+ * native step fails.
+ *
+ * NOTE: fade in/out is not yet implemented for native loop layers.
+ */
+function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  if (_isNativePlatform) {
+    log.debug('loop backend — Native (@capgo/native-audio)', { soundId: layer.soundId });
+    managed.isNative = true;
+    void _startLoopAudioNative(layer, managed);
+  } else {
+    log.debug('loop backend — HTMLAudioElement (web platform)', { soundId: layer.soundId });
+    _startLoopAudioHtml(layer, managed, 'web-platform');
   }
 }
 
@@ -444,6 +654,10 @@ function playLayer(layer: VibeExecutionLayer): void {
   stopLayer(layer.soundId);
 
   if (!hasValidExecutionFileUrl(layer.fileUrl)) {
+    log.warn('playLayer — skipped: invalid fileUrl', {
+      soundId:  layer.soundId,
+      playMode: layer.playMode as PlayMode,
+    });
     console.warn('[AudioPlayer] Skipping layer — invalid fileUrl', {
       soundId:   layer.soundId,
       soundName: layer.soundName,
@@ -456,6 +670,10 @@ function playLayer(layer: VibeExecutionLayer): void {
   if (layer.playMode === 'interval') {
     const ri = layer.repeatIntervalSeconds;
     if (ri == null || ri < 1) {
+      log.warn('playLayer — skipped: invalid repeatIntervalSeconds', {
+        soundId: layer.soundId,
+        ri,
+      });
       console.warn('[AudioPlayer] Skipping interval layer — invalid repeatIntervalSeconds', {
         soundId:   layer.soundId,
         soundName: layer.soundName,
@@ -469,6 +687,7 @@ function playLayer(layer: VibeExecutionLayer): void {
   const managed: ManagedLayer = {
     soundId:                      layer.soundId,
     layer,
+    isNative:                     false,
     audio:                        null,
     startTimerId:                 null,
     durationTimerId:              null,
@@ -487,6 +706,13 @@ function playLayer(layer: VibeExecutionLayer): void {
   };
 
   _layers.set(layer.soundId, managed);
+  log.debug('playLayer — registered', {
+    soundId:     layer.soundId,
+    playMode:    layer.playMode as PlayMode,
+    startsAt:    layer.startsAtSeconds,
+    duration:    layer.durationSeconds ?? null,
+    layersSize:  _layers.size,
+  });
 
   if (layer.startsAtSeconds > 0) {
     const delayMs = layer.startsAtSeconds * 1_000;
@@ -506,6 +732,13 @@ function stopLayer(soundId: number): void {
   const managed = _layers.get(soundId);
   if (!managed) return;
 
+  log.debug('stopLayer', {
+    soundId,
+    playMode:  managed.layer.playMode as PlayMode,
+    isNative:  managed.isNative,
+    layersAfter: _layers.size - 1,
+  });
+
   _clearFadeAnimations(managed);
   _clearStartTimer(managed);
   _clearDurationTimer(managed);
@@ -519,20 +752,25 @@ function stopLayer(soundId: number): void {
   managed.pendingDurationRemainingMs = null;
   managed.pendingIntervalRemainingMs = null;
 
-  const audio = managed.audio;
+  if (managed.isNative) {
+    // Fire-and-forget: stop + unload the native asset asynchronously
+    void _stopNativeAsset(_nativeAssetId(soundId));
+  } else {
+    const audio = managed.audio;
 
-  if (managed.onceEndedHandler && audio) {
-    audio.removeEventListener('ended', managed.onceEndedHandler);
-    managed.onceEndedHandler = null;
-  }
+    if (managed.onceEndedHandler && audio) {
+      audio.removeEventListener('ended', managed.onceEndedHandler);
+      managed.onceEndedHandler = null;
+    }
 
-  _detachIntervalTickListeners(managed);
+    _detachIntervalTickListeners(managed);
 
-  if (audio) {
-    audio.pause();
-    audio.currentTime = 0;
-    audio.src = '';
-    managed.audio = null;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = '';
+      managed.audio = null;
+    }
   }
 
   _layers.delete(soundId);
@@ -542,10 +780,29 @@ function stopLayer(soundId: number): void {
 // ── Session API ─────────────────────────────────────────────────────────────────
 
 function playPlan(layers: VibeExecutionLayer[]): void {
-  stopAll();
-  _sessionPaused = false;
-  for (const layer of layers) {
-    playLayer(layer);
+  log.debug('playPlan — start', {
+    incomingLayers: layers.length,
+    currentLayers:  _layers.size,
+    isNativePlatform: _isNativePlatform,
+  });
+  // Suppress the session-ended callback while tearing down the previous plan
+  // and registering new layers. The callback is re-evaluated at the end so
+  // it fires correctly if ALL new layers fail validation (nothing in _layers).
+  _playPlanInProgress = true;
+  try {
+    stopAll();
+    _sessionPaused = false;
+    for (const layer of layers) {
+      playLayer(layer);
+    }
+  } finally {
+    _playPlanInProgress = false;
+    log.debug('playPlan — end', {
+      registeredLayers: _layers.size,
+      nativeLayers:     _nativeLayers.size,
+    });
+    // Fire now if every layer was skipped due to validation errors.
+    _notifySessionEndedIfEmpty();
   }
 }
 
@@ -579,7 +836,11 @@ function _resumeLayerDurationAfterPause(managed: ManagedLayer, layer: VibeExecut
 }
 
 function pauseAll(): void {
-  if (!_layers.size) return;
+  log.debug('pauseAll', { layers: _layers.size, nativeLayers: _nativeLayers.size });
+  if (!_layers.size) {
+    log.debug('pauseAll — no layers, skipping');
+    return;
+  }
 
   _sessionPaused = true;
 
@@ -618,14 +879,27 @@ function pauseAll(): void {
       }
     }
 
-    if (managed.audio !== null) {
+    if (managed.isNative) {
+      const assetId = _nativeAssetId(managed.soundId);
+      if (_nativeLayers.has(assetId)) {
+        void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause', assetId, e));
+      }
+    } else if (managed.audio !== null) {
       managed.audio.pause();
     }
   }
 }
 
 function resumeAll(): void {
-  if (!_sessionPaused || !_layers.size) return;
+  log.debug('resumeAll', {
+    sessionPaused: _sessionPaused,
+    layers:        _layers.size,
+    nativeLayers:  _nativeLayers.size,
+  });
+  if (!_sessionPaused || !_layers.size) {
+    log.debug('resumeAll — skipped (not paused or no layers)');
+    return;
+  }
 
   _sessionPaused = false;
 
@@ -672,7 +946,19 @@ function resumeAll(): void {
       continue;
     }
 
-    // ── Active audio (loop / once / interval mid-tick) ─────────
+    // ── Active native loop ────────────────────────────────────
+    if (managed.isNative) {
+      _resumeLayerDurationAfterPause(managed, layer);
+      if (!_layers.has(layer.soundId)) continue;
+
+      const assetId = _nativeAssetId(layer.soundId);
+      if (_nativeLayers.has(assetId)) {
+        void NativeAudio.resume({ assetId }).catch((e) => _logNativeFailure('resume', assetId, e));
+      }
+      continue;
+    }
+
+    // ── Active audio (HTML: once / interval mid-tick / loop fallback) ──────
     if (managed.audio !== null) {
       _resumeLayerDurationAfterPause(managed, layer);
       if (!_layers.has(layer.soundId)) continue;
@@ -683,11 +969,16 @@ function resumeAll(): void {
 }
 
 function stopAll(): void {
-  _sessionPaused = false;
-  const ids = [..._layers.keys()];
-  if (!ids.length) return;
-  for (const soundId of ids) {
-    stopLayer(soundId);
+  log.debug('stopAll', { layers: _layers.size, nativeLayers: _nativeLayers.size });
+  _stopAllExplicit = true;
+  try {
+    _sessionPaused = false;
+    const ids = [..._layers.keys()];
+    for (const soundId of ids) {
+      stopLayer(soundId);
+    }
+  } finally {
+    _stopAllExplicit = false;
   }
 }
 
@@ -699,6 +990,22 @@ function isSessionPaused(): boolean {
   return _sessionPaused;
 }
 
+/**
+ * Returns the number of layers that would pass playLayer() validation.
+ * Used by the store for optimistic state updates: if countValidLayers() > 0
+ * the store can set playbackState = 'playing' before the async native operations
+ * complete, ensuring the Mini Player appears on the first reactive flush.
+ */
+function countValidLayers(layers: VibeExecutionLayer[]): number {
+  return layers.filter((layer) => {
+    if (!hasValidExecutionFileUrl(layer.fileUrl)) return false;
+    if (layer.playMode === 'interval') {
+      return layer.repeatIntervalSeconds != null && layer.repeatIntervalSeconds >= 1;
+    }
+    return true;
+  }).length;
+}
+
 export const audioPlayerService = {
   playPlan,
   restartPlan,
@@ -708,4 +1015,5 @@ export const audioPlayerService = {
   stopLayer,
   hasActiveLayers,
   isSessionPaused,
+  countValidLayers,
 };

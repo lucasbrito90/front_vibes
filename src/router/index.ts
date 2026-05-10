@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/services/firebase';
+import { createLogger } from '@/utils/player-debug';
+
+const log = createLogger('Router');
 
 // Extend Vue Router's RouteMeta so custom flags are type-safe everywhere.
 declare module 'vue-router' {
@@ -50,7 +53,14 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/vibes/:id/player',
     component: () => import('@/views/VibePlayerPage.vue'),
-    meta: { requiresAuth: true },
+    /*
+     * hideMiniPlayer: true — The MiniPlayer has position:fixed and z-index:200,
+     * so it renders above everything in the viewport, including this full-screen
+     * page. Without this flag, the mini player bar floats over the full player
+     * page whenever audio is playing. It will reappear (with slide-up animation)
+     * when the user navigates back to a tab route such as /vibes.
+     */
+    meta: { requiresAuth: true, hideMiniPlayer: true },
   },
 
   // ── Authenticated routes (tab bar visible) ────────────────────────────────
@@ -134,6 +144,14 @@ router.beforeEach(async (to) => {
   }
 
   return true;
+});
+
+router.afterEach((to, from) => {
+  log.debug('route changed', {
+    from:           from.fullPath,
+    to:             to.fullPath,
+    hideMiniPlayer: !!to.meta.hideMiniPlayer,
+  });
 });
 
 export default router;

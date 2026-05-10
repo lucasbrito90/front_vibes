@@ -73,51 +73,47 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
-          <!-- DEV: Native Audio POC — single loop layer test -->
-          <div v-if="!loading && pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
+          <!-- DEV: Player state — visible on device without ADB -->
+          <div v-if="!loading" class="player-dev-panel player-dev-panel--state">
             <div class="player-dev-panel-header">
-              <span class="player-dev-badge player-dev-badge--poc">DEV</span>
-              <span class="player-dev-title">Native Audio POC</span>
+              <span class="player-dev-badge player-dev-badge--state">STATE</span>
+              <span class="player-dev-title">Player State</span>
             </div>
-            <p class="player-dev-layer-summary">
-              {{ pocLoopLayer.soundName }} — vol {{ pocLoopLayer.volume }}/100
-            </p>
+            <p class="player-dev-state-hint">Main player only — use the central ▶ button to test MiniPlayer.</p>
+            <div class="player-dev-state-grid">
+              <span class="player-dev-state-key">platform</span>
+              <strong class="player-dev-state-val">{{ _isNativePlatform ? '📱 native' : '🌐 web' }}</strong>
 
-            <div class="player-dev-poc-controls">
-              <button class="player-dev-poc-btn" :disabled="pocBusy || pocState === 'playing'" @click="pocPlay">
-                ▶ Play
-              </button>
-              <button class="player-dev-poc-btn" :disabled="pocBusy || pocState !== 'playing'" @click="pocPause">
-                ⏸ Pause
-              </button>
-              <button class="player-dev-poc-btn" :disabled="pocBusy || pocState !== 'paused'" @click="pocResume">
-                ▶▶ Resume
-              </button>
-              <button class="player-dev-poc-btn player-dev-poc-btn--stop" :disabled="pocBusy || pocState === 'idle'" @click="pocStop">
-                ■ Stop
-              </button>
-            </div>
+              <span class="player-dev-state-key">routeVibeId</span>
+              <strong class="player-dev-state-val">{{ vibeId }}</strong>
 
-            <!-- Status row -->
-            <div class="player-dev-poc-status">
-              <span class="player-dev-poc-state-label">state:</span>
-              <strong class="player-dev-poc-state-value" :class="`player-dev-poc-state--${pocState}`">
-                {{ pocBusy ? 'busy…' : pocState }}
-              </strong>
-            </div>
+              <span class="player-dev-state-key">currentVibeId</span>
+              <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
 
-            <!-- Last operation result (ok or error) -->
-            <div v-if="pocLastLog" class="player-dev-poc-log" :class="{ 'player-dev-poc-log--error': pocLastError }">
-              {{ pocLastLog }}
-            </div>
-          </div>
+              <span class="player-dev-state-key">playbackState</span>
+              <strong class="player-dev-state-val" :class="`player-dev-state--${playbackState}`">{{ playbackState }}</strong>
 
-          <div v-else-if="!loading && !pocLoopLayer" class="player-dev-panel player-dev-panel--poc">
-            <div class="player-dev-panel-header">
-              <span class="player-dev-badge player-dev-badge--poc">DEV</span>
-              <span class="player-dev-title">Native Audio POC</span>
+              <span class="player-dev-state-key">isRoutePlaying</span>
+              <strong class="player-dev-state-val" :class="isThisVibePlaying ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ isThisVibePlaying }}</strong>
+
+              <span class="player-dev-state-key">isRoutePaused</span>
+              <strong class="player-dev-state-val" :class="isThisVibePaused ? 'player-dev-state--paused' : 'player-dev-state--idle'">{{ isThisVibePaused }}</strong>
+
+              <span class="player-dev-state-key">store.hasActive</span>
+              <strong class="player-dev-state-val" :class="hasActiveLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ hasActiveLayers }}</strong>
+
+              <span class="player-dev-state-key">svc.hasActive</span>
+              <strong class="player-dev-state-val" :class="diagServiceLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ diagServiceLayers }}</strong>
+
+              <span class="player-dev-state-key">hideMiniPlayer</span>
+              <strong class="player-dev-state-val">{{ !!route.meta.hideMiniPlayer }}</strong>
+
+              <span class="player-dev-state-key">lastPlayVibe</span>
+              <strong class="player-dev-state-val">{{ diagLastPlayResult === null ? '—' : diagLastPlayResult }}</strong>
+
+              <span class="player-dev-state-key">plan / playable</span>
+              <strong class="player-dev-state-val">{{ executionPlan.length }} / {{ playableLayers.length }}</strong>
             </div>
-            <p class="player-dev-empty">No loop layer available in execution plan.</p>
           </div>
 
           <!-- DEV: Execution Plan (keep visible for debugging) -->
@@ -142,6 +138,39 @@
               </div>
             </div>
           </div>
+
+
+          <!-- DEV: Runtime Logs panel — in-app diagnostics without ADB -->
+          <div class="player-dev-panel player-dev-panel--logs">
+            <div class="player-dev-panel-header player-dev-logs-header" @click="devLogsExpanded = !devLogsExpanded">
+              <span class="player-dev-badge player-dev-badge--logs">LOGS</span>
+              <span class="player-dev-title">Runtime Logs</span>
+              <span class="player-dev-logs-count">{{ logBuffer.length }}</span>
+              <button
+                type="button"
+                class="player-dev-logs-clear"
+                @click.stop="clearLogBuffer()"
+                title="Clear logs"
+              >✕</button>
+              <span class="player-dev-logs-toggle">{{ devLogsExpanded ? '▲' : '▼' }}</span>
+            </div>
+
+            <div v-if="devLogsExpanded" class="player-dev-logs-list">
+              <div v-if="!logBuffer.length" class="player-dev-empty">No logs yet.</div>
+              <div
+                v-for="(entry, i) in logBuffer"
+                :key="i"
+                class="player-dev-log-entry"
+                :class="`player-dev-log-entry--${entry.level}`"
+              >
+                <span class="player-dev-log-ts">{{ entry.ts }}</span>
+                <span class="player-dev-log-prefix">[{{ entry.prefix }}]</span>
+                <span class="player-dev-log-msg">{{ entry.message }}</span>
+                <span v-if="entry.data" class="player-dev-log-data">{{ JSON.stringify(entry.data) }}</span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
       </div>
@@ -168,18 +197,16 @@ import {
 } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { Capacitor } from '@capacitor/core';
 
-import { useAudioPlayer } from '@/composables/useAudioPlayer';
+import { storeToRefs } from 'pinia';
+import { usePlayerStore } from '@/stores/player.store';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
-import {
-  playLoopLayer,
-  pauseLoopLayer,
-  resumeLoopLayer,
-  stopLoopLayer,
-} from '@/services/native-audio-poc.service';
+import { audioPlayerService } from '@/services/audio-player.service';
 import { isExecutionLayerPlayable } from '@/services/player-engine.service';
+import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
 
 // ── Route / Router ────────────────────────────────────────────────────────────
 
@@ -192,23 +219,38 @@ const vibeId = computed(() => Number(route.params.id));
 const { vibes, selectedVibe, fetchVibe } = useVibes();
 const { vibeSounds, fetchVibeSounds }    = useVibeSounds();
 const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
+
+const store = usePlayerStore();
 const {
   playbackState,
   elapsedSeconds,
-  playPlan,
-  pauseAll,
-  resumeAll,
-  stopAll,
-  restartPlan,
-  beginSessionClock,
-  pauseElapsedTicker,
-  resumeElapsedTicker,
-  setCurrentVibe,
-} = useAudioPlayer();
+  hasActiveLayers,
+  currentVibeId,
+} = storeToRefs(store);
 
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
 const loading = ref(false);
+
+// ── Logger ────────────────────────────────────────────────────────────────────
+
+const log = createLogger('VibePlayerPage');
+
+// ── DEV diagnostics ───────────────────────────────────────────────────────────
+// These refs are updated on a 1 Hz tick so the STATE panel shows live values
+// from the audio service, which are not reactive on their own.
+
+const _isNativePlatform = Capacitor.isNativePlatform();
+
+/** Live value from audioPlayerService (polled, not reactive). */
+const diagServiceLayers = ref(false);
+/** Last value returned by store.playPlan(). */
+const diagLastPlayResult = ref<boolean | null>(null);
+
+let _diagTickId: ReturnType<typeof setInterval> | null = null;
+
+/** Controls whether the in-app DEV Logs panel is expanded. */
+const devLogsExpanded = ref(true);
 
 // Prefer the already-loaded vibe from the list; fall back to selectedVibe
 const vibe = computed(() =>
@@ -222,17 +264,43 @@ const playableLayers = computed(() => executionPlan.value.filter(isExecutionLaye
 
 const hasPlayableLayers = computed(() => playableLayers.value.length > 0);
 
-/** Allow pause/resume/stop while session active even if config became invalid mid-flight. */
+// ── Per-route playback state ──────────────────────────────────────────────────
+// These compare the route's vibeId with the store's currentVibeId so the player
+// UI reflects what THIS vibe is doing, not whatever might be playing globally.
+
+/** True when this exact vibe is actively playing. */
+const isThisVibePlaying = computed(
+  () => currentVibeId.value === vibeId.value && playbackState.value === 'playing',
+);
+
+/** True when this exact vibe is paused. */
+const isThisVibePaused = computed(
+  () => currentVibeId.value === vibeId.value && playbackState.value === 'paused',
+);
+
+/** True when a DIFFERENT vibe is currently playing or paused. */
+const isAnotherVibePlaying = computed(
+  () => currentVibeId.value !== null && currentVibeId.value !== vibeId.value,
+);
+
+/**
+ * The center button is enabled when:
+ *  - this vibe has playable sounds (can start/pause/resume), OR
+ *  - this vibe is already active (pause/resume even if plan became invalid), OR
+ *  - another vibe is playing (so the user can switch to this one).
+ */
 const canUsePlaybackControls = computed(
   () =>
     hasPlayableLayers.value
-    || playbackState.value === 'playing'
-    || playbackState.value === 'paused',
+    || isThisVibePlaying.value
+    || isThisVibePaused.value
+    || isAnotherVibePlaying.value,
 );
 
 const warningText = computed((): string | null => {
   if (loading.value) return null;
   if (!vibeSounds.value.length) return 'No sounds configured';
+  if (isAnotherVibePlaying.value) return 'Another vibe is playing — tap Play to switch';
   if (!hasPlayableLayers.value) return 'No playable sounds for this phase';
   return null;
 });
@@ -269,96 +337,28 @@ function formatElapsed(s: number): string {
 }
 
 const statusText = computed((): string => {
-  if (playbackState.value === 'playing') {
-    return `Playing • ${formatElapsed(elapsedSeconds.value)}`;
-  }
-  if (playbackState.value === 'paused') {
-    return `Paused • ${formatElapsed(elapsedSeconds.value)}`;
-  }
+  if (isThisVibePlaying.value) return `Playing • ${formatElapsed(elapsedSeconds.value)}`;
+  if (isThisVibePaused.value)  return `Paused • ${formatElapsed(elapsedSeconds.value)}`;
+  if (isAnotherVibePlaying.value) return 'Another vibe is playing';
   return 'Ready';
 });
 
-/** Dot reflects service-backed playback state (playing vs paused vs idle). */
+/** Dot reflects whether THIS vibe is playing or paused. */
 const statusDotClass = computed((): Record<string, boolean> => ({
-  'player-status-dot--active': playbackState.value === 'playing',
-  'player-status-dot--paused': playbackState.value === 'paused',
+  'player-status-dot--active': isThisVibePlaying.value,
+  'player-status-dot--paused': isThisVibePaused.value,
 }));
 
 const centerIcon = computed(() =>
-  playbackState.value === 'playing' ? pauseOutline : playOutline,
+  isThisVibePlaying.value ? pauseOutline : playOutline,
 );
 
 const centerAriaLabel = computed((): string => {
   if (!loading.value && !canUsePlaybackControls.value) return 'Playback unavailable';
-  if (playbackState.value === 'playing') return 'Pause';
-  if (playbackState.value === 'paused') return 'Resume';
+  if (isThisVibePlaying.value) return 'Pause';
+  if (isThisVibePaused.value)  return 'Resume';
   return 'Play';
 });
-
-// ── DEV: Native Audio POC ─────────────────────────────────────────────────────
-
-/** First playable loop layer in the execution plan, or null if none exists. */
-const pocLoopLayer = computed(() =>
-  executionPlan.value.find(
-    (l) => l.playMode === 'loop' && isExecutionLayerPlayable(l),
-  ) ?? null,
-);
-
-type PocState = 'idle' | 'playing' | 'paused';
-const pocState   = ref<PocState>('idle');
-const pocBusy    = ref(false);
-const pocLastLog = ref<string | null>(null);
-const pocLastError = ref(false);
-
-function _pocLog(msg: string, isError = false): void {
-  pocLastLog.value   = msg;
-  pocLastError.value = isError;
-}
-
-async function _pocRun(
-  label: string,
-  fn: () => Promise<void>,
-  nextState: PocState,
-): Promise<void> {
-  if (pocBusy.value) return;
-  const layer = pocLoopLayer.value;
-  if (!layer) return;
-  pocBusy.value = true;
-  _pocLog(`${label}…`);
-  try {
-    await fn();
-    pocState.value = nextState;
-    _pocLog(`${label} OK`);
-  } catch (err) {
-    _pocLog(`${label} FAILED: ${String(err)}`, true);
-  } finally {
-    pocBusy.value = false;
-  }
-}
-
-async function pocPlay(): Promise<void> {
-  const layer = pocLoopLayer.value;
-  if (!layer) return;
-  await _pocRun('play', () => playLoopLayer(layer), 'playing');
-}
-
-async function pocPause(): Promise<void> {
-  const layer = pocLoopLayer.value;
-  if (!layer) return;
-  await _pocRun('pause', () => pauseLoopLayer(layer), 'paused');
-}
-
-async function pocResume(): Promise<void> {
-  const layer = pocLoopLayer.value;
-  if (!layer) return;
-  await _pocRun('resume', () => resumeLoopLayer(layer), 'playing');
-}
-
-async function pocStop(): Promise<void> {
-  const layer = pocLoopLayer.value;
-  if (!layer) return;
-  await _pocRun('stop', () => stopLoopLayer(layer), 'idle');
-}
 
 // ── Toast helper ──────────────────────────────────────────────────────────────
 
@@ -373,8 +373,33 @@ async function showPlaybackToast(message: string): Promise<void> {
 }
 
 async function togglePlayback(): Promise<void> {
+  log.debug('MAIN PLAYER — togglePlayback', {
+    vibeId:           vibeId.value,
+    currentVibeId:    currentVibeId.value,
+    playbackState:    playbackState.value,
+    isThisPlaying:    isThisVibePlaying.value,
+    isThisPaused:     isThisVibePaused.value,
+    isAnotherPlaying: isAnotherVibePlaying.value,
+    loading:          loading.value,
+  });
+
   if (loading.value) return;
 
+  // ── Case B: this vibe is playing → pause ─────────────────────────────────
+  if (isThisVibePlaying.value) {
+    log.debug('MAIN PLAYER — pause (Case B: same vibe playing)');
+    store.pausePlayback();
+    return;
+  }
+
+  // ── Case C: this vibe is paused → resume ─────────────────────────────────
+  if (isThisVibePaused.value) {
+    log.debug('MAIN PLAYER — resume (Case C: same vibe paused)');
+    store.resumePlayback();
+    return;
+  }
+
+  // ── Case A / D: start this vibe (idle OR switching from another vibe) ────
   if (!vibeSounds.value.length) {
     await showPlaybackToast('No sounds configured');
     return;
@@ -385,37 +410,44 @@ async function togglePlayback(): Promise<void> {
     return;
   }
 
-  if (playbackState.value === 'idle') {
-    const totalLayers     = executionPlan.value.length;
-    const playableCount   = playableLayers.value.length;
-    const started         = playPlan(executionPlan.value);
+  const totalLayers   = executionPlan.value.length;
+  const playableCount = playableLayers.value.length;
+  const soundCount    = vibeSounds.value.length;
 
-    if (!started) {
-      await showPlaybackToast(
-        playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
-      );
-      return;
-    }
+  log.debug(
+    isAnotherVibePlaying.value
+      ? 'MAIN PLAYER — play (Case D: switching from another vibe)'
+      : 'MAIN PLAYER — play (Case A: idle)',
+    { vibeId: vibeId.value, planLayers: totalLayers, playableCount },
+  );
 
-    if (playableCount < totalLayers) {
-      await showPlaybackToast('Some sounds could not be played');
-    }
+  // playVibe() atomically: sets vibe context + optimistic state + clock + audio.
+  // It also stops any currently active session via audioPlayerService.playPlan().
+  const started = store.playVibe({
+    vibeId:       vibeId.value,
+    vibeName:     vibe.value?.name ?? '',
+    soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+    layers:       executionPlan.value,
+  });
 
-    // Publish context so the MiniPlayer can display this vibe when user navigates away.
-    const soundCount = vibeSounds.value.length;
-    setCurrentVibe(
-      vibeId.value,
-      vibe.value?.name ?? '',
-      `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+  diagLastPlayResult.value = started;
+  diagServiceLayers.value  = audioPlayerService.hasActiveLayers();
+
+  log.debug('MAIN PLAYER — playVibe result', {
+    started,
+    svcHasActive: audioPlayerService.hasActiveLayers(),
+  });
+
+  if (!started) {
+    log.warn('MAIN PLAYER — playVibe returned false (all layers invalid)');
+    await showPlaybackToast(
+      playableCount === 0 ? 'No playable sounds available' : 'Some sounds could not be played',
     );
+    return;
+  }
 
-    beginSessionClock();
-  } else if (playbackState.value === 'playing') {
-    pauseAll();
-    pauseElapsedTicker();
-  } else {
-    resumeAll();
-    resumeElapsedTicker();
+  if (playableCount < totalLayers) {
+    await showPlaybackToast('Some sounds could not be played');
   }
 }
 
@@ -434,7 +466,17 @@ async function handleRestartVibe(): Promise<void> {
 
   const totalLayers   = executionPlan.value.length;
   const playableCount = playableLayers.value.length;
-  const started       = restartPlan(executionPlan.value);
+  const soundCount    = vibeSounds.value.length;
+
+  log.debug('MAIN PLAYER — restart');
+
+  // Use playVibe() for restart too — it resets vibe context, clock, and audio.
+  const started = store.playVibe({
+    vibeId:       vibeId.value,
+    vibeName:     vibe.value?.name ?? '',
+    soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+    layers:       executionPlan.value,
+  });
 
   if (!started) {
     await showPlaybackToast(
@@ -446,20 +488,10 @@ async function handleRestartVibe(): Promise<void> {
   if (playableCount < totalLayers) {
     await showPlaybackToast('Some sounds could not be played');
   }
-
-  // Keep vibe context current after restart.
-  const soundCount = vibeSounds.value.length;
-  setCurrentVibe(
-    vibeId.value,
-    vibe.value?.name ?? '',
-    `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-  );
-
-  beginSessionClock();
 }
 
 function handleStopVibe(): void {
-  stopAll();
+  store.stopPlayback();
 }
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -488,6 +520,7 @@ const heroGradient = computed((): string => {
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
+  log.debug('mounted', { vibeId: vibeId.value });
   loading.value = true;
   await Promise.all([
     fetchVibe(vibeId.value),
@@ -495,13 +528,29 @@ onMounted(async () => {
   ]);
   buildPlan(vibeSounds.value);
   loading.value = false;
+  log.debug('loaded', {
+    sounds:    vibeSounds.value.length,
+    planLayers: executionPlan.value.length,
+  });
+
+  // Poll service state at 1 Hz so the DEV STATE panel shows live values
+  // without ADB — non-reactive service state requires polling.
+  _diagTickId = setInterval(() => {
+    diagServiceLayers.value = audioPlayerService.hasActiveLayers();
+  }, 1_000);
 });
 
 onUnmounted(() => {
+  log.debug('unmounted — audio preserved for MiniPlayer');
   // Do NOT call stopAll() — audio must persist for the MiniPlayer after
   // navigating away. The execution plan can be cleared safely because it
   // will be rebuilt via buildPlan() if the user returns to this page.
   clearPlan();
+
+  if (_diagTickId !== null) {
+    clearInterval(_diagTickId);
+    _diagTickId = null;
+  }
 });
 </script>
 
@@ -772,86 +821,136 @@ onUnmounted(() => {
   background: rgba(248, 113, 113, 0.12) !important;
 }
 
-/* ── Native Audio POC styles ──────────────────────────── */
-
-.player-dev-panel--poc {
-  border-color: rgba(99, 202, 183, 0.35);
-  background: rgba(16, 60, 55, 0.55);
+/* ── DEV Composable State panel ───────────────────────── */
+.player-dev-panel--state {
+  border-color: rgba(99, 102, 241, 0.55);
+  max-height: none;
 }
 
-.player-dev-badge--poc {
-  background: #0d9488;
+.player-dev-badge--state {
+  background: #6366f1;
 }
 
-.player-dev-poc-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+.player-dev-state-hint {
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: rgba(199, 210, 254, 0.7);
+  font-style: italic;
 }
 
-.player-dev-poc-btn {
-  flex: 1 1 auto;
-  min-width: 72px;
-  padding: 8px 10px;
-  border: 1px solid rgba(99, 202, 183, 0.45);
-  border-radius: 8px;
-  background: rgba(13, 148, 136, 0.22);
-  color: rgba(153, 246, 228, 0.95);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s;
-}
 
-.player-dev-poc-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.player-dev-poc-btn--stop {
-  border-color: rgba(248, 113, 113, 0.45);
-  background: rgba(220, 38, 38, 0.18);
-  color: rgba(252, 165, 165, 0.95);
-}
-
-.player-dev-poc-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+.player-dev-state-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  row-gap: 5px;
   font-size: 12px;
   font-family: monospace;
 }
 
-.player-dev-poc-state-label {
-  color: rgba(153, 246, 228, 0.6);
+.player-dev-state-key {
+  color: rgba(199, 210, 254, 0.65);
+  white-space: nowrap;
 }
 
-.player-dev-poc-state-value {
-  font-size: 13px;
+.player-dev-state-val {
+  color: rgba(224, 231, 255, 0.9);
 }
 
-.player-dev-poc-state--idle    { color: rgba(153, 246, 228, 0.5); }
-.player-dev-poc-state--playing { color: #34d399; }
-.player-dev-poc-state--paused  { color: #fbbf24; }
+.player-dev-state--idle    { color: rgba(199, 210, 254, 0.5); }
+.player-dev-state--playing { color: #34d399; }
+.player-dev-state--paused  { color: #fbbf24; }
 
-.player-dev-poc-log {
+/* ── DEV Logs panel ─────────────────────────────────── */
+
+.player-dev-panel--logs {
   margin-top: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-family: monospace;
-  line-height: 1.5;
-  word-break: break-all;
-  background: rgba(13, 148, 136, 0.15);
-  color: rgba(153, 246, 228, 0.9);
-  border: 1px solid rgba(99, 202, 183, 0.2);
 }
 
-.player-dev-poc-log--error {
-  background: rgba(220, 38, 38, 0.15);
-  color: rgba(252, 165, 165, 0.95);
-  border-color: rgba(248, 113, 113, 0.3);
+.player-dev-badge--logs {
+  background: #0ea5e9;
+}
+
+.player-dev-logs-header {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.player-dev-logs-count {
+  margin-left: auto;
+  font-size: 11px;
+  color: rgba(186, 230, 253, 0.7);
+  font-family: monospace;
+}
+
+.player-dev-logs-clear {
+  margin-left: 8px;
+  background: rgba(255,255,255,0.12);
+  border: none;
+  border-radius: 4px;
+  color: rgba(186, 230, 253, 0.8);
+  font-size: 11px;
+  padding: 1px 5px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.player-dev-logs-toggle {
+  margin-left: 6px;
+  font-size: 11px;
+  color: rgba(186, 230, 253, 0.5);
+}
+
+.player-dev-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 320px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.player-dev-log-entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 10.5px;
+  font-family: monospace;
+  line-height: 1.4;
+  border-radius: 4px;
+  padding: 2px 4px;
+  background: rgba(255,255,255,0.04);
+}
+
+.player-dev-log-entry--warn  { background: rgba(251, 191, 36, 0.10); }
+.player-dev-log-entry--error { background: rgba(239, 68,  68, 0.14); }
+
+.player-dev-log-ts {
+  color: rgba(148, 163, 184, 0.65);
+  flex-shrink: 0;
+}
+
+.player-dev-log-prefix {
+  color: #7dd3fc;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.player-dev-log-msg {
+  color: rgba(224, 231, 255, 0.9);
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.player-dev-log-entry--warn  .player-dev-log-msg { color: #fcd34d; }
+.player-dev-log-entry--error .player-dev-log-msg { color: #fca5a5; }
+
+.player-dev-log-data {
+  width: 100%;
+  font-size: 10px;
+  color: rgba(148, 163, 184, 0.6);
+  word-break: break-all;
 }
 </style>

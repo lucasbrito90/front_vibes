@@ -32,7 +32,7 @@
 import { App } from '@capacitor/app';
 import { toastController } from '@ionic/vue';
 
-import { useAudioPlayer } from './useAudioPlayer';
+import { usePlayerStore } from '@/stores/player.store';
 
 // ── Singleton guard ───────────────────────────────────────────────────────────
 
@@ -48,11 +48,7 @@ export function useAppLifecycleAudio(): void {
   if (_initialized) return;
   _initialized = true;
 
-  const {
-    playbackState,
-    pauseAll,
-    pauseElapsedTicker,
-  } = useAudioPlayer();
+  const store = usePlayerStore();
 
   /**
    * True only when WE triggered the pause because the app went to background.
@@ -65,19 +61,14 @@ export function useAppLifecycleAudio(): void {
 
     // ── App going to background ─────────────────────────────────────────────
     if (!isActive) {
-      if (playbackState.value === 'playing') {
+      if (store.playbackState === 'playing') {
         /*
          * Immediately soft-pause before Android suspends the WebView.
-         * - pauseAll()         → audioPlayerService.pauseAll() + syncFromService()
-         *                        sets playbackState → 'paused'
-         *                        clears timers, stores remaining ms, calls audio.pause()
-         *                        does NOT clear currentVibeId / currentVibeName
-         * - pauseElapsedTicker() → freezes the elapsed counter at its current value
-         *
-         * After this, the mini player remains visible (paused state + vibe context intact).
+         * store.pausePlayback() calls audioPlayerService.pauseAll() and
+         * freezes the elapsed ticker. It does NOT clear currentVibeId /
+         * currentVibeName, so the Mini Player remains visible as 'paused'.
          */
-        pauseAll();
-        pauseElapsedTicker();
+        store.pausePlayback();
         _pausedByBackground = true;
       }
       return;

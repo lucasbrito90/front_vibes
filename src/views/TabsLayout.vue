@@ -51,11 +51,12 @@ import { homeOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icon
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { storeToRefs } from 'pinia';
 import MiniPlayer from '@/components/MiniPlayer.vue';
-import { useAudioPlayer } from '@/composables/useAudioPlayer';
+import { usePlayerStore } from '@/stores/player.store';
 
 const route = useRoute();
-const { playbackState } = useAudioPlayer();
+const { playbackState } = storeToRefs(usePlayerStore());
 
 /** Must match the `height` in MiniPlayer.vue. */
 const MINI_PLAYER_HEIGHT = 62; // px

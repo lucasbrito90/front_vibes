@@ -1,153 +1,52 @@
 /**
- * useAudioPlayer — Phase 3 (loop + once + interval + fades + mini player context)
+ * useAudioPlayer — legacy composable (kept for backward compatibility)
  *
- * Module-level singletons shared across every useAudioPlayer() call-site.
- * currentVibeId / currentVibeName / currentSoundSummary drive the MiniPlayer.
- * setCurrentVibe() is called by VibePlayerPage when playback starts.
- * clearCurrentVibe() is called on explicit stop and on session-ended callback.
+ * This composable has been superseded by `usePlayerStore` (Pinia).
+ * All components should migrate to importing `usePlayerStore` directly.
+ *
+ * The composable is intentionally kept as a thin re-export of the Pinia store
+ * so that any remaining references compile without errors while the migration
+ * is in progress.
+ *
+ * @deprecated Use `usePlayerStore` from `@/stores/player.store` instead.
  */
 
-import { ref } from 'vue';
-import {
-  audioPlayerService,
-  setSessionEndedCallback,
-} from '@/services/audio-player.service';
-import type { VibeExecutionLayer } from '@/services/player-engine.service';
+import { storeToRefs } from 'pinia';
+import { usePlayerStore } from '@/stores/player.store';
 
-export type PlaybackState = 'idle' | 'playing' | 'paused';
-
-const playbackState = ref<PlaybackState>('idle');
-
-// ── Vibe context (drives MiniPlayer) ─────────────────────────────────────────
-
-/** The id of the vibe whose audio is currently active. Null when idle. */
-const currentVibeId = ref<number | null>(null);
-
-/** Display name of the currently-playing vibe. */
-const currentVibeName = ref<string>('');
-
-/**
- * Brief sound count string (e.g. "3 sounds") shown in the mini player.
- * VibePlayerPage sets this when playback starts.
- */
-const currentSoundSummary = ref<string>('');
-
-function setCurrentVibe(id: number, name: string, soundSummary: string): void {
-  currentVibeId.value    = id;
-  currentVibeName.value  = name;
-  currentSoundSummary.value = soundSummary;
-}
-
-function clearCurrentVibe(): void {
-  currentVibeId.value       = null;
-  currentVibeName.value     = '';
-  currentSoundSummary.value = '';
-}
-
-/** Wall-clock session elapsed (1 Hz); paused freezes increments via clearInterval. */
-const elapsedSeconds = ref(0);
-let timerRef: ReturnType<typeof setInterval> | null = null;
-
-function syncFromService(): void {
-  if (!audioPlayerService.hasActiveLayers()) {
-    playbackState.value = 'idle';
-    return;
-  }
-  playbackState.value = audioPlayerService.isSessionPaused() ? 'paused' : 'playing';
-}
-
-function clearTimer(): void {
-  if (timerRef) {
-    clearInterval(timerRef);
-    timerRef = null;
-  }
-}
-
-/** Start / resume interval ticks without resetting elapsed. */
-function startElapsedTicker(): void {
-  clearTimer();
-  timerRef = setInterval(() => {
-    elapsedSeconds.value++;
-  }, 1_000);
-}
-
-/** Freeze elapsed ticker — preserves elapsedSeconds. */
-function pauseElapsedTicker(): void {
-  clearTimer();
-}
-
-function resetElapsed(): void {
-  elapsedSeconds.value = 0;
-  clearTimer();
-}
-
-/** Fresh session: elapsed → 0 and ticker starts. */
-function beginSessionClock(): void {
-  elapsedSeconds.value = 0;
-  startElapsedTicker();
-}
-
-/** After pause: continue ticking from current elapsed. */
-function resumeElapsedTicker(): void {
-  startElapsedTicker();
-}
-
-// When every audio layer ends (duration expiry / teardown), snap UI to Ready.
-setSessionEndedCallback(() => {
-  playbackState.value = 'idle';
-  resetElapsed();
-  clearCurrentVibe();
-});
-
-function playPlan(layers: VibeExecutionLayer[]): boolean {
-  audioPlayerService.playPlan(layers);
-  syncFromService();
-  return audioPlayerService.hasActiveLayers();
-}
-
-function pauseAll(): void {
-  audioPlayerService.pauseAll();
-  syncFromService();
-}
-
-function resumeAll(): void {
-  audioPlayerService.resumeAll();
-  syncFromService();
-}
-
-function stopAll(): void {
-  audioPlayerService.stopAll();
-  playbackState.value = 'idle';
-  resetElapsed();
-  clearCurrentVibe();
-}
-
-function restartPlan(layers: VibeExecutionLayer[]): boolean {
-  audioPlayerService.restartPlan(layers);
-  syncFromService();
-  return audioPlayerService.hasActiveLayers();
-}
+export type { PlaybackState } from '@/stores/player.store';
 
 export function useAudioPlayer() {
-  return {
-    // ── Playback state ──────────────────────────────────────
+  const store = usePlayerStore();
+  const {
     playbackState,
     elapsedSeconds,
-    playPlan,
-    pauseAll,
-    resumeAll,
-    stopAll,
-    restartPlan,
-    beginSessionClock,
-    pauseElapsedTicker,
-    resumeElapsedTicker,
-    resetElapsed,
-
-    // ── Vibe context for MiniPlayer ─────────────────────────
+    hasActiveLayers,
     currentVibeId,
     currentVibeName,
     currentSoundSummary,
-    setCurrentVibe,
-    clearCurrentVibe,
+  } = storeToRefs(store);
+
+  return {
+    // state
+    playbackState,
+    elapsedSeconds,
+    hasActiveLayers,
+    currentVibeId,
+    currentVibeName,
+    currentSoundSummary,
+
+    // actions
+    playPlan:          store.playPlan,
+    pauseAll:          store.pausePlayback,
+    resumeAll:         store.resumePlayback,
+    stopAll:           store.stopPlayback,
+    restartPlan:       store.restartPlayback,
+    beginSessionClock: store.beginSessionClock,
+    pauseElapsedTicker: store.pauseElapsedTicker,
+    resumeElapsedTicker: store.resumeElapsedTicker,
+    resetElapsed:      store.resetElapsed,
+    setCurrentVibe:    store.setCurrentVibe,
+    clearCurrentVibe:  store.clearCurrentVibe,
   };
 }
