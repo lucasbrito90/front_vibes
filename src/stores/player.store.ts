@@ -27,11 +27,19 @@ import {
   setSessionEndedCallback,
 } from '@/services/audio-player.service';
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
+import { createLogger } from '@/utils/player-debug';
 
 export type PlaybackState = 'idle' | 'playing' | 'paused';
 
+const log = createLogger('PlayerStore');
+
 // Non-reactive timer ref — lives outside the store so Pinia never wraps it.
 let _timerRef: ReturnType<typeof setInterval> | null = null;
+
+/** Logs a state transition in [old → new] format. */
+function _logTransition(field: string, from: unknown, to: unknown): void {
+  log.debug(`${field} ${String(from)} → ${String(to)}`);
+}
 
 export const usePlayerStore = defineStore('player', () => {
 
@@ -66,6 +74,7 @@ export const usePlayerStore = defineStore('player', () => {
   function beginSessionClock(): void {
     elapsedSeconds.value = 0;
     _startTicker();
+    log.debug('session clock started');
   }
 
   function pauseElapsedTicker(): void { _clearTimer(); }
@@ -80,12 +89,14 @@ export const usePlayerStore = defineStore('player', () => {
   // ── Vibe context ───────────────────────────────────────────────────────────
 
   function setCurrentVibe(id: number, name: string, soundSummary: string): void {
+    log.debug('setCurrentVibe', { id, name, soundSummary });
     currentVibeId.value       = id;
     currentVibeName.value     = name;
     currentSoundSummary.value = soundSummary;
   }
 
   function clearCurrentVibe(): void {
+    log.debug('clearCurrentVibe');
     currentVibeId.value       = null;
     currentVibeName.value     = '';
     currentSoundSummary.value = '';
@@ -96,8 +107,15 @@ export const usePlayerStore = defineStore('player', () => {
   // all layers finish naturally (duration timers) so the UI snaps to idle.
 
   setSessionEndedCallback(() => {
+    log.debug('sessionEnded callback fired', {
+      playbackState: playbackState.value,
+      currentVibeId: currentVibeId.value,
+      svcHasActive:  audioPlayerService.hasActiveLayers(),
+    });
+    const prev = playbackState.value;
     playbackState.value   = 'idle';
     hasActiveLayers.value = false;
+    if (prev !== 'idle') _logTransition('playbackState', prev, 'idle');
     resetElapsed();
     clearCurrentVibe();
   });
@@ -105,57 +123,140 @@ export const usePlayerStore = defineStore('player', () => {
   // ── Playback actions ───────────────────────────────────────────────────────
 
   /**
-   * Start a new playback session from an execution plan.
+   * Primary entry point for starting any vibe. Combines setCurrentVibe +
+   * optimistic state update + session clock + audioPlayerService.playPlan()
+   * into a single atomic action so Pinia is ALWAYS in sync with the audio
+   * backend — regardless of whether NativeAudio or HTMLAudio is used.
+   *
+   * If another vibe is already playing it is stopped automatically (the audio
+   * service's playPlan() calls stopAll() internally under _playPlanInProgress).
+   *
    * Returns true if at least one layer passes validation.
-   *
-   * Callers must call setCurrentVibe() BEFORE this so the vibe context is
-   * visible to the Mini Player from the very first reactive flush.
-   *
-   * ## Optimistic update
-   * State is set to 'playing' / hasActiveLayers = true BEFORE calling the
-   * audio service, based on the count of valid layers in the input. This is
-   * critical for native loop layers: preload + loop are async (fire-and-forget)
-   * so the service's hasActiveLayers() would still return true, but the
-   * _scheduleLayerLifetime timer (especially when fadeStartDelayMs = 0) can
-   * fire on the very next event-loop tick and destroy the layer before Vue
-   * has a chance to render the 'playing' state.
-   * By committing the state before the service runs, the first reactive flush
-   * always shows the correct state.
-   * If all layers fail validation inside the service, _sessionEndedCallback
-   * will fire synchronously and reset everything to 'idle' correctly.
+   */
+  function playVibe(params: {
+    vibeId: number;
+    vibeName: string;
+    soundSummary: string;
+    layers: VibeExecutionLayer[];
+  }): boolean {
+    const { vibeId: id, vibeName, soundSummary, layers } = params;
+    const valid = audioPlayerService.countValidLayers(layers);
+
+    log.debug('playVibe', {
+      vibeId:        id,
+      validLayers:   valid,
+      currentVibeId: currentVibeId.value,
+      playbackState: playbackState.value,
+    });
+
+    if (valid === 0) {
+      log.warn('playVibe — no valid layers, aborting');
+      return false;
+    }
+
+    // Set vibe context BEFORE audio engine starts so the Mini Player is
+    // immediately visible on the very first reactive flush, even while the
+    // async native preload/loop is still in flight.
+    setCurrentVibe(id, vibeName, soundSummary);
+
+    // Optimistic update: commit playing state now. Native preload is async
+    // (fire-and-forget), so the service's hasActiveLayers() is still true once
+    // the layer is registered — but we need Vue to render 'playing' before any
+    // duration timer could possibly fire and reset the state.
+    const prevState = playbackState.value;
+    hasActiveLayers.value = true;
+    playbackState.value   = 'playing';
+    if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
+
+    // Reset + start elapsed clock immediately so the timer is in sync.
+    beginSessionClock();
+
+    // Hand off to the audio engine. playPlan() stops any previous session
+    // first (under _playPlanInProgress guard), then registers new layers.
+    log.debug('playVibe — calling audioPlayerService.playPlan()', { valid });
+    audioPlayerService.playPlan(layers);
+
+    log.debug('playVibe — done', {
+      svcHasActive:  audioPlayerService.hasActiveLayers(),
+      storeHasActive: hasActiveLayers.value,
+    });
+
+    return true;
+  }
+
+  /**
+   * Low-level plan runner — kept for internal use and backward compatibility.
+   * Prefer playVibe() for all new call sites: it sets vibe context and starts
+   * the elapsed clock in addition to running the plan.
    */
   function playPlan(layers: VibeExecutionLayer[]): boolean {
     const valid = audioPlayerService.countValidLayers(layers);
-    if (valid === 0) return false;
+    log.debug('playPlan called', {
+      totalLayers:   layers.length,
+      validLayers:   valid,
+      currentVibeId: currentVibeId.value,
+      playbackState: playbackState.value,
+    });
 
-    // Optimistic update: commit playing state before starting the audio engine.
+    if (valid === 0) {
+      log.warn('playPlan — no valid layers, aborting');
+      return false;
+    }
+
+    const prevState = playbackState.value;
     hasActiveLayers.value = true;
     playbackState.value   = 'playing';
+    if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
 
+    log.debug('playPlan — calling audioPlayerService.playPlan()', { valid });
     audioPlayerService.playPlan(layers);
+
+    log.debug('playPlan — done', {
+      svcHasActive:  audioPlayerService.hasActiveLayers(),
+      storeHasActive: hasActiveLayers.value,
+    });
     return true;
   }
 
   function pausePlayback(): void {
+    log.debug('pausePlayback', {
+      playbackState: playbackState.value,
+      svcHasActive:  audioPlayerService.hasActiveLayers(),
+    });
     audioPlayerService.pauseAll();
     if (audioPlayerService.hasActiveLayers()) {
+      const prev = playbackState.value;
       playbackState.value = 'paused';
+      if (prev !== 'paused') _logTransition('playbackState', prev, 'paused');
     }
     pauseElapsedTicker();
   }
 
   function resumePlayback(): void {
+    log.debug('resumePlayback', {
+      playbackState: playbackState.value,
+      svcHasActive:  audioPlayerService.hasActiveLayers(),
+    });
     audioPlayerService.resumeAll();
     if (audioPlayerService.hasActiveLayers()) {
+      const prev = playbackState.value;
       playbackState.value = 'playing';
+      if (prev !== 'playing') _logTransition('playbackState', prev, 'playing');
     }
     resumeElapsedTicker();
   }
 
   function stopPlayback(): void {
+    log.debug('stopPlayback', {
+      playbackState: playbackState.value,
+      currentVibeId: currentVibeId.value,
+      svcHasActive:  audioPlayerService.hasActiveLayers(),
+    });
     audioPlayerService.stopAll();
+    const prev = playbackState.value;
     playbackState.value   = 'idle';
     hasActiveLayers.value = false;
+    if (prev !== 'idle') _logTransition('playbackState', prev, 'idle');
     resetElapsed();
     clearCurrentVibe();
   }
@@ -166,10 +267,21 @@ export const usePlayerStore = defineStore('player', () => {
    */
   function restartPlayback(layers: VibeExecutionLayer[]): boolean {
     const valid = audioPlayerService.countValidLayers(layers);
-    if (valid === 0) return false;
+    log.debug('restartPlayback', {
+      totalLayers:   layers.length,
+      validLayers:   valid,
+      currentVibeId: currentVibeId.value,
+    });
+
+    if (valid === 0) {
+      log.warn('restartPlayback — no valid layers, aborting');
+      return false;
+    }
 
     hasActiveLayers.value = true;
+    const prevState = playbackState.value;
     playbackState.value   = 'playing';
+    if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
 
     audioPlayerService.restartPlan(layers);
     return true;
@@ -197,6 +309,7 @@ export const usePlayerStore = defineStore('player', () => {
     clearCurrentVibe,
 
     // playback
+    playVibe,
     playPlan,
     pausePlayback,
     resumePlayback,

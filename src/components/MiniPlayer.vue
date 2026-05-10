@@ -49,11 +49,14 @@ import {
   playOutline,
   stopCircleOutline,
 } from 'ionicons/icons';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 
 import { usePlayerStore } from '@/stores/player.store';
+import { createLogger } from '@/utils/player-debug';
+
+const log = createLogger('MiniPlayer');
 
 const route  = useRoute();
 const router = useRouter();
@@ -75,6 +78,15 @@ const isVisible = computed(
     && currentVibeId.value !== null
     && (playbackState.value === 'playing' || playbackState.value === 'paused'),
 );
+
+watch(isVisible, (next, prev) => {
+  log.debug(`visibility ${String(prev)} → ${String(next)}`, {
+    playbackState:  playbackState.value,
+    currentVibeId:  currentVibeId.value,
+    routeName:      String(route.name ?? route.path),
+    hideMiniPlayer: !!route.meta.hideMiniPlayer,
+  });
+});
 
 // ── Display text ──────────────────────────────────────────────────────────────
 
@@ -106,13 +118,16 @@ const playPauseLabel = computed(() =>
 
 function handlePlayPause(): void {
   if (playbackState.value === 'playing') {
+    log.debug('pause tapped');
     store.pausePlayback();
   } else {
+    log.debug('resume tapped');
     store.resumePlayback();
   }
 }
 
 function handleStop(): void {
+  log.debug('stop tapped');
   store.stopPlayback();
 }
 
