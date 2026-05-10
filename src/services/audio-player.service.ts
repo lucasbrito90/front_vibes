@@ -767,36 +767,21 @@ async function _startOnceAudioNative(
     }
   });
 
-  // Build play options with native fade in/out when configured.
-  // play() supports fadeIn, fadeInDuration, fadeOut, fadeOutDuration, fadeOutStartTime.
-  // If durationSeconds is null, the plugin defaults fadeOutStartTime to
-  // fadeOutDuration before the natural end of the audio file.
-  const playOpts: {
-    assetId: string;
-    fadeIn?: boolean; fadeInDuration?: number;
-    fadeOut?: boolean; fadeOutDuration?: number; fadeOutStartTime?: number;
-  } = { assetId };
+  // Build play options with native fade in only.
+  //
+  // NOTE: fadeOut and fadeOutStartTime are intentionally NOT passed to play().
+  // On Android (tested with @capgo/native-audio) passing these options causes
+  // "CapacitorException: Index 0 out of bounds for length 0" and play() fails.
+  // Fade out for once layers is handled instead by _scheduleLayerLifetime via
+  // NativeAudio.setVolume({ duration: fadeOutSeconds }) — the same mechanism
+  // used for loop layers — when durationSeconds is configured.
+  // For once layers without durationSeconds, no native fade out is applied.
+  const playOpts: { assetId: string; fadeIn?: boolean; fadeInDuration?: number } = { assetId };
 
   if (layer.fadeInSeconds > 0) {
     playOpts.fadeIn         = true;
     playOpts.fadeInDuration = layer.fadeInSeconds;
     log.debug('[NativeAudio][Fade] once fadeIn option', { assetId, fadeInSeconds: layer.fadeInSeconds });
-  }
-
-  if (layer.fadeOutSeconds > 0) {
-    playOpts.fadeOut         = true;
-    playOpts.fadeOutDuration = layer.fadeOutSeconds;
-    if (layer.durationSeconds != null) {
-      // Pin fade-out start relative to durationSeconds so it aligns with
-      // our duration timer rather than the audio file's natural length.
-      playOpts.fadeOutStartTime = Math.max(0, layer.durationSeconds - layer.fadeOutSeconds);
-    }
-    // If durationSeconds is null, the plugin defaults to "fadeOutDuration before end".
-    log.debug('[NativeAudio][Fade] once fadeOut option', {
-      assetId,
-      fadeOutSeconds: layer.fadeOutSeconds,
-      fadeOutStartTime: playOpts.fadeOutStartTime ?? 'plugin-default',
-    });
   }
 
   try {
