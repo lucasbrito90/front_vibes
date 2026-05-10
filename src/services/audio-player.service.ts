@@ -1,5 +1,5 @@
 /**
- * audio-player.service.ts — Phase 5 (native loop + native once + HTML interval + fades)
+ * audio-player.service.ts — Phase 6 (native loop + native once + native interval + fades)
  *
  * ## Audio backend per play mode
  * - loop:     @capgo/native-audio on native platforms (Android/iOS).
@@ -7,7 +7,9 @@
  * - once:     @capgo/native-audio on native platforms (Android/iOS).
  *             Falls back to HTMLAudioElement on web (ionic serve), or if
  *             any native step (preload / play) fails.
- * - interval: HTMLAudioElement (unchanged).
+ * - interval: @capgo/native-audio on native platforms (Android/iOS).
+ *             Falls back to HTMLAudioElement on web (ionic serve), or if
+ *             the initial native preload fails.
  *
  * ## Native loop lifecycle
  * - preload() + loop() on start. pause() / resume() / stop()+unload() for control.
@@ -23,6 +25,25 @@
  * - On completion the layer is torn down and _notifySessionEndedIfEmpty() fires,
  *   exactly mirroring the HTMLAudioElement 'ended' path.
  * - If preload or play fails, the layer falls back to HTMLAudioElement.
+ *
+ * ## Native interval lifecycle
+ * - Asset is preloaded ONCE with a stable assetId at layer start.
+ * - Each tick calls NativeAudio.play({ assetId }) (not loop()). The same
+ *   preloaded asset is reused for every tick — no re-preload needed.
+ * - Tick completion is detected via the same global 'complete' listener used
+ *   for once layers. On complete, the next gap timer is scheduled, which
+ *   fires _intervalPlayTickNative() for the following tick.
+ * - Overlap prevention: if the 'complete' callback for a tick is still
+ *   registered when the next tick would start, the new tick is skipped with
+ *   a structured warning (mirrors the HTML guard).
+ * - Pause during active tick: NativeAudio.pause() is called only when a tick
+ *   is playing (completion callback registered). During the gap phase nothing
+ *   is playing, so NativeAudio.pause() is skipped to avoid plugin errors.
+ * - Pause during gap: the gap timer is cleared and pendingIntervalRemainingMs
+ *   is saved. On resume the gap timer is rescheduled from remaining time.
+ * - Stop: completion callback cleared before _stopNativeAsset() to prevent
+ *   ghost ticks from firing after explicit stop.
+ * - If preload fails, the layer transparently falls back to HTMLAudioElement.
  *
  * ## Pause vs Stop
  * - pauseAll: pauses audio (native + HTML), clears timeouts and fade RAF, stores
@@ -531,7 +552,7 @@ function _beginLayerAfterDelay(layer: VibeExecutionLayer, managed: ManagedLayer)
       _startOnceAudio(layer, managed);
       break;
     case 'interval':
-      _intervalPlayTick(layer, managed);
+      _startIntervalAudio(layer, managed);
       break;
   }
 }
@@ -737,6 +758,80 @@ function _startOnceAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
   }
 }
 
+/**
+ * Preloads the interval asset once, then fires the first tick.
+ * Subsequent ticks are driven by the 'complete' event → gap timer → _intervalPlayTick.
+ * Falls back to HTMLAudioElement if preload fails.
+ */
+async function _startIntervalAudioNative(
+  layer: VibeExecutionLayer,
+  managed: ManagedLayer,
+): Promise<void> {
+  const assetId = _nativeAssetId(layer.soundId);
+  log.debug('[NativeAudio][Interval] preload — start', { soundId: layer.soundId, assetId });
+
+  // Ensure global complete listener is ready
+  await _ensureNativeOnceCompleteListener();
+
+  // Unload stale asset from a previous play (e.g. restart)
+  if (_nativeLayers.has(assetId)) {
+    log.debug('[NativeAudio][Interval] unloading stale asset', { assetId });
+    await _stopNativeAsset(assetId);
+  }
+
+  // Guard: layer may have been stopped while awaiting above
+  if (!_layers.has(layer.soundId)) {
+    log.warn('[NativeAudio][Interval] layer removed while awaiting stale stop, aborting', { soundId: layer.soundId });
+    return;
+  }
+
+  try {
+    await NativeAudio.preload({
+      assetId,
+      assetPath: layer.fileUrl,
+      isUrl: true,
+      volume: _toNativeVolume(layer.volume),
+      audioChannelNum: 1,
+    });
+    _nativeLayers.add(assetId);
+    log.debug('[NativeAudio][Interval] preload — OK', { assetId, nativeCount: _nativeLayers.size });
+  } catch (err) {
+    _logNativeFailure('preload (interval)', assetId, err);
+    log.warn('[NativeAudio][Interval] preload — FAILED, falling back to HTML', { assetId, err: String(err) });
+    if (_layers.has(layer.soundId)) {
+      managed.isNative = false;
+      _intervalPlayTick(layer, managed); // HTML fallback via dispatcher
+    }
+    return;
+  }
+
+  // Guard again: layer may have been stopped during preload
+  if (!_layers.has(layer.soundId)) {
+    log.warn('[NativeAudio][Interval] layer removed during preload, unloading asset', { assetId });
+    void _stopNativeAsset(assetId);
+    return;
+  }
+
+  // Kick off the first tick (managed.isNative is already true)
+  _intervalPlayTick(layer, managed);
+}
+
+/**
+ * Starts interval playback. On native platforms, preloads the asset once and
+ * then drives ticks via the 'complete' event + gap timers. Falls back to
+ * HTMLAudioElement on web or if the initial native preload fails.
+ */
+function _startIntervalAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  if (_isNativePlatform) {
+    log.debug('interval backend — Native (@capgo/native-audio)', { soundId: layer.soundId });
+    managed.isNative = true;
+    void _startIntervalAudioNative(layer, managed);
+  } else {
+    log.debug('interval backend — HTMLAudioElement (web platform)', { soundId: layer.soundId });
+    _intervalPlayTick(layer, managed); // HTML via dispatcher (isNative = false)
+  }
+}
+
 function _scheduleNextIntervalGap(layer: VibeExecutionLayer, managed: ManagedLayer): void {
   const gapSec = layer.repeatIntervalSeconds ?? 0;
   const gapMs  = gapSec * 1_000;
@@ -754,13 +849,13 @@ function _scheduleNextIntervalGap(layer: VibeExecutionLayer, managed: ManagedLay
   }, gapMs);
 }
 
-function _intervalPlayTick(layer: VibeExecutionLayer, managed: ManagedLayer): void {
-  _clearIntervalTimer(managed);
-  managed.intervalFiresAtEpochMs = null;
-
-  if (_sessionPaused) return;
-
-  /* Normal path: gap elapsed → previous tick already torn down */
+/**
+ * HTMLAudioElement interval tick — used on web and as fallback.
+ * A new short-lived audio element is created for each tick. The existing
+ * element (if any) is torn down before the new one starts.
+ */
+function _intervalPlayTickHtml(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  /* Previous tick still alive (shouldn't happen normally, but guard) */
   if (managed.audio !== null) {
     _tearDownIntervalTickAudio(managed);
   }
@@ -804,6 +899,7 @@ function _intervalPlayTick(layer: VibeExecutionLayer, managed: ManagedLayer): vo
   }
 }
 
+/** Tear down a single HTML interval tick element. */
 function _tearDownIntervalTickAudio(managed: ManagedLayer): void {
   _clearFadeAnimations(managed);
   const audio = managed.audio;
@@ -813,6 +909,94 @@ function _tearDownIntervalTickAudio(managed: ManagedLayer): void {
     audio.pause();
     audio.src = '';
     managed.audio = null;
+  }
+}
+
+/**
+ * Native interval tick — calls NativeAudio.play() on the already-preloaded
+ * asset. The global 'complete' listener schedules the next gap when the tick
+ * finishes. Overlap prevention: if the completion callback is still registered
+ * (previous tick not yet done), the new tick is skipped with a warning.
+ */
+async function _intervalPlayTickNative(
+  layer: VibeExecutionLayer,
+  managed: ManagedLayer,
+): Promise<void> {
+  const assetId = _nativeAssetId(layer.soundId);
+
+  // Overlap prevention: if the completion callback for the previous tick is
+  // still registered, that tick is still playing → skip this one.
+  if (_nativeOnceCompleteCallbacks.has(assetId)) {
+    log.warn('[NativeAudio][Interval] tick skipped — previous tick still playing', {
+      assetId,
+      soundId: layer.soundId,
+    });
+    return;
+  }
+
+  if (!_nativeLayers.has(assetId)) {
+    // Asset was unloaded unexpectedly; layer will stop naturally via duration/stop.
+    log.warn('[NativeAudio][Interval] tick skipped — asset not preloaded', { assetId });
+    return;
+  }
+
+  // Register completion callback BEFORE play() to avoid missing the event
+  // for very short audio files.
+  _nativeOnceCompleteCallbacks.set(assetId, () => {
+    log.debug('[NativeAudio][Interval] tick complete', { assetId, sessionPaused: _sessionPaused });
+    if (_sessionPaused) {
+      log.warn('[NativeAudio][Interval] tick complete while paused — ignoring', { assetId });
+      return;
+    }
+    if (!_layers.has(layer.soundId)) return;
+    log.debug('[NativeAudio][Interval] scheduling next gap', {
+      assetId,
+      gapSec: layer.repeatIntervalSeconds,
+    });
+    _scheduleNextIntervalGap(layer, managed);
+  });
+
+  try {
+    await NativeAudio.play({ assetId });
+    log.debug('[NativeAudio][Interval] tick play — started', {
+      assetId,
+      soundId:      layer.soundId,
+      sessionPaused: _sessionPaused,
+    });
+    // Race guard: session paused while we were awaiting play()
+    if (_sessionPaused && _nativeLayers.has(assetId)) {
+      log.debug('[NativeAudio][Interval] session paused during tick start, pausing immediately', { assetId });
+      void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race interval)', assetId, e));
+    }
+  } catch (err) {
+    _logNativeFailure('play (interval tick)', assetId, err);
+    log.warn('[NativeAudio][Interval] tick play — FAILED, scheduling next gap anyway', {
+      assetId,
+      err: String(err),
+    });
+    // Remove stale completion callback and keep the interval alive by
+    // scheduling the next gap so a transient error doesn't kill the layer.
+    _nativeOnceCompleteCallbacks.delete(assetId);
+    if (_layers.has(layer.soundId) && !_sessionPaused) {
+      _scheduleNextIntervalGap(layer, managed);
+    }
+  }
+}
+
+/**
+ * Dispatcher for interval ticks. Routes to native or HTML based on managed.isNative.
+ * Also the entry point called by the gap timer for subsequent ticks.
+ */
+function _intervalPlayTick(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+  _clearIntervalTimer(managed);
+  managed.intervalFiresAtEpochMs = null;
+
+  if (_sessionPaused) return;
+
+  if (managed.isNative) {
+    void _intervalPlayTickNative(layer, managed);
+  } else {
+    _intervalPlayTickHtml(layer, managed);
   }
 }
 
@@ -1053,7 +1237,21 @@ function pauseAll(): void {
 
     if (managed.isNative) {
       const assetId = _nativeAssetId(managed.soundId);
-      if (_nativeLayers.has(assetId)) {
+      /*
+       * For interval layers, the asset may be preloaded but NOT playing
+       * (we are in the gap between ticks — intervalTimerId was active).
+       * Calling NativeAudio.pause() on an asset that is already stopped
+       * produces a plugin error on Android. Only pause if a tick is
+       * currently playing, which is indicated by the completion callback
+       * being registered in _nativeOnceCompleteCallbacks.
+       *
+       * For loop and once layers, _nativeOnceCompleteCallbacks never has an
+       * entry (loop) or always has one while playing (once), so the simpler
+       * check `layer.playMode !== 'interval'` is used as an additional guard.
+       */
+      const tickPlaying =
+        layer.playMode !== 'interval' || _nativeOnceCompleteCallbacks.has(assetId);
+      if (_nativeLayers.has(assetId) && tickPlaying) {
         void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause', assetId, e));
       }
     } else if (managed.audio !== null) {
