@@ -394,16 +394,12 @@ async function _startLoopAudioNative(
     return;
   }
 
-  // When fading in, preload at minimum volume (0.1) so loop() starts silently
-  // and setVolume() can ramp up smoothly. NativeAudio's minimum is 0.1 (not 0).
-  const preloadVolume = layer.fadeInSeconds > 0 ? 0.1 : _toNativeVolume(layer.volume);
-
   try {
     await NativeAudio.preload({
       assetId,
       assetPath: layer.fileUrl,
       isUrl: true,
-      volume: preloadVolume,
+      volume: _toNativeVolume(layer.volume),
       audioChannelNum: 1,
     });
     _nativeLayers.add(assetId);
@@ -412,7 +408,6 @@ async function _startLoopAudioNative(
     _logNativeFailure('preload', assetId, err);
     log.warn('native preload — FAILED, falling back to HTML', { assetId, err: String(err) });
     if (_layers.has(layer.soundId)) {
-      // Preload failed — fall back to HTMLAudioElement for this layer
       managed.isNative = false;
       _startLoopAudioHtml(layer, managed, 'preload-failed');
     }
@@ -420,8 +415,46 @@ async function _startLoopAudioNative(
   }
 
   if (!_layers.has(layer.soundId)) {
-    // Layer was stopped while preloading — clean up the native asset
     log.warn('native preload — layer removed while preloading, unloading asset', { assetId });
+    void _stopNativeAsset(assetId);
+    return;
+  }
+
+  /*
+   * Fade-in preparation for loop mode.
+   *
+   * On Android, preload({ volume }) is not guaranteed to set the actual
+   * playback volume reliably — the native player may use a cached volume
+   * from a previous session or ignore the preload value entirely.
+   * To ensure loop() starts at near-silence, we explicitly call
+   * setVolume(0.1) and await it BEFORE loop() so the volume is applied
+   * to the native player state before playback begins.
+   *
+   * setVolume scale:    0.1–1.0  (plugin minimum is 0.1, not 0.0)
+   * setVolume duration: seconds  (0 = immediate, no duration param = immediate)
+   */
+  if (layer.fadeInSeconds > 0) {
+    const fadeStartVol  = 0.1;
+    const targetVol     = _toNativeVolume(layer.volume);
+    log.debug('[NativeAudio][Fade] loop fadeIn — resetting to fade-start volume before loop()', {
+      assetId,
+      fadeStartVol,
+      targetVol,
+      fadeInSeconds: layer.fadeInSeconds,
+    });
+    try {
+      // Await the snap to near-silence so loop() definitely starts quiet.
+      await NativeAudio.setVolume({ assetId, volume: fadeStartVol });
+    } catch (e) {
+      log.warn('[NativeAudio][Fade] loop fadeIn pre-reset setVolume — failed, fade may start loud', {
+        assetId, err: String(e),
+      });
+    }
+  }
+
+  // Guard: layer may have been stopped while we were awaiting setVolume above
+  if (!_layers.has(layer.soundId)) {
+    log.warn('native loop — layer removed while awaiting pre-reset, unloading asset', { assetId });
     void _stopNativeAsset(assetId);
     return;
   }
@@ -435,23 +468,26 @@ async function _startLoopAudioNative(
       layersSize:    _layers.size,
     });
 
-    // Apply fade in via setVolume ramp (loop() has no fade options).
-    // Only ramp if not immediately paused by a race condition below.
+    // Start the fade-in ramp AFTER loop() confirms playback began.
+    // setVolume with duration ramps from current volume (0.1) to target over fadeInSeconds.
     if (layer.fadeInSeconds > 0 && !_sessionPaused && _nativeLayers.has(assetId)) {
-      log.debug('[NativeAudio][Fade] loop fadeIn — starting', {
+      const targetVol = _toNativeVolume(layer.volume);
+      log.debug('[NativeAudio][Fade] loop fadeIn — starting ramp to target', {
         assetId,
-        targetVolume: _toNativeVolume(layer.volume),
+        targetVol,
         fadeInSeconds: layer.fadeInSeconds,
       });
       void NativeAudio.setVolume({
         assetId,
-        volume:   _toNativeVolume(layer.volume),
+        volume:   targetVol,
         duration: layer.fadeInSeconds,
-      }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn setVolume — failed', { assetId, err: String(e) }));
+      }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn ramp setVolume — failed', {
+        assetId, err: String(e),
+      }));
     }
 
-    // Race-condition guard: if the session was paused while we were preloading,
-    // immediately pause the native player so state stays consistent.
+    // Race-condition guard: if the session was paused while we were awaiting
+    // loop(), immediately pause the native player so state stays consistent.
     if (_sessionPaused && _nativeLayers.has(assetId)) {
       log.debug('native loop — session was paused during preload, pausing immediately', { assetId });
       void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race)', assetId, e));
@@ -461,7 +497,6 @@ async function _startLoopAudioNative(
     log.warn('native loop — FAILED, falling back to HTML', { assetId, err: String(err) });
     _nativeLayers.delete(assetId);
     if (_layers.has(layer.soundId)) {
-      // loop() failed — fall back to HTMLAudioElement
       managed.isNative = false;
       _startLoopAudioHtml(layer, managed, 'loop-failed');
     }
