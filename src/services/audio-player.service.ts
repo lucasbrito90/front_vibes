@@ -394,12 +394,33 @@ async function _startLoopAudioNative(
     return;
   }
 
+  /*
+   * Preload volume selection:
+   * - No fade-in: preload at target volume so loop() starts at the right level.
+   * - Fade-in configured: preload at 0.1 (near-silence) so the native player
+   *   never holds the target volume in its internal cache before loop() starts.
+   *   We then also await a setVolume(0.1) reset before loop() as a redundant
+   *   safety measure, because Android may not always honour the preload volume.
+   *
+   * setVolume scale:    0.1–1.0  (plugin minimum is 0.1, not 0.0)
+   * setVolume.duration: seconds  (confirmed from @capgo/native-audio typings)
+   */
+  const targetVol    = _toNativeVolume(layer.volume);
+  const preloadVol   = layer.fadeInSeconds > 0 ? 0.1 : targetVol;
+
+  log.debug('[NativeAudio][Fade] preload volume selected', {
+    assetId,
+    preloadVol,
+    targetVol,
+    fadeInSeconds: layer.fadeInSeconds,
+  });
+
   try {
     await NativeAudio.preload({
       assetId,
       assetPath: layer.fileUrl,
       isUrl: true,
-      volume: _toNativeVolume(layer.volume),
+      volume: preloadVol,
       audioChannelNum: 1,
     });
     _nativeLayers.add(assetId);
@@ -420,31 +441,13 @@ async function _startLoopAudioNative(
     return;
   }
 
-  /*
-   * Fade-in preparation for loop mode.
-   *
-   * On Android, preload({ volume }) is not guaranteed to set the actual
-   * playback volume reliably — the native player may use a cached volume
-   * from a previous session or ignore the preload value entirely.
-   * To ensure loop() starts at near-silence, we explicitly call
-   * setVolume(0.1) and await it BEFORE loop() so the volume is applied
-   * to the native player state before playback begins.
-   *
-   * setVolume scale:    0.1–1.0  (plugin minimum is 0.1, not 0.0)
-   * setVolume duration: seconds  (0 = immediate, no duration param = immediate)
-   */
+  // Redundant safety reset before loop(): even if preload volume was cached
+  // from a previous play, this explicit await ensures the native player state
+  // is at 0.1 before playback begins.
   if (layer.fadeInSeconds > 0) {
-    const fadeStartVol  = 0.1;
-    const targetVol     = _toNativeVolume(layer.volume);
-    log.debug('[NativeAudio][Fade] loop fadeIn — resetting to fade-start volume before loop()', {
-      assetId,
-      fadeStartVol,
-      targetVol,
-      fadeInSeconds: layer.fadeInSeconds,
-    });
+    log.debug('[NativeAudio][Fade] loop fadeIn — safety reset to 0.1 before loop()', { assetId });
     try {
-      // Await the snap to near-silence so loop() definitely starts quiet.
-      await NativeAudio.setVolume({ assetId, volume: fadeStartVol });
+      await NativeAudio.setVolume({ assetId, volume: 0.1 });
     } catch (e) {
       log.warn('[NativeAudio][Fade] loop fadeIn pre-reset setVolume — failed, fade may start loud', {
         assetId, err: String(e),
@@ -452,7 +455,7 @@ async function _startLoopAudioNative(
     }
   }
 
-  // Guard: layer may have been stopped while we were awaiting setVolume above
+  // Guard: layer may have been stopped while awaiting setVolume above
   if (!_layers.has(layer.soundId)) {
     log.warn('native loop — layer removed while awaiting pre-reset, unloading asset', { assetId });
     void _stopNativeAsset(assetId);
