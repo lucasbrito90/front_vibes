@@ -26,6 +26,11 @@ import {
   audioPlayerService,
   setSessionEndedCallback,
 } from '@/services/audio-player.service';
+import {
+  startBackgroundAudio,
+  stopBackgroundAudio,
+  updateBackgroundAudioTitle,
+} from '@/services/backgroundAudio.service';
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
 import { createLogger } from '@/utils/player-debug';
 
@@ -118,6 +123,8 @@ export const usePlayerStore = defineStore('player', () => {
     if (prev !== 'idle') _logTransition('playbackState', prev, 'idle');
     resetElapsed();
     clearCurrentVibe();
+    // All layers ended naturally — stop the foreground service.
+    void stopBackgroundAudio();
   });
 
   // ── Playback actions ───────────────────────────────────────────────────────
@@ -176,6 +183,9 @@ export const usePlayerStore = defineStore('player', () => {
     log.debug('playVibe — calling audioPlayerService.playPlan()', { valid });
     audioPlayerService.playPlan(layers);
 
+    // Start (or update) the foreground service so audio continues in background.
+    void startBackgroundAudio(vibeName).catch(() => undefined);
+
     log.debug('playVibe — done', {
       svcHasActive:  audioPlayerService.hasActiveLayers(),
       storeHasActive: hasActiveLayers.value,
@@ -210,6 +220,9 @@ export const usePlayerStore = defineStore('player', () => {
 
     log.debug('playPlan — calling audioPlayerService.playPlan()', { valid });
     audioPlayerService.playPlan(layers);
+
+    // Start (or keep) the foreground service with the current vibe name.
+    void startBackgroundAudio(currentVibeName.value).catch(() => undefined);
 
     log.debug('playPlan — done', {
       svcHasActive:  audioPlayerService.hasActiveLayers(),
@@ -259,6 +272,8 @@ export const usePlayerStore = defineStore('player', () => {
     if (prev !== 'idle') _logTransition('playbackState', prev, 'idle');
     resetElapsed();
     clearCurrentVibe();
+    // User explicitly stopped — stop the foreground service.
+    void stopBackgroundAudio();
   }
 
   /**
@@ -284,7 +299,17 @@ export const usePlayerStore = defineStore('player', () => {
     if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
 
     audioPlayerService.restartPlan(layers);
+    // Keep / start the foreground service on restart.
+    void startBackgroundAudio(currentVibeName.value).catch(() => undefined);
     return true;
+  }
+
+  /**
+   * Update the foreground service notification with the current vibe name.
+   * Call this if vibe metadata changes while playback continues.
+   */
+  function syncBackgroundAudioTitle(): void {
+    void updateBackgroundAudioTitle(currentVibeName.value).catch(() => undefined);
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
@@ -315,5 +340,6 @@ export const usePlayerStore = defineStore('player', () => {
     resumePlayback,
     stopPlayback,
     restartPlayback,
+    syncBackgroundAudioTitle,
   };
 });
