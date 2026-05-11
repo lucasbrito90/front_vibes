@@ -1,21 +1,25 @@
 /**
  * backgroundAudio.service.ts
  *
- * Manages the Android Foreground Service that keeps audio alive when the app
- * is in the background or the screen is locked.
+ * Manages the Android Foreground Service that keeps the app process alive when
+ * audio is playing in the background or with the screen locked.
  *
- * ## Why a foreground service is required
- * @capgo/native-audio with `backgroundPlayback: true` skips its own auto-pause/resume
- * on app lifecycle events so ExoPlayer keeps running. But Android still kills the
- * process after ~1-2 min in background unless a foreground service is active.
+ * ## Role in the audio stack
+ * @capgo/native-audio (configured with backgroundPlayback: true) skips its own
+ * auto-pause/resume so ExoPlayer keeps running when the app backgrounds. However,
+ * Android still kills the process after ~1-2 min without a foreground service.
+ * This service posts a minimal indicator notification, which tells Android to
+ * keep the process alive indefinitely.
+ *
+ * ## Notification design (two-notification approach)
+ * Since NativeAudio.configure({ showNotification: true }) creates a full
+ * MediaStyle notification with lock-screen / media controls, this service uses
+ * a LOW-importance channel ('vibes_bg_service') so its notification is subtle
+ * and does not compete visually with the NativeAudio media notification.
  *
  * ## Notification permission (Android 13+)
- * Starting with Android 13 (API 33) the system requires the app to hold the
- * POST_NOTIFICATIONS runtime permission for any notification to appear — including
- * foreground service notifications. The foreground service itself can start, but the
- * notification is silently suppressed if the permission is not granted.
- * We request this permission inside startBackgroundAudio() on first call so the
- * system dialog appears at a meaningful moment (user just tapped Play).
+ * POST_NOTIFICATIONS must be granted at runtime (manifest declaration is not
+ * enough). We request it once per session before calling startForegroundService.
  *
  * ## Lifecycle
  * - startBackgroundAudio(vibeName): check/request permission → create channel → start service
@@ -23,7 +27,7 @@
  * - stopBackgroundAudio(): stop service and dismiss notification
  *
  * ## Platform guard
- * All public functions are no-ops on web (ionic serve) — the plugin is Android only.
+ * All public functions are no-ops on web (ionic serve) — plugin is Android only.
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -38,7 +42,9 @@ const log = createLogger('BackgroundAudio');
 const SERVICE_TYPE_MEDIA_PLAYBACK = 2;
 
 const NOTIFICATION_ID   = 101;
-const CHANNEL_ID        = 'vibes_playback';
+// Separate channel from NativeAudio's own media notification channel so we
+// can keep this at Low importance (visible but not intrusive).
+const CHANNEL_ID        = 'vibes_bg_service';
 const NOTIFICATION_ICON = 'ic_stat_audio';
 
 /** True when the foreground service is currently running. */
@@ -120,9 +126,10 @@ async function _ensureNotificationChannel(): Promise<void> {
   try {
     await ForegroundService.createNotificationChannel({
       id:          CHANNEL_ID,
-      name:        'Playback',
-      description: 'Shown while a vibe is playing in the background',
-      importance:  3, // Importance.Default — visible in shade, no heads-up popup
+      name:        'Background Playback Service',
+      description: 'Keeps audio running in the background. Media controls appear in a separate notification.',
+      importance:  2, // Importance.Low — visible in shade, no sound, no status-bar icon,
+      // so it does not compete with NativeAudio's own MediaStyle media notification.
     });
     log.debug('notification channel created/confirmed', { channelId: CHANNEL_ID });
   } catch (err) {
