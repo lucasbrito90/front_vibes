@@ -1,5 +1,5 @@
 /**
- * audio-player.service.ts — Phase 6 (native loop + native once + native interval + fades)
+ * audio-player.service.ts — Phase 7 (native loop + native once + native interval + fades + background audio)
  *
  * ## Audio backend per play mode
  * - loop:     @capgo/native-audio on native platforms (Android/iOS).
@@ -88,6 +88,19 @@ const log = createLogger('AudioService');
 
 /** True when running inside a native Capacitor app (Android / iOS). */
 const _isNativePlatform = Capacitor.isNativePlatform();
+
+// ── NativeAudio one-time configuration ───────────────────────────────────────
+// backgroundPlayback: true — instructs the plugin to skip its built-in
+// auto-pause/resume on handleOnPause/handleOnResume lifecycle events. This
+// keeps ExoPlayer instances running when the app backgrounds. The actual
+// process-keep-alive is handled by the Android foreground service in
+// backgroundAudio.service.ts. Without backgroundPlayback: true the plugin
+// would still pause/resume on its own, fighting our foreground service.
+if (_isNativePlatform) {
+  void NativeAudio.configure({ backgroundPlayback: true }).catch((err: unknown) => {
+    log.warn('NativeAudio.configure failed', { err });
+  });
+}
 
 // ── Internal state ────────────────────────────────────────────────────────────
 

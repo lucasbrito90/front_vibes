@@ -2,27 +2,35 @@
  * useAppLifecycleAudio
  *
  * Bridges Capacitor's app lifecycle (foreground / background) with the
- * web-based HTMLAudioElement audio engine.
+ * audio engine, while supporting true background audio via a foreground service.
  *
- * ## Why this is needed
- * HTMLAudioElement running inside a WebView is not a native audio player.
- * Android treats it as browser audio and suspends / kills it after ~2 min
- * in background. This composable:
- *   1. Detects when the app goes background and immediately pauses playback
- *      so the UI state stays consistent (playbackState → 'paused', vibe
- *      context and elapsed time preserved, mini player stays visible).
- *   2. When the app returns to foreground, keeps the player paused and
- *      shows an informational toast so the user can manually resume.
+ * ## Behaviour when background audio is active (normal case)
+ * When a vibe is playing and the Android foreground service is running
+ * (managed by backgroundAudio.service.ts), the app going to background is
+ * intentional — audio should continue uninterrupted. In this case:
+ *   - We do NOT pause playback.
+ *   - We do NOT show a toast.
+ *   - NativeAudio is already configured with backgroundPlayback: true, so its
+ *     ExoPlayer instances keep running.
+ *   - The foreground service keeps the process alive.
+ *   - When the user returns, the player state is still 'playing' and the
+ *     Mini Player remains visible and correct.
+ *
+ * ## Behaviour when background audio is NOT active (web / fallback)
+ * If we are on web (ionic serve) or the foreground service is not running
+ * (e.g. playback had already stopped), the original graceful-pause behaviour
+ * is applied:
+ *   1. Immediately soft-pauses playback on background so the UI state stays
+ *      consistent (playbackState → 'paused', vibe context and elapsed time
+ *      preserved, mini player stays visible as 'paused').
+ *   2. When the app returns to foreground, keeps the player paused and shows
+ *      an informational toast so the user can manually resume.
  *
  * ## What this is NOT
- * This does NOT implement background audio. Audio still stops after Android
- * suspends the WebView. This only prevents the UI from becoming inconsistent.
- *
- * ## True background audio requirements (future work)
- * - Android Foreground Service with MediaPlayer/ExoPlayer
- * - AudioFocus management
- * - MediaSession for lock-screen controls
- * - A native Capacitor plugin bridging the above to JavaScript
+ * This does not implement background audio by itself. Background audio is
+ * powered by:
+ *   - @capgo/native-audio configured with backgroundPlayback: true
+ *   - The Android foreground service in backgroundAudio.service.ts
  *
  * ## Singleton guard
  * The listener must be registered exactly once for the lifetime of the app.
@@ -33,6 +41,7 @@ import { App } from '@capacitor/app';
 import { toastController } from '@ionic/vue';
 
 import { usePlayerStore } from '@/stores/player.store';
+import { isBackgroundAudioRunning } from '@/services/backgroundAudio.service';
 
 // ── Singleton guard ───────────────────────────────────────────────────────────
 
@@ -51,9 +60,9 @@ export function useAppLifecycleAudio(): void {
   const store = usePlayerStore();
 
   /**
-   * True only when WE triggered the pause because the app went to background.
-   * Prevents showing the "paused in background" toast if the user had already
-   * paused manually before minimising.
+   * True only when WE triggered the pause because the app went to background
+   * and background audio was not running. Prevents showing the "paused in
+   * background" toast if the user had already paused manually before minimising.
    */
   let _pausedByBackground = false;
 
@@ -61,8 +70,16 @@ export function useAppLifecycleAudio(): void {
 
     // ── App going to background ─────────────────────────────────────────────
     if (!isActive) {
+      // If the foreground service is running, audio will continue in background.
+      // Do not interfere — NativeAudio is configured with backgroundPlayback: true
+      // and the foreground service keeps the process alive.
+      if (isBackgroundAudioRunning()) {
+        return;
+      }
+
       if (store.playbackState === 'playing') {
         /*
+         * Fallback path (web or foreground service not running):
          * Immediately soft-pause before Android suspends the WebView.
          * store.pausePlayback() calls audioPlayerService.pauseAll() and
          * freezes the elapsed ticker. It does NOT clear currentVibeId /
@@ -87,11 +104,11 @@ export function useAppLifecycleAudio(): void {
      */
 
     const toast = await toastController.create({
-      message: 'Playback was paused while the app was in background',
+      message:  'Playback was paused while the app was in background',
       duration: 3500,
       position: 'top',
-      color: 'medium',
-      buttons: [{ text: 'OK', role: 'cancel' }],
+      color:    'medium',
+      buttons:  [{ text: 'OK', role: 'cancel' }],
     });
 
     await toast.present();

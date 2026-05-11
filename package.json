@@ -20,6 +20,7 @@
     "@capacitor/keyboard": "8.0.3",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "8.0.2",
+    "@capawesome-team/capacitor-android-foreground-service": "^8.1.0",
     "@capgo/native-audio": "^8.4.2",
     "@ionic/vue": "^8.0.0",
     "@ionic/vue-router": "^8.0.0",
