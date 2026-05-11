@@ -45,16 +45,31 @@
  *   ghost ticks from firing after explicit stop.
  * - If preload fails, the layer transparently falls back to HTMLAudioElement.
  *
+ * ## Native fade implementation
+ * - loop fade in:  preload at volume 0.1, then call setVolume({ volume: target,
+ *   duration: fadeInSeconds }) after loop() starts. loop() accepts only { assetId }
+ *   with no fade options, so we rely on setVolume() for the ramp.
+ * - loop fade out: at (durationSeconds - fadeOutSeconds), call setVolume({ volume: 0.1,
+ *   duration: fadeOutSeconds }) to ramp down. The existing hard-stop timer at
+ *   durationSeconds still calls stopLayer() so the asset is fully torn down.
+ * - once fade in/out: passed directly as play() options (fadeIn, fadeInDuration,
+ *   fadeOut, fadeOutDuration, fadeOutStartTime). No JS scheduling needed.
+ * - interval tick fade in: passed to each NativeAudio.play() call per tick.
+ *   Fade out per tick is NOT applied (tick duration is unknown at tick-start);
+ *   layer-level fade out via setVolume still fires near durationSeconds.
+ * - HTML fade (loop/once/interval): unchanged, uses RAF-based applyFadeIn/Out.
+ *
  * ## Pause vs Stop
  * - pauseAll: pauses audio (native + HTML), clears timeouts and fade RAF, stores
  *   remaining ms for resume. Does NOT reset currentTime or clear src on pause.
  * - stopLayer/stopAll: hard teardown — timers cleared, fades cancelled, native
  *   stop+unload (or HTML currentTime=0/src='').
  *
- * ## Fade + pause/resume (Phase 3 — intentional simplicity)
+ * ## HTML Fade + pause/resume (Phase 3 — intentional simplicity)
  * - Active fade-in or fade-out RAF chains are cancelled on pause; playback resumes at
  *   whatever volume the element already has (frozen). Fade envelope is not reconstructed.
- * - Fade in/out for native loop layers is NOT yet implemented (Phase 4 scope limit).
+ * - Native fades (setVolume with duration) are similarly not reconstructed on resume;
+ *   audio continues from current volume without re-ramping after a pause.
  *
  * ## Interval mode — other limitations
  * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended`
@@ -379,12 +394,33 @@ async function _startLoopAudioNative(
     return;
   }
 
+  /*
+   * Preload volume selection:
+   * - No fade-in: preload at target volume so loop() starts at the right level.
+   * - Fade-in configured: preload at 0.1 (near-silence) so the native player
+   *   never holds the target volume in its internal cache before loop() starts.
+   *   We then also await a setVolume(0.1) reset before loop() as a redundant
+   *   safety measure, because Android may not always honour the preload volume.
+   *
+   * setVolume scale:    0.1–1.0  (plugin minimum is 0.1, not 0.0)
+   * setVolume.duration: seconds  (confirmed from @capgo/native-audio typings)
+   */
+  const targetVol    = _toNativeVolume(layer.volume);
+  const preloadVol   = layer.fadeInSeconds > 0 ? 0.1 : targetVol;
+
+  log.debug('[NativeAudio][Fade] preload volume selected', {
+    assetId,
+    preloadVol,
+    targetVol,
+    fadeInSeconds: layer.fadeInSeconds,
+  });
+
   try {
     await NativeAudio.preload({
       assetId,
       assetPath: layer.fileUrl,
       isUrl: true,
-      volume: _toNativeVolume(layer.volume),
+      volume: preloadVol,
       audioChannelNum: 1,
     });
     _nativeLayers.add(assetId);
@@ -393,7 +429,6 @@ async function _startLoopAudioNative(
     _logNativeFailure('preload', assetId, err);
     log.warn('native preload — FAILED, falling back to HTML', { assetId, err: String(err) });
     if (_layers.has(layer.soundId)) {
-      // Preload failed — fall back to HTMLAudioElement for this layer
       managed.isNative = false;
       _startLoopAudioHtml(layer, managed, 'preload-failed');
     }
@@ -401,8 +436,28 @@ async function _startLoopAudioNative(
   }
 
   if (!_layers.has(layer.soundId)) {
-    // Layer was stopped while preloading — clean up the native asset
     log.warn('native preload — layer removed while preloading, unloading asset', { assetId });
+    void _stopNativeAsset(assetId);
+    return;
+  }
+
+  // Redundant safety reset before loop(): even if preload volume was cached
+  // from a previous play, this explicit await ensures the native player state
+  // is at 0.1 before playback begins.
+  if (layer.fadeInSeconds > 0) {
+    log.debug('[NativeAudio][Fade] loop fadeIn — safety reset to 0.1 before loop()', { assetId });
+    try {
+      await NativeAudio.setVolume({ assetId, volume: 0.1 });
+    } catch (e) {
+      log.warn('[NativeAudio][Fade] loop fadeIn pre-reset setVolume — failed, fade may start loud', {
+        assetId, err: String(e),
+      });
+    }
+  }
+
+  // Guard: layer may have been stopped while awaiting setVolume above
+  if (!_layers.has(layer.soundId)) {
+    log.warn('native loop — layer removed while awaiting pre-reset, unloading asset', { assetId });
     void _stopNativeAsset(assetId);
     return;
   }
@@ -411,12 +466,31 @@ async function _startLoopAudioNative(
     await NativeAudio.loop({ assetId });
     log.debug('native loop — started', {
       assetId,
-      soundId:      layer.soundId,
+      soundId:       layer.soundId,
       sessionPaused: _sessionPaused,
-      layersSize:   _layers.size,
+      layersSize:    _layers.size,
     });
-    // Race-condition guard: if the session was paused while we were preloading,
-    // immediately pause the native player so state stays consistent.
+
+    // Start the fade-in ramp AFTER loop() confirms playback began.
+    // setVolume with duration ramps from current volume (0.1) to target over fadeInSeconds.
+    if (layer.fadeInSeconds > 0 && !_sessionPaused && _nativeLayers.has(assetId)) {
+      const targetVol = _toNativeVolume(layer.volume);
+      log.debug('[NativeAudio][Fade] loop fadeIn — starting ramp to target', {
+        assetId,
+        targetVol,
+        fadeInSeconds: layer.fadeInSeconds,
+      });
+      void NativeAudio.setVolume({
+        assetId,
+        volume:   targetVol,
+        duration: layer.fadeInSeconds,
+      }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn ramp setVolume — failed', {
+        assetId, err: String(e),
+      }));
+    }
+
+    // Race-condition guard: if the session was paused while we were awaiting
+    // loop(), immediately pause the native player so state stays consistent.
     if (_sessionPaused && _nativeLayers.has(assetId)) {
       log.debug('native loop — session was paused during preload, pausing immediately', { assetId });
       void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race)', assetId, e));
@@ -426,7 +500,6 @@ async function _startLoopAudioNative(
     log.warn('native loop — FAILED, falling back to HTML', { assetId, err: String(err) });
     _nativeLayers.delete(assetId);
     if (_layers.has(layer.soundId)) {
-      // loop() failed — fall back to HTMLAudioElement
       managed.isNative = false;
       _startLoopAudioHtml(layer, managed, 'loop-failed');
     }
@@ -505,21 +578,38 @@ function _scheduleLayerLifetime(layer: VibeExecutionLayer, managed: ManagedLayer
     const audio = managed.audio;
     if (!audio) {
       /*
-       * No HTMLAudioElement — this is a native loop layer.
+       * No HTMLAudioElement — this is a native layer (loop / once / interval).
        *
-       * Fade-out is not yet implemented for native audio.
-       * We must NOT stop immediately: the outer timer fired at
+       * Apply a native volume fade-out via setVolume({ duration: fadeOutSeconds })
+       * so the sound ramps down smoothly before the hard stop. The inner timer
+       * below fires at exactly durationSeconds (after the full fadeOutMs has
+       * elapsed) and calls stopLayer() for teardown.
+       *
+       * We must NOT stop immediately here: the outer timer fired at
        * (durMs - fadeOutMs), so we still owe the layer another fadeOutMs
        * before the configured durationSeconds has truly elapsed.
-       * Schedule the remaining stop so the total lifetime = durMs.
        *
        * Stopping at (durMs - fadeOutMs) was the original (broken) behaviour
        * that caused native layers to be torn down far too early — in extreme
        * cases (fadeOutSeconds >= durationSeconds → fadeStartDelayMs = 0) the
-       * layer was destroyed on the very next event-loop tick, before the UI
-       * could even render the 'playing' state, making the Mini Player
-       * invisible and playbackState flip back to 'idle' immediately.
+       * layer was destroyed on the very next event-loop tick, making the Mini
+       * Player invisible and playbackState flip back to 'idle' immediately.
        */
+      if (managed.isNative && layer.fadeOutSeconds > 0) {
+        const assetId = _nativeAssetId(layer.soundId);
+        if (_nativeLayers.has(assetId)) {
+          log.debug('[NativeAudio][Fade] scheduleLayerLifetime fadeOut — starting', {
+            assetId,
+            fadeOutSeconds: layer.fadeOutSeconds,
+          });
+          void NativeAudio.setVolume({
+            assetId,
+            volume:   0.1,
+            duration: layer.fadeOutSeconds,
+          }).catch((e) => log.warn('[NativeAudio][Fade] fadeOut setVolume — failed', { assetId, err: String(e) }));
+        }
+      }
+
       managed.durationTimerId = setTimeout(() => {
         managed.durationTimerId          = null;
         managed.layerAbsoluteStopEpochMs = null;
@@ -715,8 +805,25 @@ async function _startOnceAudioNative(
     }
   });
 
+  // Build play options with native fade in only.
+  //
+  // NOTE: fadeOut and fadeOutStartTime are intentionally NOT passed to play().
+  // On Android (tested with @capgo/native-audio) passing these options causes
+  // "CapacitorException: Index 0 out of bounds for length 0" and play() fails.
+  // Fade out for once layers is handled instead by _scheduleLayerLifetime via
+  // NativeAudio.setVolume({ duration: fadeOutSeconds }) — the same mechanism
+  // used for loop layers — when durationSeconds is configured.
+  // For once layers without durationSeconds, no native fade out is applied.
+  const playOpts: { assetId: string; fadeIn?: boolean; fadeInDuration?: number } = { assetId };
+
+  if (layer.fadeInSeconds > 0) {
+    playOpts.fadeIn         = true;
+    playOpts.fadeInDuration = layer.fadeInSeconds;
+    log.debug('[NativeAudio][Fade] once fadeIn option', { assetId, fadeInSeconds: layer.fadeInSeconds });
+  }
+
   try {
-    await NativeAudio.play({ assetId });
+    await NativeAudio.play(playOpts);
     log.debug('[NativeAudio][Once] play — started', {
       assetId,
       soundId:      layer.soundId,
@@ -956,8 +1063,25 @@ async function _intervalPlayTickNative(
     _scheduleNextIntervalGap(layer, managed);
   });
 
+  // Build per-tick play options with fade in if configured.
+  // Fade out per tick is NOT applied — tick duration is unknown at tick-start.
+  // Layer-level fade out (via setVolume near durationSeconds) still applies.
+  const tickPlayOpts: {
+    assetId: string;
+    fadeIn?: boolean; fadeInDuration?: number;
+  } = { assetId };
+
+  if (layer.fadeInSeconds > 0) {
+    tickPlayOpts.fadeIn         = true;
+    tickPlayOpts.fadeInDuration = layer.fadeInSeconds;
+    log.debug('[NativeAudio][Fade] interval tick fadeIn option', {
+      assetId,
+      fadeInSeconds: layer.fadeInSeconds,
+    });
+  }
+
   try {
-    await NativeAudio.play({ assetId });
+    await NativeAudio.play(tickPlayOpts);
     log.debug('[NativeAudio][Interval] tick play — started', {
       assetId,
       soundId:      layer.soundId,
