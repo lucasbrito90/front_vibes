@@ -1,5 +1,5 @@
 /**
- * audio-player.service.ts — Phase 7 (native loop + native once + native interval + fades + background audio)
+ * audio-player.service.ts — Phase 8 (native loop + native once + native interval + fades + background audio + media session)
  *
  * ## Audio backend per play mode
  * - loop:     @capgo/native-audio on native platforms (Android/iOS).
@@ -90,15 +90,74 @@ const log = createLogger('AudioService');
 const _isNativePlatform = Capacitor.isNativePlatform();
 
 // ── NativeAudio one-time configuration ───────────────────────────────────────
-// backgroundPlayback: true — instructs the plugin to skip its built-in
-// auto-pause/resume on handleOnPause/handleOnResume lifecycle events. This
-// keeps ExoPlayer instances running when the app backgrounds. The actual
-// process-keep-alive is handled by the Android foreground service in
-// backgroundAudio.service.ts. Without backgroundPlayback: true the plugin
-// would still pause/resume on its own, fighting our foreground service.
+// backgroundPlayback: true — skips built-in auto-pause/resume so ExoPlayer
+//   keeps running when the app backgrounds (process-keep-alive is the
+//   foreground service in backgroundAudio.service.ts).
+// showNotification: true — creates a native MediaSession + MediaStyle
+//   notification with play/pause/stop controls on the lock screen and in the
+//   notification shade. The plugin fires 'playbackState' events with
+//   reason='remotePlay' / 'remotePause' / 'remoteStop' when those controls
+//   are tapped, allowing us to route them back to the Pinia store.
 if (_isNativePlatform) {
-  void NativeAudio.configure({ backgroundPlayback: true }).catch((err: unknown) => {
+  void NativeAudio.configure({ backgroundPlayback: true, showNotification: true }).catch((err: unknown) => {
     log.warn('NativeAudio.configure failed', { err });
+  });
+}
+
+// ── Notification / MediaSession vibe context ─────────────────────────────────
+// Stored here so every preload call can embed the current vibe name as the
+// notification title without requiring the store to be imported.
+
+let _notificationVibeName = '';
+
+/**
+ * Update the vibe name stored for upcoming NativeAudio preload metadata.
+ * Call this from player.store.ts before or after audioPlayerService.playPlan().
+ */
+export function setNotificationVibeName(name: string): void {
+  _notificationVibeName = name;
+}
+
+// ── Remote media control callbacks ───────────────────────────────────────────
+// Registered once by the Pinia store so the global 'playbackState' listener
+// can route lock-screen / notification / Bluetooth transport events back to
+// store actions without importing the store here (avoids circular deps).
+
+type MediaControlCb = () => void;
+
+let _onRemotePlay:  MediaControlCb | null = null;
+let _onRemotePause: MediaControlCb | null = null;
+let _onRemoteStop:  MediaControlCb | null = null;
+
+/**
+ * Register Pinia store actions as media-control callbacks.
+ * Called once from player.store.ts at store creation time.
+ */
+export function setMediaControlCallbacks(opts: {
+  onPlay:  MediaControlCb;
+  onPause: MediaControlCb;
+  onStop:  MediaControlCb;
+}): void {
+  _onRemotePlay  = opts.onPlay;
+  _onRemotePause = opts.onPause;
+  _onRemoteStop  = opts.onStop;
+}
+
+// Global 'playbackState' listener — active for the lifetime of the app.
+// Only reacts to remote reasons (lock screen, notification, Bluetooth).
+// Local reasons ('play', 'pause', 'complete') are already handled by the
+// store's own actions; reacting to them here would cause re-entrant loops.
+if (_isNativePlatform) {
+  void NativeAudio.addListener('playbackState', (event) => {
+    const { assetId, state, reason } = event;
+
+    if (!reason.startsWith('remote')) return;
+
+    log.debug('[MediaSession] remote control event', { assetId, state, reason });
+
+    if (state === 'playing')  _onRemotePlay?.();
+    else if (state === 'paused')  _onRemotePause?.();
+    else if (state === 'stopped') _onRemoteStop?.();
   });
 }
 
@@ -435,6 +494,10 @@ async function _startLoopAudioNative(
       isUrl: true,
       volume: preloadVol,
       audioChannelNum: 1,
+      notificationMetadata: {
+        title:  _notificationVibeName || layer.soundName,
+        artist: layer.soundName,
+      },
     });
     _nativeLayers.add(assetId);
     log.debug('native preload — OK', { assetId, nativeCount: _nativeLayers.size });
@@ -779,6 +842,10 @@ async function _startOnceAudioNative(
       isUrl: true,
       volume: _toNativeVolume(layer.volume),
       audioChannelNum: 1,
+      notificationMetadata: {
+        title:  _notificationVibeName || layer.soundName,
+        artist: layer.soundName,
+      },
     });
     _nativeLayers.add(assetId);
     log.debug('[NativeAudio][Once] preload — OK', { assetId, nativeCount: _nativeLayers.size });
@@ -912,6 +979,10 @@ async function _startIntervalAudioNative(
       isUrl: true,
       volume: _toNativeVolume(layer.volume),
       audioChannelNum: 1,
+      notificationMetadata: {
+        title:  _notificationVibeName || layer.soundName,
+        artist: layer.soundName,
+      },
     });
     _nativeLayers.add(assetId);
     log.debug('[NativeAudio][Interval] preload — OK', { assetId, nativeCount: _nativeLayers.size });

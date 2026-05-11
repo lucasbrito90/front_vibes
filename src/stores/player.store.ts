@@ -25,6 +25,8 @@ import { ref } from 'vue';
 import {
   audioPlayerService,
   setSessionEndedCallback,
+  setMediaControlCallbacks,
+  setNotificationVibeName,
 } from '@/services/audio-player.service';
 import {
   startBackgroundAudio,
@@ -127,6 +129,27 @@ export const usePlayerStore = defineStore('player', () => {
     void stopBackgroundAudio();
   });
 
+  // ── Media control callbacks ────────────────────────────────────────────────
+  // NativeAudio fires 'playbackState' events with reason='remotePlay/Pause/Stop'
+  // when the user taps lock-screen or notification media controls. The audio
+  // service dispatches these to the callbacks registered here so Pinia (and
+  // therefore the MiniPlayer and VibePlayerPage) stays in sync.
+
+  setMediaControlCallbacks({
+    onPlay() {
+      log.debug('[MediaSession] remote play received');
+      if (playbackState.value === 'paused') resumePlayback();
+    },
+    onPause() {
+      log.debug('[MediaSession] remote pause received');
+      if (playbackState.value === 'playing') pausePlayback();
+    },
+    onStop() {
+      log.debug('[MediaSession] remote stop received');
+      if (playbackState.value !== 'idle') stopPlayback();
+    },
+  });
+
   // ── Playback actions ───────────────────────────────────────────────────────
 
   /**
@@ -165,6 +188,10 @@ export const usePlayerStore = defineStore('player', () => {
     // immediately visible on the very first reactive flush, even while the
     // async native preload/loop is still in flight.
     setCurrentVibe(id, vibeName, soundSummary);
+
+    // Push vibe name to audio service so every upcoming NativeAudio.preload()
+    // embeds it as the notification/lock-screen title.
+    setNotificationVibeName(vibeName);
 
     // Optimistic update: commit playing state now. Native preload is async
     // (fire-and-forget), so the service's hasActiveLayers() is still true once
@@ -272,6 +299,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (prev !== 'idle') _logTransition('playbackState', prev, 'idle');
     resetElapsed();
     clearCurrentVibe();
+    setNotificationVibeName('');
     // User explicitly stopped — stop the foreground service.
     void stopBackgroundAudio();
   }
