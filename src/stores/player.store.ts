@@ -27,6 +27,7 @@ import {
   setSessionEndedCallback,
   setMediaControlCallbacks,
   setNotificationVibeName,
+  setNotificationArtworkUrl,
 } from '@/services/audio-player.service';
 import {
   startBackgroundAudio,
@@ -52,17 +53,18 @@ export const usePlayerStore = defineStore('player', () => {
 
   // ── Reactive state ─────────────────────────────────────────────────────────
 
-  const playbackState       = ref<PlaybackState>('idle');
-  const currentVibeId       = ref<number | null>(null);
-  const currentVibeName     = ref<string>('');
-  const currentSoundSummary = ref<string>('');
-  const elapsedSeconds      = ref(0);
+  const playbackState        = ref<PlaybackState>('idle');
+  const currentVibeId        = ref<number | null>(null);
+  const currentVibeName      = ref<string>('');
+  const currentSoundSummary  = ref<string>('');
+  const currentVibeArtworkUrl = ref<string | null>(null);
+  const elapsedSeconds       = ref(0);
   /**
    * Mirrors audioPlayerService.hasActiveLayers().
    * Updated synchronously after every play/pause/stop action so components
    * never need to call the service directly.
    */
-  const hasActiveLayers     = ref(false);
+  const hasActiveLayers      = ref(false);
 
   // ── Elapsed clock ──────────────────────────────────────────────────────────
 
@@ -95,18 +97,25 @@ export const usePlayerStore = defineStore('player', () => {
 
   // ── Vibe context ───────────────────────────────────────────────────────────
 
-  function setCurrentVibe(id: number, name: string, soundSummary: string): void {
-    log.debug('setCurrentVibe', { id, name, soundSummary });
-    currentVibeId.value       = id;
-    currentVibeName.value     = name;
-    currentSoundSummary.value = soundSummary;
+  function setCurrentVibe(
+    id: number,
+    name: string,
+    soundSummary: string,
+    artworkUrl?: string | null,
+  ): void {
+    log.debug('setCurrentVibe', { id, name, soundSummary, hasArtwork: !!artworkUrl });
+    currentVibeId.value         = id;
+    currentVibeName.value       = name;
+    currentSoundSummary.value   = soundSummary;
+    currentVibeArtworkUrl.value = artworkUrl ?? null;
   }
 
   function clearCurrentVibe(): void {
     log.debug('clearCurrentVibe');
-    currentVibeId.value       = null;
-    currentVibeName.value     = '';
-    currentSoundSummary.value = '';
+    currentVibeId.value         = null;
+    currentVibeName.value       = '';
+    currentSoundSummary.value   = '';
+    currentVibeArtworkUrl.value = null;
   }
 
   // ── Session-ended callback ─────────────────────────────────────────────────
@@ -167,9 +176,10 @@ export const usePlayerStore = defineStore('player', () => {
     vibeId: number;
     vibeName: string;
     soundSummary: string;
+    artworkUrl?: string | null;
     layers: VibeExecutionLayer[];
   }): boolean {
-    const { vibeId: id, vibeName, soundSummary, layers } = params;
+    const { vibeId: id, vibeName, soundSummary, artworkUrl, layers } = params;
     const valid = audioPlayerService.countValidLayers(layers);
 
     log.debug('playVibe', {
@@ -187,11 +197,12 @@ export const usePlayerStore = defineStore('player', () => {
     // Set vibe context BEFORE audio engine starts so the Mini Player is
     // immediately visible on the very first reactive flush, even while the
     // async native preload/loop is still in flight.
-    setCurrentVibe(id, vibeName, soundSummary);
+    setCurrentVibe(id, vibeName, soundSummary, artworkUrl);
 
-    // Push vibe name to audio service so every upcoming NativeAudio.preload()
-    // embeds it as the notification/lock-screen title.
+    // Push vibe name + artwork to audio service so every upcoming
+    // NativeAudio.preload() embeds them in the MediaSession notification.
     setNotificationVibeName(vibeName);
+    setNotificationArtworkUrl(artworkUrl ?? null);
 
     // Optimistic update: commit playing state now. Native preload is async
     // (fire-and-forget), so the service's hasActiveLayers() is still true once
@@ -300,6 +311,7 @@ export const usePlayerStore = defineStore('player', () => {
     resetElapsed();
     clearCurrentVibe();
     setNotificationVibeName('');
+    setNotificationArtworkUrl(null);
     // User explicitly stopped — stop the foreground service.
     void stopBackgroundAudio();
   }
@@ -348,6 +360,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentVibeId,
     currentVibeName,
     currentSoundSummary,
+    currentVibeArtworkUrl,
     elapsedSeconds,
     hasActiveLayers,
 

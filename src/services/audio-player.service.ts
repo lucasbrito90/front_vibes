@@ -108,14 +108,25 @@ if (_isNativePlatform) {
 // Stored here so every preload call can embed the current vibe name as the
 // notification title without requiring the store to be imported.
 
-let _notificationVibeName = '';
+let _notificationVibeName   = '';
+let _notificationArtworkUrl = '';
 
 /**
  * Update the vibe name stored for upcoming NativeAudio preload metadata.
- * Call this from player.store.ts before or after audioPlayerService.playPlan().
+ * Call this from player.store.ts before audioPlayerService.playPlan().
  */
 export function setNotificationVibeName(name: string): void {
   _notificationVibeName = name;
+}
+
+/**
+ * Update the artwork URL stored for upcoming NativeAudio preload metadata.
+ * Call this from player.store.ts before audioPlayerService.playPlan().
+ * Pass null or empty string to clear (no artwork in notification).
+ */
+export function setNotificationArtworkUrl(url: string | null): void {
+  _notificationArtworkUrl = url ?? '';
+  log.debug('[Artwork] notification artwork URL updated', { hasArtwork: !!_notificationArtworkUrl });
 }
 
 // ── Remote media control callbacks ───────────────────────────────────────────
@@ -495,11 +506,13 @@ async function _startLoopAudioNative(
       volume: preloadVol,
       audioChannelNum: 1,
       notificationMetadata: {
-        title:  _notificationVibeName || layer.soundName,
-        artist: layer.soundName,
+        title:      _notificationVibeName || layer.soundName,
+        artist:     layer.soundName,
+        artworkUrl: _notificationArtworkUrl || undefined,
       },
     });
     _nativeLayers.add(assetId);
+    log.debug('[Artwork] loop preload metadata', { assetId, title: _notificationVibeName, hasArtwork: !!_notificationArtworkUrl });
     log.debug('native preload — OK', { assetId, nativeCount: _nativeLayers.size });
   } catch (err) {
     _logNativeFailure('preload', assetId, err);
@@ -843,11 +856,13 @@ async function _startOnceAudioNative(
       volume: _toNativeVolume(layer.volume),
       audioChannelNum: 1,
       notificationMetadata: {
-        title:  _notificationVibeName || layer.soundName,
-        artist: layer.soundName,
+        title:      _notificationVibeName || layer.soundName,
+        artist:     layer.soundName,
+        artworkUrl: _notificationArtworkUrl || undefined,
       },
     });
     _nativeLayers.add(assetId);
+    log.debug('[Artwork] once preload metadata', { assetId, title: _notificationVibeName, hasArtwork: !!_notificationArtworkUrl });
     log.debug('[NativeAudio][Once] preload — OK', { assetId, nativeCount: _nativeLayers.size });
   } catch (err) {
     _logNativeFailure('preload (once)', assetId, err);
@@ -980,11 +995,13 @@ async function _startIntervalAudioNative(
       volume: _toNativeVolume(layer.volume),
       audioChannelNum: 1,
       notificationMetadata: {
-        title:  _notificationVibeName || layer.soundName,
-        artist: layer.soundName,
+        title:      _notificationVibeName || layer.soundName,
+        artist:     layer.soundName,
+        artworkUrl: _notificationArtworkUrl || undefined,
       },
     });
     _nativeLayers.add(assetId);
+    log.debug('[Artwork] interval preload metadata', { assetId, title: _notificationVibeName, hasArtwork: !!_notificationArtworkUrl });
     log.debug('[NativeAudio][Interval] preload — OK', { assetId, nativeCount: _nativeLayers.size });
   } catch (err) {
     _logNativeFailure('preload (interval)', assetId, err);
