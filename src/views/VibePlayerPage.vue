@@ -423,11 +423,12 @@ async function togglePlayback(): Promise<void> {
 
   // playVibe() atomically: sets vibe context + optimistic state + clock + audio.
   // It also stops any currently active session via audioPlayerService.playPlan().
+  // artwork_url is already resolved by the API (fallback: thumbnail_url).
   const started = store.playVibe({
     vibeId:       vibeId.value,
     vibeName:     vibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    artworkUrl:   vibe.value?.thumbnail_url ?? null,
+    artworkUrl:   vibe.value?.artwork_url ?? vibe.value?.thumbnail_url ?? null,
     layers:       executionPlan.value,
   });
 
@@ -476,7 +477,7 @@ async function handleRestartVibe(): Promise<void> {
     vibeId:       vibeId.value,
     vibeName:     vibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    artworkUrl:   vibe.value?.thumbnail_url ?? null,
+    artworkUrl:   vibe.value?.artwork_url ?? vibe.value?.thumbnail_url ?? null,
     layers:       executionPlan.value,
   });
 
@@ -505,8 +506,9 @@ function handleBack(): void {
 }
 
 // ── Hero background ───────────────────────────────────────────────────────────
-// When the vibe has a thumbnail_url, use it as a cover image.
-// Falls back to the gradient array so the player always has a visual background.
+// Priority: player_background_url → thumbnail_url → gradient fallback.
+// The API already resolves player_background_url ?? thumbnail_url server-side,
+// so player_background_url is the correct field to use here.
 
 const gradients = [
   'linear-gradient(160deg, #3a1c71 0%, #4a1890 55%, #1a1a6e 100%)',
@@ -517,11 +519,12 @@ const gradients = [
 ];
 
 const heroBackground = computed((): Record<string, string> => {
-  const artworkUrl = vibe.value?.thumbnail_url;
-  if (artworkUrl) {
-    log.debug('[Artwork] player background — using thumbnail_url', { artworkUrl });
+  // player_background_url is already resolved by the API (fallback: thumbnail_url).
+  const bgUrl = vibe.value?.player_background_url ?? vibe.value?.thumbnail_url;
+  if (bgUrl) {
+    log.debug('[Artwork] player background — using image', { bgUrl });
     return {
-      backgroundImage:    `url('${artworkUrl}')`,
+      backgroundImage:    `url('${bgUrl}')`,
       backgroundSize:     'cover',
       backgroundPosition: 'center',
       backgroundRepeat:   'no-repeat',
