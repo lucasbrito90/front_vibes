@@ -67,6 +67,8 @@ const {
   currentVibeId,
   currentVibeName,
   currentSoundSummary,
+  // Exposed for future MiniPlayer artwork thumbnail — no visual change yet.
+  currentVibeArtworkUrl,
 } = storeToRefs(store);
 
 // ── Visibility ────────────────────────────────────────────────────────────────

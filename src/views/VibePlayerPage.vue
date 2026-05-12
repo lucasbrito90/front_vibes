@@ -1,7 +1,7 @@
 <template>
   <ion-page class="player-page">
     <ion-content :fullscreen="true" class="player-content">
-      <div class="player-wrap" :style="{ background: heroGradient }">
+      <div class="player-wrap" :style="heroBackground">
 
         <!-- Depth overlay — transparent top, dark bottom -->
         <div class="player-overlay" />
@@ -427,6 +427,7 @@ async function togglePlayback(): Promise<void> {
     vibeId:       vibeId.value,
     vibeName:     vibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+    artworkUrl:   vibe.value?.thumbnail_url ?? null,
     layers:       executionPlan.value,
   });
 
@@ -475,6 +476,7 @@ async function handleRestartVibe(): Promise<void> {
     vibeId:       vibeId.value,
     vibeName:     vibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
+    artworkUrl:   vibe.value?.thumbnail_url ?? null,
     layers:       executionPlan.value,
   });
 
@@ -502,7 +504,9 @@ function handleBack(): void {
   router.back();
 }
 
-// ── Hero gradient ─────────────────────────────────────────────────────────────
+// ── Hero background ───────────────────────────────────────────────────────────
+// When the vibe has a thumbnail_url, use it as a cover image.
+// Falls back to the gradient array so the player always has a visual background.
 
 const gradients = [
   'linear-gradient(160deg, #3a1c71 0%, #4a1890 55%, #1a1a6e 100%)',
@@ -512,9 +516,20 @@ const gradients = [
   'linear-gradient(160deg, #4338ca 0%, #6d28d9 100%)',
 ];
 
-const heroGradient = computed((): string => {
+const heroBackground = computed((): Record<string, string> => {
+  const artworkUrl = vibe.value?.thumbnail_url;
+  if (artworkUrl) {
+    log.debug('[Artwork] player background — using thumbnail_url', { artworkUrl });
+    return {
+      backgroundImage:    `url('${artworkUrl}')`,
+      backgroundSize:     'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat:   'no-repeat',
+    };
+  }
   const id = vibe.value?.id ?? 0;
-  return gradients[id % gradients.length];
+  log.debug('[Artwork] player background — fallback gradient', { id });
+  return { background: gradients[id % gradients.length] };
 });
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────

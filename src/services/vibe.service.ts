@@ -6,7 +6,15 @@ export interface Vibe {
   id: number;
   name: string;
   description: string | null;
+  /**
+   * Firebase Storage URL for the vibe artwork.
+   * Used as the player full-screen background, card thumbnail,
+   * and Android MediaSession / lock-screen notification artwork.
+   * Null when no image has been uploaded.
+   */
+  thumbnail_url: string | null;
   is_active: boolean;
+  sounds_count?: number;
   created_at: string;
   updated_at: string;
 }
