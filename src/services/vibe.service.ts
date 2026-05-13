@@ -6,13 +6,34 @@ export interface Vibe {
   id: number;
   name: string;
   description: string | null;
+
   /**
-   * Firebase Storage URL for the vibe artwork.
-   * Used as the player full-screen background, card thumbnail,
-   * and Android MediaSession / lock-screen notification artwork.
-   * Null when no image has been uploaded.
+   * Legacy artwork field. The API falls back to this when the dedicated
+   * context-specific fields below are null. Do not use directly in new UI —
+   * prefer the resolved fields (card_image_url, player_background_url,
+   * artwork_url) which already incorporate the thumbnail_url fallback.
    */
   thumbnail_url: string | null;
+
+  /**
+   * Image shown on the vibe card in the /vibes list (square or wide crop).
+   * The API resolves this as: card_image_url ?? thumbnail_url.
+   */
+  card_image_url: string | null;
+
+  /**
+   * Full-screen background image for the player page (portrait, high-res).
+   * The API resolves this as: player_background_url ?? thumbnail_url.
+   */
+  player_background_url: string | null;
+
+  /**
+   * Artwork shown in the Android MediaSession notification and lock screen
+   * (square, typically 512 × 512 px).
+   * The API resolves this as: artwork_url ?? thumbnail_url.
+   */
+  artwork_url: string | null;
+
   is_active: boolean;
   sounds_count?: number;
   created_at: string;

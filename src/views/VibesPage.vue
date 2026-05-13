@@ -31,8 +31,8 @@
             v-for="(vibe, i) in vibes"
             :key="vibe.id"
             class="vibe-card"
-            :style="vibe.thumbnail_url
-              ? { backgroundImage: `url('${vibe.thumbnail_url}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+            :style="(vibe.card_image_url || vibe.thumbnail_url)
+              ? { backgroundImage: `url('${vibe.card_image_url ?? vibe.thumbnail_url}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
               : { background: gradients[i % gradients.length] }"
             @click="router.push(`/vibes/${vibe.id}/player`)"
           >
