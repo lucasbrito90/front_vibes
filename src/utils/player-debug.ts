@@ -2,12 +2,21 @@
  * player-debug.ts — Shared structured logger for the entire player flow.
  *
  * Every module (store, service, components, router) calls `createLogger(prefix)`
- * to get a namespaced logger. Each log entry is:
- *   1. Written to the browser / ADB console with a consistent format.
- *   2. Prepended to `logBuffer` — a reactive ref that the in-app DEV Logs
- *      panel inside VibePlayerPage.vue reads in real time on the device.
+ * to get a namespaced logger. Behaviour by build mode:
  *
- * TEMPORARY DEV INSTRUMENTATION — gate or remove before production.
+ *   DEV  (import.meta.env.DEV === true):
+ *     debug → console.log + logBuffer
+ *     warn  → console.warn + logBuffer
+ *     error → console.error + logBuffer
+ *
+ *   PROD (import.meta.env.DEV === false):
+ *     debug → silent (no console, no buffer)
+ *     warn  → console.warn only  (no buffer)
+ *     error → console.error only (no buffer)
+ *
+ * The logBuffer drives the in-app DEV Logs panel in VibePlayerPage.vue,
+ * which is itself gated behind `import.meta.env.DEV` so it is never visible
+ * in production builds.
  */
 
 import { ref } from 'vue';
@@ -26,12 +35,12 @@ export interface LogEntry {
 
 // ── Reactive buffer ───────────────────────────────────────────────────────────
 
-/** Max entries kept in memory / shown in the in-app panel. */
+/** Max entries kept in memory / shown in the in-app DEV panel. */
 const MAX_ENTRIES = 100;
 
 /**
  * Reactive log buffer — newest entry at index 0.
- * Import this in VibePlayerPage.vue to drive the in-app DEV Logs panel.
+ * Only populated in DEV builds. Import in VibePlayerPage.vue for the panel.
  */
 export const logBuffer = ref<LogEntry[]>([]);
 
@@ -41,12 +50,17 @@ export function clearLogBuffer(): void {
 
 // ── Internal push ─────────────────────────────────────────────────────────────
 
+const _isDev = import.meta.env.DEV;
+
 function _push(
   level: LogEntry['level'],
   prefix: string,
   message: string,
   data?: Record<string, unknown>,
 ): void {
+  // debug messages are suppressed entirely in production
+  if (level === 'debug' && !_isDev) return;
+
   const ts   = new Date().toTimeString().slice(0, 12); // "HH:mm:ss.mmm"
   const line = `[${ts}][${prefix}] ${message}`;
 
@@ -58,8 +72,11 @@ function _push(
     data ? console.log(line, data) : console.log(line);
   }
 
-  const entry: LogEntry = { ts, level, prefix, message, data };
-  logBuffer.value = [entry, ...logBuffer.value.slice(0, MAX_ENTRIES - 1)];
+  // buffer is only populated in DEV (warn/error always, debug already guarded)
+  if (_isDev) {
+    const entry: LogEntry = { ts, level, prefix, message, data };
+    logBuffer.value = [entry, ...logBuffer.value.slice(0, MAX_ENTRIES - 1)];
+  }
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -69,9 +86,8 @@ function _push(
  *
  * Usage:
  *   const log = createLogger('PlayerStore');
- *   log.debug('playPlan called', { layers: 3 });
- *   // → console: [12:34:56.789][PlayerStore] playPlan called  { layers: 3 }
- *   // → logBuffer entry prepended
+ *   log.debug('playPlan called', { layers: 3 });   // DEV only
+ *   log.warn('NativeAudio failed', { err });        // always
  */
 export function createLogger(prefix: string) {
   return {

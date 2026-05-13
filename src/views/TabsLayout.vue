@@ -5,7 +5,7 @@
     boundary and logs the "does not have the required <ion-page>" warning
     on every tab switch. This matches the official Ionic Vue starter pattern.
 
-    When the mini player is visible, --app-mini-player-height is set to 62px
+    When the mini player is visible, --app-mini-player-height is set to 68px
     so that child ion-content elements can add bottom padding via:
       --padding-bottom: var(--app-mini-player-height, 0px)
     (applied globally in the non-scoped <style> block below).
@@ -59,14 +59,14 @@ const route = useRoute();
 const { playbackState } = storeToRefs(usePlayerStore());
 
 /** Must match the `height` in MiniPlayer.vue. */
-const MINI_PLAYER_HEIGHT = 62; // px
+const MINI_PLAYER_HEIGHT = 68; // px
 const TAB_BAR_HEIGHT     = 56; // px
 
 /**
  * CSS variables cascaded from the root ion-page to all descendants:
  *
  * --app-tab-bar-height        Always 56px — lets MiniPlayer reference it.
- * --app-mini-player-height    62px when mini player is actually visible,
+ * --app-mini-player-height    68px when mini player is actually visible,
  *                             0px when idle OR when the route hides it.
  *                             Used by the global --padding-bottom rule below
  *                             so only routes that show the mini player get

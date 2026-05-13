@@ -73,103 +73,105 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
-          <!-- DEV: Player state — visible on device without ADB -->
-          <div v-if="!loading" class="player-dev-panel player-dev-panel--state">
-            <div class="player-dev-panel-header">
-              <span class="player-dev-badge player-dev-badge--state">STATE</span>
-              <span class="player-dev-title">Player State</span>
-            </div>
-            <p class="player-dev-state-hint">Main player only — use the central ▶ button to test MiniPlayer.</p>
-            <div class="player-dev-state-grid">
-              <span class="player-dev-state-key">platform</span>
-              <strong class="player-dev-state-val">{{ _isNativePlatform ? '📱 native' : '🌐 web' }}</strong>
+          <!-- DEV only: Player state, execution plan, and runtime logs panels -->
+          <template v-if="isDev">
+            <!-- Player state — visible on device without ADB -->
+            <div v-if="!loading" class="player-dev-panel player-dev-panel--state">
+              <div class="player-dev-panel-header">
+                <span class="player-dev-badge player-dev-badge--state">STATE</span>
+                <span class="player-dev-title">Player State</span>
+              </div>
+              <p class="player-dev-state-hint">Main player only — use the central ▶ button to test MiniPlayer.</p>
+              <div class="player-dev-state-grid">
+                <span class="player-dev-state-key">platform</span>
+                <strong class="player-dev-state-val">{{ _isNativePlatform ? '📱 native' : '🌐 web' }}</strong>
 
-              <span class="player-dev-state-key">routeVibeId</span>
-              <strong class="player-dev-state-val">{{ vibeId }}</strong>
+                <span class="player-dev-state-key">routeVibeId</span>
+                <strong class="player-dev-state-val">{{ vibeId }}</strong>
 
-              <span class="player-dev-state-key">currentVibeId</span>
-              <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
+                <span class="player-dev-state-key">currentVibeId</span>
+                <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
 
-              <span class="player-dev-state-key">playbackState</span>
-              <strong class="player-dev-state-val" :class="`player-dev-state--${playbackState}`">{{ playbackState }}</strong>
+                <span class="player-dev-state-key">playbackState</span>
+                <strong class="player-dev-state-val" :class="`player-dev-state--${playbackState}`">{{ playbackState }}</strong>
 
-              <span class="player-dev-state-key">isRoutePlaying</span>
-              <strong class="player-dev-state-val" :class="isThisVibePlaying ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ isThisVibePlaying }}</strong>
+                <span class="player-dev-state-key">isRoutePlaying</span>
+                <strong class="player-dev-state-val" :class="isThisVibePlaying ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ isThisVibePlaying }}</strong>
 
-              <span class="player-dev-state-key">isRoutePaused</span>
-              <strong class="player-dev-state-val" :class="isThisVibePaused ? 'player-dev-state--paused' : 'player-dev-state--idle'">{{ isThisVibePaused }}</strong>
+                <span class="player-dev-state-key">isRoutePaused</span>
+                <strong class="player-dev-state-val" :class="isThisVibePaused ? 'player-dev-state--paused' : 'player-dev-state--idle'">{{ isThisVibePaused }}</strong>
 
-              <span class="player-dev-state-key">store.hasActive</span>
-              <strong class="player-dev-state-val" :class="hasActiveLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ hasActiveLayers }}</strong>
+                <span class="player-dev-state-key">store.hasActive</span>
+                <strong class="player-dev-state-val" :class="hasActiveLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ hasActiveLayers }}</strong>
 
-              <span class="player-dev-state-key">svc.hasActive</span>
-              <strong class="player-dev-state-val" :class="diagServiceLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ diagServiceLayers }}</strong>
+                <span class="player-dev-state-key">svc.hasActive</span>
+                <strong class="player-dev-state-val" :class="diagServiceLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ diagServiceLayers }}</strong>
 
-              <span class="player-dev-state-key">hideMiniPlayer</span>
-              <strong class="player-dev-state-val">{{ !!route.meta.hideMiniPlayer }}</strong>
+                <span class="player-dev-state-key">hideMiniPlayer</span>
+                <strong class="player-dev-state-val">{{ !!route.meta.hideMiniPlayer }}</strong>
 
-              <span class="player-dev-state-key">lastPlayVibe</span>
-              <strong class="player-dev-state-val">{{ diagLastPlayResult === null ? '—' : diagLastPlayResult }}</strong>
+                <span class="player-dev-state-key">lastPlayVibe</span>
+                <strong class="player-dev-state-val">{{ diagLastPlayResult === null ? '—' : diagLastPlayResult }}</strong>
 
-              <span class="player-dev-state-key">plan / playable</span>
-              <strong class="player-dev-state-val">{{ executionPlan.length }} / {{ playableLayers.length }}</strong>
-            </div>
-          </div>
-
-          <!-- DEV: Execution Plan (keep visible for debugging) -->
-          <div v-if="!loading" class="player-dev-panel">
-            <div class="player-dev-panel-header">
-              <span class="player-dev-badge">DEV</span>
-              <span class="player-dev-title">DEV Execution Plan</span>
-              <span class="player-dev-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
-            </div>
-            <div v-if="!executionPlan.length" class="player-dev-empty">No layers (build plan after load).</div>
-            <div v-for="layer in executionPlan" :key="layer.soundId" class="player-dev-layer">
-              <p class="player-dev-layer-summary">{{ layer.humanReadableSummary }}</p>
-              <div class="player-dev-layer-meta">
-                <span>start: {{ layer.startsAtSeconds }}s</span>
-                <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
-                <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
-                <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
-                <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
-                <span :class="{ 'player-dev-unplayable': !isExecutionLayerPlayable(layer) }">
-                  {{ isExecutionLayerPlayable(layer) ? 'playable' : 'skipped (invalid URL or interval)' }}
-                </span>
+                <span class="player-dev-state-key">plan / playable</span>
+                <strong class="player-dev-state-val">{{ executionPlan.length }} / {{ playableLayers.length }}</strong>
               </div>
             </div>
-          </div>
 
-
-          <!-- DEV: Runtime Logs panel — in-app diagnostics without ADB -->
-          <div class="player-dev-panel player-dev-panel--logs">
-            <div class="player-dev-panel-header player-dev-logs-header" @click="devLogsExpanded = !devLogsExpanded">
-              <span class="player-dev-badge player-dev-badge--logs">LOGS</span>
-              <span class="player-dev-title">Runtime Logs</span>
-              <span class="player-dev-logs-count">{{ logBuffer.length }}</span>
-              <button
-                type="button"
-                class="player-dev-logs-clear"
-                @click.stop="clearLogBuffer()"
-                title="Clear logs"
-              >✕</button>
-              <span class="player-dev-logs-toggle">{{ devLogsExpanded ? '▲' : '▼' }}</span>
-            </div>
-
-            <div v-if="devLogsExpanded" class="player-dev-logs-list">
-              <div v-if="!logBuffer.length" class="player-dev-empty">No logs yet.</div>
-              <div
-                v-for="(entry, i) in logBuffer"
-                :key="i"
-                class="player-dev-log-entry"
-                :class="`player-dev-log-entry--${entry.level}`"
-              >
-                <span class="player-dev-log-ts">{{ entry.ts }}</span>
-                <span class="player-dev-log-prefix">[{{ entry.prefix }}]</span>
-                <span class="player-dev-log-msg">{{ entry.message }}</span>
-                <span v-if="entry.data" class="player-dev-log-data">{{ JSON.stringify(entry.data) }}</span>
+            <!-- Execution Plan -->
+            <div v-if="!loading" class="player-dev-panel">
+              <div class="player-dev-panel-header">
+                <span class="player-dev-badge">DEV</span>
+                <span class="player-dev-title">DEV Execution Plan</span>
+                <span class="player-dev-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
+              </div>
+              <div v-if="!executionPlan.length" class="player-dev-empty">No layers (build plan after load).</div>
+              <div v-for="layer in executionPlan" :key="layer.soundId" class="player-dev-layer">
+                <p class="player-dev-layer-summary">{{ layer.humanReadableSummary }}</p>
+                <div class="player-dev-layer-meta">
+                  <span>start: {{ layer.startsAtSeconds }}s</span>
+                  <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
+                  <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
+                  <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
+                  <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
+                  <span :class="{ 'player-dev-unplayable': !isExecutionLayerPlayable(layer) }">
+                    {{ isExecutionLayerPlayable(layer) ? 'playable' : 'skipped (invalid URL or interval)' }}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+
+            <!-- Runtime Logs panel — in-app diagnostics without ADB -->
+            <div class="player-dev-panel player-dev-panel--logs">
+              <div class="player-dev-panel-header player-dev-logs-header" @click="devLogsExpanded = !devLogsExpanded">
+                <span class="player-dev-badge player-dev-badge--logs">LOGS</span>
+                <span class="player-dev-title">Runtime Logs</span>
+                <span class="player-dev-logs-count">{{ logBuffer.length }}</span>
+                <button
+                  type="button"
+                  class="player-dev-logs-clear"
+                  @click.stop="clearLogBuffer()"
+                  title="Clear logs"
+                >✕</button>
+                <span class="player-dev-logs-toggle">{{ devLogsExpanded ? '▲' : '▼' }}</span>
+              </div>
+
+              <div v-if="devLogsExpanded" class="player-dev-logs-list">
+                <div v-if="!logBuffer.length" class="player-dev-empty">No logs yet.</div>
+                <div
+                  v-for="(entry, i) in logBuffer"
+                  :key="i"
+                  class="player-dev-log-entry"
+                  :class="`player-dev-log-entry--${entry.level}`"
+                >
+                  <span class="player-dev-log-ts">{{ entry.ts }}</span>
+                  <span class="player-dev-log-prefix">[{{ entry.prefix }}]</span>
+                  <span class="player-dev-log-msg">{{ entry.message }}</span>
+                  <span v-if="entry.data" class="player-dev-log-data">{{ JSON.stringify(entry.data) }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
 
         </div>
 
@@ -236,15 +238,20 @@ const loading = ref(false);
 
 const log = createLogger('VibePlayerPage');
 
+// ── DEV mode flag ─────────────────────────────────────────────────────────────
+// Tree-shaken to `false` in production builds (vite define: import.meta.env.DEV).
+
+const isDev = import.meta.env.DEV;
+
 // ── DEV diagnostics ───────────────────────────────────────────────────────────
-// These refs are updated on a 1 Hz tick so the STATE panel shows live values
-// from the audio service, which are not reactive on their own.
+// These refs are only used by the DEV panels (visible when isDev === true).
+// In production, no panels are rendered and no polling tick is started.
 
 const _isNativePlatform = Capacitor.isNativePlatform();
 
-/** Live value from audioPlayerService (polled, not reactive). */
+/** Live value from audioPlayerService (polled at 1 Hz in DEV only). */
 const diagServiceLayers = ref(false);
-/** Last value returned by store.playPlan(). */
+/** Last value returned by store.playVibe(). */
 const diagLastPlayResult = ref<boolean | null>(null);
 
 let _diagTickId: ReturnType<typeof setInterval> | null = null;
@@ -432,8 +439,10 @@ async function togglePlayback(): Promise<void> {
     layers:       executionPlan.value,
   });
 
-  diagLastPlayResult.value = started;
-  diagServiceLayers.value  = audioPlayerService.hasActiveLayers();
+  if (isDev) {
+    diagLastPlayResult.value = started;
+    diagServiceLayers.value  = audioPlayerService.hasActiveLayers();
+  }
 
   log.debug('MAIN PLAYER — playVibe result', {
     started,
@@ -551,11 +560,12 @@ onMounted(async () => {
     planLayers: executionPlan.value.length,
   });
 
-  // Poll service state at 1 Hz so the DEV STATE panel shows live values
-  // without ADB — non-reactive service state requires polling.
-  _diagTickId = setInterval(() => {
-    diagServiceLayers.value = audioPlayerService.hasActiveLayers();
-  }, 1_000);
+  // Poll service state at 1 Hz for the DEV STATE panel (DEV mode only).
+  if (isDev) {
+    _diagTickId = setInterval(() => {
+      diagServiceLayers.value = audioPlayerService.hasActiveLayers();
+    }, 1_000);
+  }
 });
 
 onUnmounted(() => {

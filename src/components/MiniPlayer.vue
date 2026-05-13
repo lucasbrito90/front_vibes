@@ -7,7 +7,24 @@
       aria-label="Mini Player"
       @click="navigateToPlayer"
     >
-      <!-- Left: vibe info -->
+      <!-- Artwork thumbnail -->
+      <div class="mini-player-artwork">
+        <img
+          v-if="currentVibeArtworkUrl"
+          :src="currentVibeArtworkUrl"
+          class="mini-player-artwork-img"
+          alt=""
+          aria-hidden="true"
+        />
+        <div
+          v-else
+          class="mini-player-artwork-placeholder"
+          :style="artworkGradient"
+          aria-hidden="true"
+        />
+      </div>
+
+      <!-- Vibe info -->
       <div class="mini-player-info">
         <p class="mini-player-name">{{ currentVibeName }}</p>
         <p class="mini-player-meta">
@@ -16,9 +33,8 @@
         </p>
       </div>
 
-      <!-- Right: controls -->
+      <!-- Controls -->
       <div class="mini-player-controls">
-        <!-- Play / Pause -->
         <button
           type="button"
           class="mini-player-btn"
@@ -28,7 +44,6 @@
           <ion-icon :icon="playPauseIcon" />
         </button>
 
-        <!-- Stop -->
         <button
           type="button"
           class="mini-player-btn mini-player-btn--stop"
@@ -67,7 +82,6 @@ const {
   currentVibeId,
   currentVibeName,
   currentSoundSummary,
-  // Exposed for future MiniPlayer artwork thumbnail — no visual change yet.
   currentVibeArtworkUrl,
 } = storeToRefs(store);
 
@@ -75,7 +89,6 @@ const {
 
 const isVisible = computed(
   () =>
-    // Hidden on routes that define hideMiniPlayer: true (e.g. sounds, player).
     !route.meta.hideMiniPlayer
     && currentVibeId.value !== null
     && (playbackState.value === 'playing' || playbackState.value === 'paused'),
@@ -89,6 +102,22 @@ watch(isVisible, (next, prev) => {
     hideMiniPlayer: !!route.meta.hideMiniPlayer,
   });
 });
+
+// ── Artwork placeholder gradient ──────────────────────────────────────────────
+// When no artwork URL is available, derive a gradient from the vibe ID so each
+// vibe always gets a consistent colour rather than a generic grey box.
+
+const _gradients = [
+  'linear-gradient(135deg, #3a1c71 0%, #4a1890 100%)',
+  'linear-gradient(135deg, #b0298a 0%, #8b2fc9 100%)',
+  'linear-gradient(135deg, #1dac92 0%, #0f3f5c 100%)',
+  'linear-gradient(135deg, #d97706 0%, #7c2d12 100%)',
+  'linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)',
+];
+
+const artworkGradient = computed(() => ({
+  background: _gradients[(currentVibeId.value ?? 0) % _gradients.length],
+}));
 
 // ── Display text ──────────────────────────────────────────────────────────────
 
@@ -152,23 +181,50 @@ function navigateToPlayer(): void {
    * --app-tab-bar-height (56px) is injected by TabsLayout so this value is
    * always in sync with the actual tab bar height. env(safe-area-inset-bottom)
    * accounts for the home-indicator area on notched devices.
-   * Height 62px must match MINI_PLAYER_HEIGHT in TabsLayout.vue.
+   * Height 68px must match MINI_PLAYER_HEIGHT in TabsLayout.vue.
    */
   bottom: calc(var(--app-tab-bar-height, 56px) + env(safe-area-inset-bottom, 0px));
   z-index: 200;
-  height: 62px;
+  height: 68px;
 
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: 12px;
+  padding: 0 14px;
 
-  background: var(--app-color-bg, #ffffff);
-  border-top: 1px solid var(--app-color-border, #cbd5e1);
-  /* No box-shadow — keeps the bar visually attached to the tab bar. */
+  /* Dark glass — premium feel */
+  background: rgba(12, 12, 20, 0.86);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.38),
+    0 -1px 0   rgba(255, 255, 255, 0.06);
 
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Artwork thumbnail ───────────────────────────────────── */
+.mini-player-artwork {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.mini-player-artwork-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mini-player-artwork-placeholder {
+  width: 100%;
+  height: 100%;
 }
 
 /* ── Info area ───────────────────────────────────────────── */
@@ -177,17 +233,18 @@ function navigateToPlayer(): void {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .mini-player-name {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: var(--app-color-text-primary, #121826);
+  color: rgba(255, 255, 255, 0.95);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.1px;
 }
 
 .mini-player-meta {
@@ -195,8 +252,8 @@ function navigateToPlayer(): void {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--app-color-text-secondary, #64748b);
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.52);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -205,21 +262,21 @@ function navigateToPlayer(): void {
 /* ── State dot ───────────────────────────────────────────── */
 .mini-player-dot {
   flex-shrink: 0;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--app-color-border, #cbd5e1);
+  background: rgba(255, 255, 255, 0.22);
   transition: background 0.3s;
 }
 
 .mini-player-dot--playing {
-  background: var(--ion-color-success, #64c086);
-  box-shadow: 0 0 5px rgba(100, 192, 134, 0.55);
+  background: #4ade80;
+  box-shadow: 0 0 6px rgba(74, 222, 128, 0.65);
 }
 
 .mini-player-dot--paused {
-  background: var(--ion-color-warning, #facc15);
-  box-shadow: 0 0 4px rgba(250, 204, 21, 0.45);
+  background: #fbbf24;
+  box-shadow: 0 0 5px rgba(251, 191, 36, 0.50);
 }
 
 /* ── Controls ────────────────────────────────────────────── */
@@ -238,31 +295,30 @@ function navigateToPlayer(): void {
   height: 38px;
   border: none;
   border-radius: 50%;
-  font-size: 19px;
+  font-size: 18px;
   cursor: pointer;
   padding: 0;
   transition: background 0.15s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
 
-  /* Play / pause — primary colour */
-  background: var(--ion-color-primary, #1dac92);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.90);
 }
 
 .mini-player-btn:active {
-  transform: scale(0.90);
-  background: var(--ion-color-primary-shade, #1a987f);
+  transform: scale(0.88);
+  background: rgba(255, 255, 255, 0.20);
 }
 
 /* Stop button — subtle danger surface */
 .mini-player-btn--stop {
-  background: rgba(247, 85, 85, 0.10);
-  color: var(--ion-color-danger, #f75555);
+  background: rgba(247, 85, 85, 0.12);
+  color: rgba(255, 120, 120, 0.90);
 }
 
 .mini-player-btn--stop:active {
-  background: rgba(247, 85, 85, 0.20);
-  transform: scale(0.90);
+  background: rgba(247, 85, 85, 0.24);
+  transform: scale(0.88);
 }
 
 /* ── Slide-up / slide-down transition ───────────────────── */
