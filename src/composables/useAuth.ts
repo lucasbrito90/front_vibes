@@ -25,6 +25,27 @@ async function persistToken(token: string | null): Promise<void> {
 }
 
 function toFriendlyAuthError(err: unknown): string {
+  // Native Google Sign-In cancellation — the plugin throws a plain Error whose
+  // message contains "SIGN_IN_CANCELLED" or "12501" (Android status code).
+  if (err instanceof Error) {
+    const msg = err.message ?? '';
+    if (
+      msg.includes('SIGN_IN_CANCELLED') ||
+      msg.includes('12501') ||
+      msg.includes('canceled') ||
+      msg.includes('cancelled')
+    ) {
+      return 'Sign-in was cancelled.';
+    }
+    if (msg.includes('NETWORK_ERROR') || msg.includes('7:')) {
+      return 'Network error. Check your connection and try again.';
+    }
+    if (msg.includes('ID token')) {
+      // Misconfigured Web Client ID (see VITE_GOOGLE_WEB_CLIENT_ID).
+      return 'Google Sign-In configuration error. Please contact support.';
+    }
+  }
+
   if (!(err instanceof FirebaseError)) {
     return 'Something went wrong. Please try again.';
   }
@@ -41,7 +62,7 @@ function toFriendlyAuthError(err: unknown): string {
     case 'auth/weak-password':
       return 'Password is too weak. Use at least 6 characters.';
     case 'auth/popup-closed-by-user':
-      return 'Login popup was closed before finishing.';
+      return 'Sign-in was cancelled.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please wait a few minutes and try again.';
     case 'auth/network-request-failed':
