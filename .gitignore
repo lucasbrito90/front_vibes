@@ -2,6 +2,7 @@
 # http://git-scm.com/docs/gitignore
 
 *~
+*.env
 *.sw[mnpcod]
 .tmp
 *.tmp
