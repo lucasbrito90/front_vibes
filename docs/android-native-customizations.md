@@ -555,9 +555,9 @@ npx cap add android   # ← DO NOT RUN without backup
 
 These commands regenerate the entire `android/` directory and will destroy:
 
-- `android/app/src/main/java/io/ionic/starter/MainActivity.java` — custom BroadcastReceiver + TaskRemovedService wiring
-- `android/app/src/main/java/io/ionic/starter/TaskRemovedService.java` — app-close / task-removal watchdog
-- `android/app/src/main/AndroidManifest.xml` — all added permissions and service declarations
+- `android/app/src/main/java/io/ionic/starter/MainActivity.java` — custom BroadcastReceiver for headset disconnect
+- `android/app/src/main/AndroidManifest.xml` — permissions and service declarations
+- `scripts/patch-android-foreground-service.cjs` — injects `onTaskRemoved()` into plugin (postinstall + cap sync hook)
 - `android/app/google-services.json` — Firebase Android configuration
 - `android/app/src/main/res/drawable/ic_stat_audio.xml` — notification icon
 - `android/app/src/main/res/mipmap-*/` — generated app icons
@@ -590,19 +590,26 @@ render as a solid white square.
 ## Section 9 — App close / task removal behavior
 
 **Files changed:**
-- `android/app/src/main/java/io/ionic/starter/TaskRemovedService.java` (new)
-- `android/app/src/main/java/io/ionic/starter/MainActivity.java` (updated — `onCreate`)
-- `android/app/src/main/AndroidManifest.xml` (updated — service registration)
+- `scripts/patch-android-foreground-service.cjs` (new) — postinstall + cap sync hook
+- `package.json` (updated — `postinstall` and `capacitor:sync:after` hooks)
+- `android/app/src/main/java/io/ionic/starter/MainActivity.java` (updated — doc comment only)
 
 ### The problem
 
-The app uses `backgroundPlayback: true` so ExoPlayer (managed by `@capgo/native-audio`)
-keeps running when the app backgrounds. This is intentional for use cases like:
-- user presses **Home** → vibe continues while using other apps
-- screen **locks** → vibe continues overnight
+Confirmed via `adb logcat` (see `android-audio-debug.log`):
 
-However, when the user **explicitly closes** the app by swiping it away from the recent-apps
-list, the same mechanism caused audio to keep playing as a ghost process:
+```
+16:18:51.673  SurfaceFlinger  onHandleDestroyed: ...io.ionic.starter/.MainActivity
+16:18:51.723  NativeAudio     No listeners found for event currentTime   ← audio still playing!
+16:18:51.745  NativeAudio     No listeners found for event currentTime
+... (continues every 100ms indefinitely)
+```
+
+When the user swipes Ixora from the recent-apps list:
+1. Android destroys the `Activity` and its WebView
+2. The Capacitor JS bridge is torn down (Pinia → idle, Vue listeners → gone)
+3. **ExoPlayer (NativeAudio) keeps running** — it does not know the UI layer is dead
+4. **The Foreground Service (`@capawesome`) keeps running** — it is `START_STICKY`
 
 | Event | Before fix | After fix |
 |---|---|---|
@@ -612,61 +619,86 @@ list, the same mechanism caused audio to keep playing as a ghost process:
 | Swipe from recents | audio continues ✗ | audio stops ✓ |
 | Reopen after swipe | Pinia idle, audio still playing ✗ | Pinia idle, audio silent ✓ |
 
-### Why JS-side teardown is not reliable here
+### Why JS cannot solve this
 
-When the user swipes the app from recents:
-1. Android destroys the `Activity` and its associated WebView
-2. The Capacitor JS bridge is torn down
-3. `NativeAudio.deinitPlugin()` and `ForegroundService.stopForegroundService()` cannot
-   be called reliably — the bridge is gone
+The JS bridge is destroyed before `onTaskRemoved()` fires. Any attempt to call
+`NativeAudio.deinitPlugin()`, `ForegroundService.stopForegroundService()`, or
+`window.dispatchEvent()` from JS will silently fail or error. The logcat confirms:
+"No listeners found" — the event callbacks are already gone.
 
-### Solution: `TaskRemovedService.java`
+### Why a separate `TaskRemovedService.java` did not work
 
-`Service.onTaskRemoved(Intent)` is an Android lifecycle callback that fires **only** when
-the user explicitly removes a task from the recent-apps list. It is not called on Home press,
-lock, or app switch.
+The initial approach registered a `TaskRemovedService` in `android/app/src/main/AndroidManifest.xml`.
+This failed because:
 
-A dedicated lightweight service (`TaskRemovedService`) is started from `MainActivity.onCreate()`
-with `START_NOT_STICKY`. Its `onTaskRemoved()` calls `android.os.Process.killProcess()`, which:
+1. **`ionic capacitor run android`** and **`cap sync`** call `writeCordovaAndroidManifest()`
+   which regenerates `android/app/src/main/AndroidManifest.xml` on every run.
+2. Our custom `<service>` entries were silently removed each time.
+3. Without the manifest entry, `startService(new Intent(this, TaskRemovedService.class))`
+   in `MainActivity.onCreate()` would throw `ActivityNotFoundException` silently.
 
-1. Terminates ExoPlayer (same process as the app)
-2. Terminates the `@capawesome` Foreground Service (same process)
-3. Android automatically removes the foreground notification
-4. Android automatically abandons AudioFocus
+### Solution: patch `@capawesome-team/capacitor-android-foreground-service` via postinstall script
+
+`AndroidForegroundService` is the `@capawesome` Foreground Service that is **already registered**
+in the manifest by the plugin's own AAR (merged by Gradle at build time — unaffected by `cap sync`).
+
+We patch its Java source to add `onTaskRemoved()` directly:
 
 ```java
-// TaskRemovedService.java
+// Injected by scripts/patch-android-foreground-service.cjs
 @Override
 public void onTaskRemoved(Intent rootIntent) {
-    Log.d(TAG, "onTaskRemoved — user closed app from recents; stopping audio process");
+    Log.d("IxoraTaskRemoved", "onTaskRemoved — user closed app from recents");
+    Log.d("IxoraForegroundServiceStop", "Stopping foreground notification");
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        stopForeground(Service.STOP_FOREGROUND_REMOVE);
+    } else {
+        stopForeground(true);
+    }
+    Log.d("IxoraNativeAudioStop", "Killing process — stops ExoPlayer and all audio");
     android.os.Process.killProcess(android.os.Process.myPid());
-    stopSelf();
 }
 ```
+
+**adb logcat filter:** `adb logcat -s IxoraTaskRemoved IxoraForegroundServiceStop IxoraNativeAudioStop`
+
+### How the patch survives npm install and cap sync
+
+Two hooks in `package.json`:
+
+```json
+{
+  "scripts": {
+    "postinstall": "patch-package && node scripts/patch-android-foreground-service.cjs",
+    "capacitor:sync:after": "node scripts/patch-android-foreground-service.cjs"
+  }
+}
+```
+
+- `postinstall` runs after every `npm install` — re-applies the patch to freshly installed `node_modules`
+- `capacitor:sync:after` is a Capacitor CLI hook — runs after every `cap sync` / `ionic cap run`
+
+The script is **idempotent**: it checks for the presence of `onTaskRemoved` before modifying.
 
 ### Why killProcess() is safe here
 
-- Home/lock/switch do NOT trigger `onTaskRemoved()` → no risk of killing background audio
-- The JS bridge is already destroyed at this point → cannot call JS APIs anyway
-- ExoPlayer is in-process → killing the process is the only atomic teardown available
-- The OS cleans up all resources (file handles, network connections, audio sessions)
+- `onTaskRemoved()` is ONLY called on task removal — never on Home, lock, or app switch
+- The JS bridge is already destroyed at this point — JS teardown is not possible
+- ExoPlayer is in the same process → `killProcess()` stops it atomically
+- `START_STICKY` does NOT restart a service killed by `onTaskRemoved` — Android treats
+  task removal as user-initiated termination, not a crash requiring restart
+- The OS automatically abandons AudioFocus and cleans up all resources
 
-### Manifest registration
+### Debugging with adb logcat
 
-```xml
-<!-- stopWithTask="false" keeps the service alive past task removal
-     so onTaskRemoved() is still called on that event. -->
-<service android:name=".TaskRemovedService" android:stopWithTask="false" />
-```
+```bash
+# Filter for all Ixora audio-stop events
+adb logcat -s IxoraTaskRemoved IxoraForegroundServiceStop IxoraNativeAudioStop NativeAudio
 
-### MainActivity wiring
-
-```java
-@Override
-protected void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    startService(new Intent(this, TaskRemovedService.class));
-}
+# Expected output when user swipes from recents:
+# D IxoraTaskRemoved: onTaskRemoved — user closed app from recents
+# D IxoraForegroundServiceStop: Stopping foreground notification
+# D IxoraNativeAudioStop: Killing process — stops ExoPlayer and all audio
 ```
 
 ---

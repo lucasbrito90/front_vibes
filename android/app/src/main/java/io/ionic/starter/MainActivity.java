@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
-import android.os.Bundle;
 import android.util.Log;
 
 import com.getcapacitor.BridgeActivity;
@@ -18,10 +17,11 @@ import com.getcapacitor.BridgeActivity;
  *   The receiver is registered in onResume and unregistered in onPause to avoid
  *   leaking the registration when the activity is destroyed.
  *
- * TaskRemovedService:
- *   Started in onCreate() so that Service.onTaskRemoved() fires when the user
- *   explicitly removes Ixora from the recent-apps list. This stops all audio
- *   and kills the process. It does NOT fire on Home press or lock screen.
+ * Task removal (app swiped from recents):
+ *   Handled natively in AndroidForegroundService.onTaskRemoved() via a patch-package
+ *   patch on @capawesome-team/capacitor-android-foreground-service. That service is
+ *   already registered in the manifest by the plugin's own AAR — no additional entry
+ *   in this app's AndroidManifest.xml is required. See patches/ directory.
  */
 public class MainActivity extends BridgeActivity {
 
@@ -37,15 +37,6 @@ public class MainActivity extends BridgeActivity {
             }
         }
     };
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // Start the task-removed watchdog. TaskRemovedService.onTaskRemoved() fires
-        // when the user explicitly swipes the app away from the recent-apps list,
-        // killing the process so ExoPlayer and the Foreground Service stop cleanly.
-        startService(new Intent(this, TaskRemovedService.class));
-    }
 
     @Override
     public void onResume() {

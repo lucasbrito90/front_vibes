@@ -11,18 +11,11 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
         <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
-        <!-- stopWithTask="true": Android gracefully stops the Foreground Service (and removes
-             its notification) when the user swipes Ixora from the recent-apps list.
-             Android does NOT restart a gracefully-stopped service (unlike a crashed one),
-             so the notification is gone and ExoPlayer won't be restarted via this service.
-             This does NOT affect normal backgrounding (Home press, lock screen). -->
-        <service android:foregroundServiceType="mediaPlayback"
-                 android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
-                 android:stopWithTask="true" />
-        <!-- Watchdog service: onTaskRemoved() fires when user swipes app from recents.
-             stopWithTask="false" keeps it alive past task removal so the callback fires.
-             It calls killProcess() to ensure ExoPlayer (same process) stops immediately. -->
-        <service android:name=".TaskRemovedService" android:stopWithTask="false" />
+        <!-- onTaskRemoved() is added to AndroidForegroundService via patch-package
+             (patches/@capawesome-team+capacitor-android-foreground-service+8.1.0.patch).
+             No additional manifest entry is needed here — the service is already
+             registered by the plugin's own AAR manifest. -->
+        <service android:foregroundServiceType="mediaPlayback" android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" />
     </application>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />

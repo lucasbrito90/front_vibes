@@ -12,7 +12,8 @@
     "test:e2e": "cypress run",
     "test:unit": "vitest",
     "lint": "eslint .",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package && node scripts/patch-android-foreground-service.cjs",
+    "capacitor:sync:after": "node scripts/patch-android-foreground-service.cjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.3",
