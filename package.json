@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:staging": "vite --mode staging",
     "build": "vue-tsc && vite build",
+    "build:staging": "vue-tsc && vite build --mode staging",
     "preview": "vite preview",
     "test:e2e": "cypress run",
     "test:unit": "vitest",
@@ -32,6 +34,7 @@
     "vue-router": "^4.2.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "8.3.1",
     "@vitejs/plugin-legacy": "^5.0.0",
     "@vitejs/plugin-vue": "^4.0.0",
