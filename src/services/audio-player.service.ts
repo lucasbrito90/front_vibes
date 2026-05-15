@@ -98,8 +98,12 @@ const _isNativePlatform = Capacitor.isNativePlatform();
 //   notification shade. The plugin fires 'playbackState' events with
 //   reason='remotePlay' / 'remotePause' / 'remoteStop' when those controls
 //   are tapped, allowing us to route them back to the Pinia store.
+// focus: true — requests Android AudioFocus (AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).
+//   Android OS handles system-level ducking automatically. The plugin emits
+//   'playbackState' events with reason='audioFocusLoss', 'audioFocusLossTransient',
+//   or 'audioFocusGain' so we can sync Pinia state accordingly.
 if (_isNativePlatform) {
-  void NativeAudio.configure({ backgroundPlayback: true, showNotification: true }).catch((err: unknown) => {
+  void NativeAudio.configure({ backgroundPlayback: true, showNotification: true, focus: true }).catch((err: unknown) => {
     log.warn('NativeAudio.configure failed', { err });
   });
 }
@@ -154,21 +158,63 @@ export function setMediaControlCallbacks(opts: {
   _onRemoteStop  = opts.onStop;
 }
 
+// Tracks whether the most recent playback pause was caused by an audio focus
+// loss so we can safely auto-resume on focus gain without resuming after a
+// user-initiated pause.
+let _pausedByAudioFocus = false;
+
 // Global 'playbackState' listener — active for the lifetime of the app.
-// Only reacts to remote reasons (lock screen, notification, Bluetooth).
-// Local reasons ('play', 'pause', 'complete') are already handled by the
-// store's own actions; reacting to them here would cause re-entrant loops.
+// Handles:
+//   • Remote transport controls (lock screen / notification / Bluetooth)
+//     reason: 'remotePlay', 'remotePause', 'remoteStop'
+//   • Android audio focus events (phone calls, other audio apps, GPS)
+//     reason: 'audioFocusLoss', 'audioFocusLossTransient', 'audioFocusGain'
+// Local reasons ('play', 'pause', 'complete') are handled by store actions;
+// reacting here would cause re-entrant loops.
 if (_isNativePlatform) {
   void NativeAudio.addListener('playbackState', (event) => {
     const { assetId, state, reason } = event;
 
-    if (!reason.startsWith('remote')) return;
+    // ── Remote media controls ─────────────────────────────────────────────
+    if (reason.startsWith('remote')) {
+      log.debug('[MediaSession] remote control event', { assetId, state, reason });
+      if (state === 'playing')  _onRemotePlay?.();
+      else if (state === 'paused')  _onRemotePause?.();
+      else if (state === 'stopped') _onRemoteStop?.();
+      return;
+    }
 
-    log.debug('[MediaSession] remote control event', { assetId, state, reason });
+    // ── Audio focus events ────────────────────────────────────────────────
+    if (reason === 'audioFocusLossTransient') {
+      // Another app temporarily needs audio (GPS navigation, voice command,
+      // brief notification). Plugin has already paused native audio. Sync state.
+      log.debug('[AudioFocus] transient loss — pausing', { assetId });
+      _pausedByAudioFocus = true;
+      _onRemotePause?.();
+      return;
+    }
 
-    if (state === 'playing')  _onRemotePlay?.();
-    else if (state === 'paused')  _onRemotePause?.();
-    else if (state === 'stopped') _onRemoteStop?.();
+    if (reason === 'audioFocusGain') {
+      // Focus returned. Plugin has already resumed native audio. Sync state,
+      // but only if WE paused due to focus — never auto-resume after a
+      // user-initiated pause.
+      log.debug('[AudioFocus] focus gained — resuming if focus-paused', { assetId, wasAutopaused: _pausedByAudioFocus });
+      if (_pausedByAudioFocus) {
+        _pausedByAudioFocus = false;
+        _onRemotePlay?.();
+      }
+      return;
+    }
+
+    if (reason === 'audioFocusLoss') {
+      // Permanent focus loss (phone call, another music player taking over).
+      // Plugin has already stopped native audio. Stop fully, keep vibe selected
+      // so user can manually resume.
+      log.debug('[AudioFocus] permanent loss — stopping', { assetId });
+      _pausedByAudioFocus = false;
+      _onRemoteStop?.();
+      return;
+    }
   });
 }
 

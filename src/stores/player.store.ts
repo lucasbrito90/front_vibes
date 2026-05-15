@@ -29,6 +29,7 @@ import {
   setNotificationVibeName,
   setNotificationArtworkUrl,
 } from '@/services/audio-player.service';
+import { setAudioFocusCallbacks } from '@/services/audio-focus.service';
 import {
   startBackgroundAudio,
   stopBackgroundAudio,
@@ -156,6 +157,16 @@ export const usePlayerStore = defineStore('player', () => {
     onStop() {
       log.debug('[MediaSession] remote stop received');
       if (playbackState.value !== 'idle') stopPlayback();
+    },
+  });
+
+  // Register headset disconnect callback. The audio-focus.service bridges
+  // Android's ACTION_AUDIO_BECOMING_NOISY to this action so that pulling out
+  // headphones or disconnecting Bluetooth pauses playback immediately.
+  setAudioFocusCallbacks({
+    onBecomingNoisy() {
+      log.debug('[AudioFocus] headset/BT disconnected — pausing');
+      if (playbackState.value === 'playing') pausePlayback();
     },
   });
 
