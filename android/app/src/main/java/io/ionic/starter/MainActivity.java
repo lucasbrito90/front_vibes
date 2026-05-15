@@ -33,14 +33,14 @@ public class MainActivity extends BridgeActivity {
     };
 
     @Override
-    protected void onResume() {
+    public void onResume() {
         super.onResume();
         IntentFilter filter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
         registerReceiver(noisyReceiver, filter);
     }
 
     @Override
-    protected void onPause() {
+    public void onPause() {
         super.onPause();
         try {
             unregisterReceiver(noisyReceiver);
