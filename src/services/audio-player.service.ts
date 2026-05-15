@@ -71,6 +71,31 @@
  * - Native fades (setVolume with duration) are similarly not reconstructed on resume;
  *   audio continues from current volume without re-ramping after a pause.
  *
+ * ## Interval mode — field semantics
+ *
+ * The interval layer has two independent timing fields:
+ *
+ *   repeat_interval_seconds  — silence gap between the END of one playback and the
+ *                              START of the next. This is NOT a period; it is the wait.
+ *   play_duration_seconds    — total wall-clock time the layer stays active inside the
+ *                              vibe session. All ticks must complete before this expires.
+ *                              Null means "repeat until the user stops".
+ *
+ * Example:
+ *   repeat_interval_seconds = 30, play_duration_seconds = 300
+ *   → asset plays once → (silence 30 s) → plays again → … → layer stops at ~300 s
+ *
+ * This does NOT mean "play for 30 s then wait 30 s". Tick length is determined
+ * solely by the audio file's natural duration.
+ *
+ * Future field (not yet implemented):
+ *   tick_duration_seconds — maximum duration of a single tick before it is hard-stopped.
+ *   TODO: Add tick_duration_seconds to backend vibe_sounds table and player-engine.service.ts.
+ *         When set, each NativeAudio.play() tick should be force-stopped after
+ *         tick_duration_seconds regardless of the file's natural length.
+ *         Example: tick_duration_seconds=30, repeat_interval_seconds=30,
+ *         play_duration_seconds=3600 → play 30 s → wait 30 s → repeat for 1 hour.
+ *
  * ## Interval mode — other limitations
  * - Next tick is scheduled after `ended` (gap = repeatIntervalSeconds). If `ended`
  *   never fires the chain stalls.
@@ -1090,15 +1115,37 @@ function _scheduleNextIntervalGap(layer: VibeExecutionLayer, managed: ManagedLay
   const gapSec = layer.repeatIntervalSeconds ?? 0;
   const gapMs  = gapSec * 1_000;
 
-  if (gapMs < 1_000) return;
+  if (gapMs < 1_000) {
+    log.warn('[Interval] invalid gap — repeatIntervalSeconds too small, skipping next tick', {
+      soundId: layer.soundId,
+      repeatIntervalSeconds: layer.repeatIntervalSeconds,
+    });
+    return;
+  }
 
   _clearIntervalTimer(managed);
+
+  log.debug('[Interval] next tick gap scheduled', {
+    soundId: layer.soundId,
+    gapSec,
+  });
 
   managed.intervalFiresAtEpochMs = Date.now() + gapMs;
   managed.intervalTimerId = setTimeout(() => {
     managed.intervalTimerId        = null;
     managed.intervalFiresAtEpochMs = null;
-    if (!_layers.has(layer.soundId) || _sessionPaused) return;
+    if (!_layers.has(layer.soundId)) {
+      log.debug('[Interval] gap expired — tick skipped: layer was stopped', { soundId: layer.soundId });
+      return;
+    }
+    if (_sessionPaused) {
+      // pauseAll() should have cleared this timer and stored pendingIntervalRemainingMs.
+      // This guard catches a microqueue race where the callback fires just after
+      // _sessionPaused is set. resumeAll() will reschedule from pendingIntervalRemainingMs.
+      log.debug('[Interval] gap expired — tick skipped: session paused (race guard)', { soundId: layer.soundId });
+      return;
+    }
+    log.debug('[Interval] gap expired — firing tick', { soundId: layer.soundId });
     _intervalPlayTick(layer, managed);
   }, gapMs);
 }
@@ -1262,7 +1309,16 @@ function _intervalPlayTick(layer: VibeExecutionLayer, managed: ManagedLayer): vo
   _clearIntervalTimer(managed);
   managed.intervalFiresAtEpochMs = null;
 
-  if (_sessionPaused) return;
+  if (_sessionPaused) {
+    log.debug('[Interval] tick suppressed — session paused', { soundId: layer.soundId });
+    return;
+  }
+
+  log.debug('[Interval] tick starting', {
+    soundId:  layer.soundId,
+    isNative: managed.isNative,
+    repeatIntervalSeconds: layer.repeatIntervalSeconds,
+  });
 
   if (managed.isNative) {
     void _intervalPlayTickNative(layer, managed);
