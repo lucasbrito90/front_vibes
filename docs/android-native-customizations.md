@@ -555,7 +555,8 @@ npx cap add android   # ← DO NOT RUN without backup
 
 These commands regenerate the entire `android/` directory and will destroy:
 
-- `android/app/src/main/java/io/ionic/starter/MainActivity.java` — custom BroadcastReceiver
+- `android/app/src/main/java/io/ionic/starter/MainActivity.java` — custom BroadcastReceiver + TaskRemovedService wiring
+- `android/app/src/main/java/io/ionic/starter/TaskRemovedService.java` — app-close / task-removal watchdog
 - `android/app/src/main/AndroidManifest.xml` — all added permissions and service declarations
 - `android/app/google-services.json` — Firebase Android configuration
 - `android/app/src/main/res/drawable/ic_stat_audio.xml` — notification icon
@@ -586,7 +587,91 @@ render as a solid white square.
 
 ---
 
-## Section 9 — Recommended future improvements
+## Section 9 — App close / task removal behavior
+
+**Files changed:**
+- `android/app/src/main/java/io/ionic/starter/TaskRemovedService.java` (new)
+- `android/app/src/main/java/io/ionic/starter/MainActivity.java` (updated — `onCreate`)
+- `android/app/src/main/AndroidManifest.xml` (updated — service registration)
+
+### The problem
+
+The app uses `backgroundPlayback: true` so ExoPlayer (managed by `@capgo/native-audio`)
+keeps running when the app backgrounds. This is intentional for use cases like:
+- user presses **Home** → vibe continues while using other apps
+- screen **locks** → vibe continues overnight
+
+However, when the user **explicitly closes** the app by swiping it away from the recent-apps
+list, the same mechanism caused audio to keep playing as a ghost process:
+
+| Event | Before fix | After fix |
+|---|---|---|
+| Home button | audio continues ✓ | audio continues ✓ |
+| Lock screen | audio continues ✓ | audio continues ✓ |
+| App switch | audio continues ✓ | audio continues ✓ |
+| Swipe from recents | audio continues ✗ | audio stops ✓ |
+| Reopen after swipe | Pinia idle, audio still playing ✗ | Pinia idle, audio silent ✓ |
+
+### Why JS-side teardown is not reliable here
+
+When the user swipes the app from recents:
+1. Android destroys the `Activity` and its associated WebView
+2. The Capacitor JS bridge is torn down
+3. `NativeAudio.deinitPlugin()` and `ForegroundService.stopForegroundService()` cannot
+   be called reliably — the bridge is gone
+
+### Solution: `TaskRemovedService.java`
+
+`Service.onTaskRemoved(Intent)` is an Android lifecycle callback that fires **only** when
+the user explicitly removes a task from the recent-apps list. It is not called on Home press,
+lock, or app switch.
+
+A dedicated lightweight service (`TaskRemovedService`) is started from `MainActivity.onCreate()`
+with `START_NOT_STICKY`. Its `onTaskRemoved()` calls `android.os.Process.killProcess()`, which:
+
+1. Terminates ExoPlayer (same process as the app)
+2. Terminates the `@capawesome` Foreground Service (same process)
+3. Android automatically removes the foreground notification
+4. Android automatically abandons AudioFocus
+
+```java
+// TaskRemovedService.java
+@Override
+public void onTaskRemoved(Intent rootIntent) {
+    Log.d(TAG, "onTaskRemoved — user closed app from recents; stopping audio process");
+    android.os.Process.killProcess(android.os.Process.myPid());
+    stopSelf();
+}
+```
+
+### Why killProcess() is safe here
+
+- Home/lock/switch do NOT trigger `onTaskRemoved()` → no risk of killing background audio
+- The JS bridge is already destroyed at this point → cannot call JS APIs anyway
+- ExoPlayer is in-process → killing the process is the only atomic teardown available
+- The OS cleans up all resources (file handles, network connections, audio sessions)
+
+### Manifest registration
+
+```xml
+<!-- stopWithTask="false" keeps the service alive past task removal
+     so onTaskRemoved() is still called on that event. -->
+<service android:name=".TaskRemovedService" android:stopWithTask="false" />
+```
+
+### MainActivity wiring
+
+```java
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    startService(new Intent(this, TaskRemovedService.class));
+}
+```
+
+---
+
+## Section 10 — Recommended future improvements
 
 ### Audio
 

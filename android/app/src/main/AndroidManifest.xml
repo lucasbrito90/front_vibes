@@ -12,6 +12,9 @@
         </provider>
         <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
         <service android:foregroundServiceType="mediaPlayback" android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" />
+        <!-- Watchdog service: onTaskRemoved() fires when user swipes app from recents.
+             stopWithTask="false" keeps it alive past task removal so the callback fires. -->
+        <service android:name=".TaskRemovedService" android:stopWithTask="false" />
     </application>
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
