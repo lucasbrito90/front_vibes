@@ -71,6 +71,7 @@
           <span class="modal-section-label">Repeat every</span>
           <span class="modal-section-value">{{ localRepeatInterval ?? '—' }}s</span>
         </div>
+        <p class="modal-section-hint">Wait time between each playback.</p>
         <input
           v-model.number="localRepeatInterval"
           type="number"
@@ -108,7 +109,7 @@
         </div>
 
         <div class="modal-timing-field">
-          <label class="modal-timing-label">Play for</label>
+          <label class="modal-timing-label">{{ localPlayMode === 'interval' ? 'Active for' : 'Play for' }}</label>
           <input
             v-model.number="localPlayDurationMin"
             type="number"
@@ -143,6 +144,12 @@
           />
         </div>
       </div>
+
+      <!-- Interval semantics hint -->
+      <p v-if="localPlayMode === 'interval'" class="modal-interval-hint">
+        <strong>Active for</strong> is the total time this sound stays active in the vibe.
+        Leave blank to repeat indefinitely until you stop the vibe.
+      </p>
 
       <!-- Error (shown above buttons) -->
       <p v-if="saveError" class="modal-error">{{ saveError }}</p>
@@ -480,6 +487,13 @@ async function handleSave(): Promise<void> {
 .modal-interval-input {
   width: 100%;
   margin-top: 8px;
+}
+
+.modal-interval-hint {
+  font-size: 12px;
+  color: var(--app-color-text-muted, #94a3b8);
+  margin: 10px 20px 0;
+  line-height: 1.5;
 }
 
 /* ── Timing ──────────────────────────────────────── */
