@@ -1,10 +1,14 @@
 /**
  * Persists vibe sound files under Directory.Data for guaranteed offline playback.
  * ExoPlayer's SimpleCache (see RemoteAudioAsset) only buffers progressively — preload/prepare
- * does not download the entire file. This module performs a full HTTP fetch + Filesystem write.
+ * does not download the entire file.
+ *
+ * Downloads use CapacitorHttp (native stack), not WebView fetch(), so Firebase Storage
+ * CORS (Origin https://localhost) does not apply.
  */
 
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, CapacitorHttp } from '@capacitor/core';
+import type { HttpHeaders } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 
@@ -12,6 +16,10 @@ import type { VibeExecutionLayer } from '@/services/player-engine.service';
 
 const MANIFEST_KEY = 'ixora_offline_audio_manifest_v1';
 const LOG = '[AudioCache]';
+
+/** Timeouts for large ambient files over HTTPS */
+const CONNECT_TIMEOUT_MS = 30_000;
+const READ_TIMEOUT_MS    = 180_000;
 
 export interface OfflineManifestEntry {
   relativePath: string;
@@ -21,6 +29,17 @@ export interface OfflineManifestEntry {
 
 export function offlineAudioKey(vibeId: number, soundId: number): string {
   return `${vibeId}:${soundId}`;
+}
+
+function getHeader(headers: HttpHeaders, name: string): string | null {
+  const target = name.toLowerCase();
+  for (const key of Object.keys(headers ?? {})) {
+    if (key.toLowerCase() === target) {
+      const v = headers[key];
+      return typeof v === 'string' ? v : null;
+    }
+  }
+  return null;
 }
 
 async function readManifest(): Promise<Record<string, OfflineManifestEntry>> {
@@ -60,21 +79,57 @@ export function guessAudioExtension(remoteUrl: string, contentType: string | nul
   return '.audio';
 }
 
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = (): void => {
-      const r = reader.result;
-      if (typeof r !== 'string') {
-        reject(new Error('FileReader result was not a string'));
-        return;
-      }
-      const comma = r.indexOf(',');
-      resolve(comma >= 0 ? r.slice(comma + 1) : r);
-    };
-    reader.onerror = (): void => reject(reader.error ?? new Error('FileReader failed'));
-    reader.readAsDataURL(blob);
-  });
+/**
+ * Native GET → base64 body suitable for Filesystem.writeFile without `encoding`.
+ * On Android/iOS, responseType `blob` / `arraybuffer` maps to base64 string (see Capacitor HttpRequestHandler).
+ */
+async function downloadBinaryViaNativeHttp(remoteUrl: string): Promise<{ base64: string; contentType: string | null }> {
+  const urlPreview = remoteUrl.length > 96 ? `${remoteUrl.slice(0, 96)}…` : remoteUrl;
+  console.log(`${LOG} native download started`, { url: urlPreview });
+
+  let status: number;
+  let data: unknown;
+  let headers: HttpHeaders;
+
+  try {
+    const response = await CapacitorHttp.request({
+      url:            remoteUrl,
+      method:         'GET',
+      responseType:   'blob',
+      connectTimeout: CONNECT_TIMEOUT_MS,
+      readTimeout:    READ_TIMEOUT_MS,
+    });
+    status   = response.status;
+    data     = response.data;
+    headers  = response.headers;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn(`${LOG} native download failed`, { reason: 'native_exception', error: msg });
+    throw new Error(msg);
+  }
+
+  if (status < 200 || status >= 300) {
+    const bodyPreview = typeof data === 'string' ? data.slice(0, 160) : '';
+    console.warn(`${LOG} native download failed`, {
+      reason: 'http_error_status',
+      status,
+      bodyPreview: bodyPreview || undefined,
+    });
+    throw new Error(`HTTP ${status}`);
+  }
+
+  if (typeof data !== 'string' || data.length === 0) {
+    console.warn(`${LOG} native download failed`, {
+      reason: 'invalid_body',
+      bodyType: typeof data,
+    });
+    throw new Error('Invalid or empty download body');
+  }
+
+  const contentType = getHeader(headers, 'Content-Type');
+  console.log(`${LOG} native download success`, { status, contentType });
+
+  return { base64: data, contentType };
 }
 
 /**
@@ -86,18 +141,14 @@ export async function downloadLayerForOffline(vibeId: number, layer: VibeExecuti
   }
 
   const remoteUrl = layer.fileUrl.trim();
-  console.log(`${LOG} download — start`, { vibeId, soundId: layer.soundId });
 
-  const response = await fetch(remoteUrl);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
+  const { base64, contentType } = await downloadBinaryViaNativeHttp(remoteUrl);
 
-  const blob        = await response.blob();
-  const ext         = guessAudioExtension(remoteUrl, response.headers.get('content-type'));
+  const ext          = guessAudioExtension(remoteUrl, contentType);
   const relativePath = `offline_audio/vibe_${vibeId}/sound_${layer.soundId}${ext}`;
 
-  const base64 = await blobToBase64(blob);
+  console.log(`${LOG} file saved — writing`, { vibeId, soundId: layer.soundId, relativePath });
+
   await Filesystem.writeFile({
     path:       relativePath,
     directory:  Directory.Data,
@@ -105,7 +156,7 @@ export async function downloadLayerForOffline(vibeId: number, layer: VibeExecuti
     recursive:  true,
   });
 
-  const manifest                       = await readManifest();
+  const manifest = await readManifest();
   manifest[offlineAudioKey(vibeId, layer.soundId)] = {
     relativePath,
     remoteUrl,
@@ -113,7 +164,7 @@ export async function downloadLayerForOffline(vibeId: number, layer: VibeExecuti
   };
   await writeManifest(manifest);
 
-  console.log(`${LOG} download — saved`, { vibeId, soundId: layer.soundId, relativePath });
+  console.log(`${LOG} manifest updated`, { vibeId, soundId: layer.soundId, relativePath });
 }
 
 /**
@@ -139,7 +190,7 @@ export async function getOfflinePlaybackUriIfValid(
       directory: Directory.Data,
     });
   } catch {
-    console.warn(`${LOG} playback resolve — missing file for manifest entry`, {
+    console.warn(`${LOG} local URI resolved — missing file`, {
       vibeId,
       soundId,
       relativePath: entry.relativePath,
@@ -152,6 +203,6 @@ export async function getOfflinePlaybackUriIfValid(
     path:      entry.relativePath,
   });
 
-  console.log(`${LOG} playback resolve — using offline file`, { vibeId, soundId });
+  console.log(`${LOG} local URI resolved`, { vibeId, soundId, uri: uri.slice(0, 64) });
   return uri;
 }

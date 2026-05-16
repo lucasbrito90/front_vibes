@@ -27,6 +27,14 @@ const config: CapacitorConfig = {
       serverClientId: '',   // injected at runtime — see main.ts
       forceCodeForRefreshToken: false,
     },
+    /**
+     * Offline downloads use CapacitorHttp.request() explicitly → native HTTP on Android/iOS
+     * without CORS from https://localhost. Setting enabled:true patches window.fetch/XHR globally;
+     * not required for our download path (see offline-audio-storage.ts).
+     */
+    CapacitorHttp: {
+      enabled: false,
+    },
   },
 };
 

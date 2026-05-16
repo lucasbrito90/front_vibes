@@ -6,7 +6,21 @@ Two separate mechanisms apply:
 
 1. **ExoPlayer streaming cache** — Automatic, progressive buffering into a 100 MiB LRU disk cache while playing remote HTTPS audio. This improves repeat playback **after** you have streamed online; it does **not** guarantee the full file exists on disk.
 
-2. **Download for offline** — Explicit full-file download via `fetch` + `@capacitor/filesystem` into `Directory.Data`. Playback resolves to a local `file://` URI when the stored manifest entry matches the current remote URL.
+2. **Download for offline** — Explicit full-file download via **`CapacitorHttp.request()`** (native HTTP on Android/iOS, **no WebView CORS**) + `@capacitor/filesystem` into `Directory.Data`. Response body is handled as **base64** (native layer for `responseType: 'blob'`) written with `Filesystem.writeFile` **without** `encoding`, so bytes are not interpreted as UTF-8 text. Playback resolves to a local `file://` URI when the manifest entry matches the current remote URL.
+
+---
+
+## Why not WebView `fetch()`?
+
+The Capacitor WebView origin is typically **`https://localhost`**. Firebase Storage only sends `Access-Control-Allow-Origin` for configured web origins; unauthenticated GET from `localhost` often fails with:
+
+`No 'Access-Control-Allow-Origin' header is present`
+
+**`CapacitorHttp.request()`** runs the HTTP client on the **native** side, outside the browser CORS policy. We intentionally **do not** use `NativeAudio.preload()` as a download primitive — it does not guarantee a complete file on disk (see ExoPlayer progressive cache above).
+
+### CapacitorHttp config (`capacitor.config.ts`)
+
+Setting `plugins.CapacitorHttp.enabled: true` patches **global** `window.fetch` / `XMLHttpRequest` to native implementations. **It is not required** for offline downloads: we call `CapacitorHttp.request()` explicitly, which already uses native HTTP. The project keeps `enabled: false` unless you need patched fetch app-wide.
 
 ---
 
@@ -42,10 +56,10 @@ It does **not** delete offline downloads under `Directory.Data/offline_audio/`.
 
 | Step | What happens |
 |---|---|
-| Download | `fetch(layer.fileUrl)` → blob → base64 → `Filesystem.writeFile` under `Directory.Data` |
+| Download | `CapacitorHttp.request({ url, method: 'GET', responseType: 'blob' })` → on Android/iOS the native plugin returns the body as a **base64 string** → `Filesystem.writeFile` (no `encoding`; binary-safe decode on disk) |
 | Manifest | `@capacitor/preferences` key `ixora_offline_audio_manifest_v1` maps `vibeId:soundId` → `{ relativePath, remoteUrl, savedAt }` |
 | Playback | `audioEngine.resolvePlaybackAssetUrl(layer, vibeId)` returns `Filesystem.getUri(...)` when `remoteUrl === layer.fileUrl` and the file still exists |
-| Native preload | `audio-player.service.ts` passes the resolved URI with `isUrl: true` → NativeAudio loads `file://` via `ParcelFileDescriptor` (not `RemoteAudioAsset`) |
+| Native preload | **Playback only** — `audio-player.service.ts` passes the resolved URI with `isUrl: true` → NativeAudio loads `file://` via `ParcelFileDescriptor` when offline copy exists; otherwise HTTPS URLs still use `RemoteAudioAsset` + transparent SimpleCache |
 
 Files are stored under paths like:
 
@@ -65,12 +79,21 @@ If Firebase Storage returns a **new** signed URL for the same sound, the manifes
 
 **Do not validate real offline behaviour with `ionic capacitor run android -l` (live reload / Vite dev server).** The WebView still expects the dev server; behaviour is not representative of a production install.
 
-Use a **production or non-live-reload** binary, for example:
+Use a **real installable build** — **not** live reload:
 
 ```bash
-ionic capacitor run android --no-sync --external
-# (without -l), or build APK/AAB and install
+ionic build
+npx cap sync android
+npx cap run android
 ```
+
+Avoid:
+
+```bash
+ionic capacitor run android -l --external
+```
+
+Live reload keeps the dev server in the loop and is **unsuitable** for validating offline playback and native HTTP download behaviour.
 
 Then:
 
@@ -104,12 +127,12 @@ Pinia sets `audioPlayerService.setPlaybackVibeContext(vibeId)` whenever vibe con
 Prefix `[AudioCache]`:
 
 ```
-[AudioCache] cacheVibeAudio — started { vibeId, layerCount }
-[AudioCache] download requested { vibeId, soundId }
-[AudioCache] download — saved { vibeId, soundId, relativePath }
-[AudioCache] download — failed { vibeId, soundId, error }
-[AudioCache] playback resolve — using offline file { vibeId, soundId }
-[AudioCache] clear — started / success / failed
+[AudioCache] native download started …
+[AudioCache] native download success …
+[AudioCache] native download failed …
+[AudioCache] file saved — writing …
+[AudioCache] manifest updated …
+[AudioCache] local URI resolved …
 ```
 
 ---
@@ -138,7 +161,7 @@ adb shell run-as io.ionic.starter ls -la files/offline_audio/
 
 | File | Role |
 |---|---|
-| `src/services/audio-engine/offline-audio-storage.ts` | Fetch + Filesystem + manifest + URI resolution |
+| `src/services/audio-engine/offline-audio-storage.ts` | `CapacitorHttp` + Filesystem + manifest + URI resolution |
 | `src/services/audio-engine/native-audio.engine.ts` | `cacheVibeAudio`, `resolvePlaybackAssetUrl`, `clearAudioCache`, `getCacheInfo` |
 | `src/services/audio-engine/types.ts` | `AudioEngine` interface |
 | `src/services/audio-player.service.ts` | Per-layer preload uses `_resolvedAssetPath()` + `setPlaybackVibeContext` |
