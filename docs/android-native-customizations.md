@@ -356,12 +356,31 @@ await NativeAudio.preload({
 `_notificationVibeName` and `_notificationArtworkUrl` are updated by the Pinia store
 before each `playVibe()` call via `setNotificationVibeName()` and `setNotificationArtworkUrl()`.
 
-### Known limitation — loop fade-in
+### Known Native Audio Limitations
 
-Loop layers start loud regardless of the configured `fadeInSeconds`. Tracked in
-[GitHub issue #3](https://github.com/lucasbrito90/front_vibes/issues/3). Root cause: the
-plugin does not reliably honour the `volume` parameter set before `loop()` on Android.
-Workaround attempts (`setVolume(0)` before `loop()`) have not fully resolved it.
+#### FadeIn disabled for loop playback mode
+
+**Status:** Temporarily disabled — loop layers start at target volume immediately.
+
+**Root cause:** `@capgo/native-audio` `loop()` calls `asset.loop()` which only does
+`setRepeatMode(ONE)` + `play()`. It does not set volume to 0 and does not call `fadeIn()`.
+All JS workarounds (post-loop `setVolume`, `loopWithFadeIn` node_modules patch) failed due
+to ExoPlayer `STATE_BUFFERING` timing: `player.isPlaying()` returns `false` during buffering,
+so volume ramps are skipped or arrive too late causing an audible flash at the stale volume.
+
+**Current behavior:**
+- UI: fade-in control is hidden in `VibeSoundEditModal.vue` when `play_mode === 'loop'`
+- Runtime: `_startLoopAudioNative()` always calls `NativeAudio.loop({ assetId })` at
+  `targetVol`, ignoring `layer.fadeInSeconds`
+- Database: `fade_in_seconds` value is **preserved** for future compatibility
+
+**FadeIn is still active for:** `once` and `interval` play modes (unaffected).
+
+**Future solution:** A custom Capacitor plugin with a native `loopWithFadeIn()` method
+that runs `setVolume(0) → setRepeatMode(ONE) → play() → fadeIn()` atomically on the
+Android UI thread, with `getPlayWhenReady()`-aware step guards. See
+[`docs/issues/native-loop-fadein.md`](./issues/native-loop-fadein.md) for full context,
+reproduction steps, and the desired native architecture.
 
 ---
 

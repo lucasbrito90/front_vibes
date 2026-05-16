@@ -120,7 +120,8 @@
           />
         </div>
 
-        <div class="modal-timing-field">
+        <!-- Fade in — hidden for loop mode (native limitation on Android) -->
+        <div v-if="localPlayMode !== 'loop'" class="modal-timing-field">
           <label class="modal-timing-label">Fade in</label>
           <input
             v-model.number="localFadeInMin"
@@ -144,6 +145,11 @@
           />
         </div>
       </div>
+
+      <!-- Loop mode: fade-in unavailable notice -->
+      <p v-if="localPlayMode === 'loop'" class="modal-loop-fadein-notice">
+        Fade in is temporarily unavailable for looping sounds on Android.
+      </p>
 
       <!-- Interval semantics hint -->
       <p v-if="localPlayMode === 'interval'" class="modal-interval-hint">
@@ -494,6 +500,14 @@ async function handleSave(): Promise<void> {
   color: var(--app-color-text-muted, #94a3b8);
   margin: 10px 20px 0;
   line-height: 1.5;
+}
+
+.modal-loop-fadein-notice {
+  font-size: 12px;
+  color: var(--app-color-text-muted, #94a3b8);
+  margin: 6px 20px 0;
+  line-height: 1.5;
+  font-style: italic;
 }
 
 /* ── Timing ──────────────────────────────────────── */

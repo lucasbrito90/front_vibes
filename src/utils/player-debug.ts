@@ -45,12 +45,37 @@ const MAX_ENTRIES = 100;
 export const logBuffer = ref<LogEntry[]>([]);
 
 export function clearLogBuffer(): void {
+  if (_flushTimer !== null) {
+    clearTimeout(_flushTimer);
+    _flushTimer = null;
+  }
+  _pendingEntries = [];
   logBuffer.value = [];
 }
 
 // ── Internal push ─────────────────────────────────────────────────────────────
 
 const _isDev = import.meta.env.DEV;
+
+/**
+ * Pending entries collected synchronously; flushed to logBuffer.value via a
+ * single setTimeout(fn, 0) macro-task so that many _push() calls inside the
+ * same Pinia action or reactive flush never trigger "Maximum recursive updates"
+ * in Vue's scheduler (which fires when the same component job is enqueued
+ * ~100 times during a single synchronous execution context).
+ */
+let _pendingEntries: LogEntry[] = [];
+let _flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function _flush(): void {
+  _flushTimer = null;
+  if (_pendingEntries.length === 0) return;
+  // _pendingEntries is in chronological order (oldest first because push()).
+  // logBuffer is newest-first, so we reverse before prepending.
+  const toAdd = _pendingEntries.reverse();
+  _pendingEntries = [];
+  logBuffer.value = [...toAdd, ...logBuffer.value].slice(0, MAX_ENTRIES);
+}
 
 function _push(
   level: LogEntry['level'],
@@ -68,14 +93,16 @@ function _push(
     data ? console.error(line, data) : console.error(line);
   } else if (level === 'warn') {
     data ? console.warn(line, data) : console.warn(line);
-  } else {
-    data ? console.log(line, data) : console.log(line);
   }
 
-  // buffer is only populated in DEV (warn/error always, debug already guarded)
-  if (_isDev) {
-    const entry: LogEntry = { ts, level, prefix, message, data };
-    logBuffer.value = [entry, ...logBuffer.value.slice(0, MAX_ENTRIES - 1)];
+  if (!_isDev) return;
+
+  // Collect synchronously, flush asynchronously in a macro-task.
+  // One setTimeout is scheduled per "batch" of calls — subsequent _push()
+  // calls in the same synchronous context re-use the same timer.
+  _pendingEntries.push({ ts, level, prefix, message, data });
+  if (_flushTimer === null) {
+    _flushTimer = setTimeout(_flush, 0);
   }
 }
 
