@@ -557,12 +557,72 @@ function _logNativeFailure(fn: string, assetId: string, error: unknown): void {
   console.warn(`[AudioPlayer] NativeAudio.${fn}(${assetId}) failed`, error);
 }
 
-/** Stops and unloads a native asset. Fire-and-forget safe. */
+/**
+ * Stops and unloads a native asset.
+ *
+ * Does NOT gate on `_nativeLayers.has(assetId)`. It always attempts stop +
+ * unload so that assets orphaned in the plugin (JS state cleared by hot-reload,
+ * a failed previous unload, etc.) are cleaned up before a fresh preload.
+ * Fire-and-forget safe.
+ */
 async function _stopNativeAsset(assetId: string): Promise<void> {
-  if (!_nativeLayers.has(assetId)) return;
-  try { await NativeAudio.stop({ assetId }); } catch { /* already stopped */ }
+  try { await NativeAudio.stop({ assetId }); } catch { /* already stopped or not loaded */ }
   try { await NativeAudio.unload({ assetId }); } catch { /* already unloaded */ }
   _nativeLayers.delete(assetId);
+}
+
+/**
+ * Ensures no asset with `assetId` is registered in the native plugin before a
+ * fresh preload. Uses `NativeAudio.isPreloaded()` as the source of truth — the
+ * native plugin registry — rather than the JS `_nativeLayers` tracking set,
+ * which can be out-of-sync after hot-reload, a failed unload, or a JS bridge
+ * re-initialization that did not call the native cleanup path.
+ *
+ * Scenarios handled:
+ *  A. Asset in native AND in _nativeLayers → normal stale cleanup
+ *  B. Asset in native but NOT in _nativeLayers (orphan) → clean up the orphan
+ *  C. Asset in _nativeLayers but NOT in native → JS de-sync; fix tracking only
+ *  D. Neither → nothing to do
+ */
+async function _ensureNativeAssetClean(assetId: string): Promise<void> {
+  let foundInNative = false;
+
+  try {
+    // isPreloaded() only needs assetId at runtime but the plugin types
+    // incorrectly require the full PreloadOptions (including assetPath).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await NativeAudio.isPreloaded({ assetId } as any);
+    foundInNative = result?.found ?? false;
+
+    if (foundInNative) {
+      log.warn('[NativeAudio][AssetLifecycle] stale asset detected in native registry — cleaning up', { assetId });
+    }
+  } catch (err) {
+    // isPreloaded() failed — treat as "unknown" and attempt cleanup defensively
+    // if JS tracking says the asset should exist.
+    log.warn('[NativeAudio][AssetLifecycle] isPreloaded failed — cleaning up defensively', {
+      assetId, err: String(err),
+    });
+    foundInNative = _nativeLayers.has(assetId); // fall back to JS truth
+  }
+
+  const foundInJs = _nativeLayers.has(assetId);
+
+  if (!foundInNative && !foundInJs) return; // case D — nothing to do
+
+  if (foundInNative) {
+    log.warn('[NativeAudio][AssetLifecycle] stop before preload', { assetId });
+    try { await NativeAudio.stop({ assetId }); } catch { /* already stopped */ }
+    log.warn('[NativeAudio][AssetLifecycle] unload before preload', { assetId });
+    try { await NativeAudio.unload({ assetId }); } catch { /* already unloaded */ }
+  }
+
+  if (foundInJs && !foundInNative) {
+    log.warn('[NativeAudio][AssetLifecycle] JS tracking de-sync — asset in _nativeLayers but not in native; correcting', { assetId });
+  }
+
+  _nativeLayers.delete(assetId);
+  log.debug('[NativeAudio][AssetLifecycle] preload after cleanup — ready for fresh preload', { assetId });
 }
 
 /**
@@ -576,15 +636,12 @@ async function _startLoopAudioNative(
   const assetId = _nativeAssetId(layer.soundId);
   log.debug('native preload — start', { soundId: layer.soundId, assetId });
 
-  // Unload stale asset from a previous play (e.g. restart)
-  if (_nativeLayers.has(assetId)) {
-    log.debug('native preload — unloading stale asset', { assetId });
-    await _stopNativeAsset(assetId);
-  }
+  // Ensure native registry is clear of any stale asset (JS state may be out-of-sync)
+  await _ensureNativeAssetClean(assetId);
 
   // Guard: layer may have been stopped while we awaited above
   if (!_layers.has(layer.soundId)) {
-    log.warn('native preload — layer removed while awaiting stop, aborting', { soundId: layer.soundId });
+    log.warn('native preload — layer removed while awaiting cleanup, aborting', { soundId: layer.soundId });
     return;
   }
 
@@ -942,15 +999,12 @@ async function _startOnceAudioNative(
   // Ensure global complete listener is ready before we register a callback
   await _ensureNativeOnceCompleteListener();
 
-  // Unload any stale asset from a previous play (e.g. restart)
-  if (_nativeLayers.has(assetId)) {
-    log.debug('[NativeAudio][Once] unloading stale asset', { assetId });
-    await _stopNativeAsset(assetId);
-  }
+  // Ensure native registry is clear of any stale asset (JS state may be out-of-sync)
+  await _ensureNativeAssetClean(assetId);
 
   // Guard: layer may have been stopped while awaiting above
   if (!_layers.has(layer.soundId)) {
-    log.warn('[NativeAudio][Once] layer removed while awaiting stale stop, aborting', { soundId: layer.soundId });
+    log.warn('[NativeAudio][Once] layer removed while awaiting cleanup, aborting', { soundId: layer.soundId });
     return;
   }
 
@@ -1081,15 +1135,12 @@ async function _startIntervalAudioNative(
   // Ensure global complete listener is ready
   await _ensureNativeOnceCompleteListener();
 
-  // Unload stale asset from a previous play (e.g. restart)
-  if (_nativeLayers.has(assetId)) {
-    log.debug('[NativeAudio][Interval] unloading stale asset', { assetId });
-    await _stopNativeAsset(assetId);
-  }
+  // Ensure native registry is clear of any stale asset (JS state may be out-of-sync)
+  await _ensureNativeAssetClean(assetId);
 
   // Guard: layer may have been stopped while awaiting above
   if (!_layers.has(layer.soundId)) {
-    log.warn('[NativeAudio][Interval] layer removed while awaiting stale stop, aborting', { soundId: layer.soundId });
+    log.warn('[NativeAudio][Interval] layer removed while awaiting cleanup, aborting', { soundId: layer.soundId });
     return;
   }
 
