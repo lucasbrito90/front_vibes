@@ -11,8 +11,8 @@
  * ## Streaming cache vs offline download (@capgo/native-audio 8.4.2 — Android)
  * - ExoPlayer SimpleCache (100 MB LRU) buffers progressively during playback — it
  *   does **not** guarantee the full file is on disk after preload/prepare.
- * - “Download for offline” writes the complete file to Directory.Data via fetch +
- *   `@capacitor/filesystem`; playback resolves to a `file://` URI when the manifest
+ * - “Download for offline” writes the complete file to Directory.Data via native
+ *   **CapacitorHttp** + `@capacitor/filesystem`; playback resolves to a `file://` URI when the manifest
  *   matches the current remote URL.
  * - clearAudioCache() only clears ExoPlayer's cache/media folder — not offline files.
  * See docs/audio-cache.md for full details.
@@ -167,7 +167,7 @@ export interface AudioEngine {
   /**
    * Download each eligible remote layer to app storage (full file) without playback.
    *
-   * Uses HTTP fetch + Filesystem (Directory.Data). Does not rely on ExoPlayer
+   * Uses CapacitorHttp (native GET) + Filesystem (Directory.Data). Does not rely on ExoPlayer
    * preload as a “download complete” signal.
    *
    * @param vibeId - Namespace for on-disk paths and manifest keys

@@ -556,7 +556,7 @@ async function handleDownloadForOffline(): Promise<void> {
     }
 
     if (result.succeeded === 0 && result.failed > 0) {
-      await showPlaybackToast('Could not download sounds. Check your connection.');
+      await showPlaybackToast('Could not download this sound.');
     } else if (result.failed > 0) {
       await showPlaybackToast(
         `Downloaded ${result.succeeded} sound${result.succeeded !== 1 ? 's' : ''}. ${result.failed} could not be downloaded.`,
@@ -569,7 +569,7 @@ async function handleDownloadForOffline(): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     log.warn('[AudioCache] download failed', { vibeId: id, error: msg });
-    await showPlaybackToast('Download failed. Try again later.');
+    await showPlaybackToast('Could not download this sound.');
   } finally {
     isDownloading.value = false;
   }

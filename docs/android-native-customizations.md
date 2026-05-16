@@ -396,7 +396,7 @@ plugin is registered on Android/iOS like other Capacitor dependencies.
 The `AudioEngine` interface exposes:
 - `getCacheInfo()` — metadata (streaming cache vs offline storage paths)
 - `clearAudioCache()` — releases ExoPlayer `SimpleCache` only (offline files kept)
-- `cacheVibeAudio(vibeId, layers)` — **full-file** `fetch` + Filesystem write (native)
+- `cacheVibeAudio(vibeId, layers)` — **full-file** `CapacitorHttp.request()` + Filesystem write (native)
 - `resolvePlaybackAssetUrl(layer, vibeId)` — `file://` when offline copy matches current URL
 
 See [`docs/audio-cache.md`](./audio-cache.md) for full details, adb paths, and why **live reload**
