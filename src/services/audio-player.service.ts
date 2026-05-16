@@ -46,12 +46,42 @@
  * - If preload fails, the layer transparently falls back to HTMLAudioElement.
  *
  * ## Native fade implementation
- * - loop fade in:  preload at volume 0.1, then call setVolume({ volume: target,
- *   duration: fadeInSeconds }) after loop() starts. loop() accepts only { assetId }
- *   with no fade options, so we rely on setVolume() for the ramp.
- * - loop fade out: at (durationSeconds - fadeOutSeconds), call setVolume({ volume: 0.1,
- *   duration: fadeOutSeconds }) to ramp down. The existing hard-stop timer at
- *   durationSeconds still calls stopLayer() so the asset is fully torn down.
+ *
+ * ### Volume scale and API units (confirmed from @capgo/native-audio Java source)
+ * - Volume range:           0.1–1.0 (plugin enforces 0.001 as internal min)
+ * - setVolume.duration:     SECONDS (Java converts internally to ms)
+ * - play/preload.volume:    0.1–1.0
+ * - fadeInDuration (play):  SECONDS (Java converts internally to ms)
+ *
+ * ### Critical: isComplex flag in preload()
+ * The Java preloadAsset() only reads the `volume` (and `audioChannelNum`) params
+ * when `isComplex: true` is passed. Without it the plugin silently defaults to
+ * volume=1.0 regardless of what the JS call specifies. All preload() calls in
+ * this service MUST include `isComplex: true` so the preload volume is respected.
+ *
+ * ### loop fade-in strategy (fix for issue #3)
+ * Previous approach (broken): preload at 0.1, setVolume(0.1) BEFORE loop() —
+ *   Java's call.resolve() can return to JS before the UI-thread runnable that
+ *   executes player.setVolume(0.1) has run. loop() + setVolume(0.91, duration)
+ *   may therefore see the player already at 1.0 (the unset isComplex default),
+ *   causing fadeTo() to start from the wrong initial volume.
+ *
+ * Fixed approach:
+ *   1. preload at 0.1 WITH isComplex:true → ExoPlayer initialized at 0.1
+ *   2. await loop() → player.play() starts; call.resolve() fires
+ *   3. await setVolume({ volume: 0.1 }) immediately after loop() — player is
+ *      NOW definitively playing (isPlaying()=true), so the UI-thread runnable
+ *      executes player.setVolume(0.1) while playing. This is the POST-LOOP reset.
+ *   4. void setVolume({ volume: target, duration: fadeInSeconds }) — at this
+ *      point player.getVolume()=0.1 and isPlaying()=true, so fadeTo() triggers
+ *      the correct exponential ramp.
+ *
+ * ### loop fade-out
+ * - At (durationSeconds - fadeOutSeconds), setVolume({ volume: 0.1, duration:
+ *   fadeOutSeconds }) ramps down. The hard-stop timer at durationSeconds still
+ *   calls stopLayer() so the asset is fully torn down.
+ *
+ * ### once / interval fade
  * - once fade in/out: passed directly as play() options (fadeIn, fadeInDuration,
  *   fadeOut, fadeOutDuration, fadeOutStartTime). No JS scheduling needed.
  * - interval tick fade in: passed to each NativeAudio.play() call per tick.
@@ -551,37 +581,43 @@ async function _startLoopAudioNative(
   /*
    * Preload volume selection:
    * - No fade-in: preload at target volume so loop() starts at the right level.
-   * - Fade-in configured: preload at 0.1 (near-silence) so the native player
-   *   never holds the target volume in its internal cache before loop() starts.
-   *   We then also await a setVolume(0.1) reset before loop() as a redundant
-   *   safety measure, because Android may not always honour the preload volume.
+   * - Fade-in configured: preload at 0.1 (near-silence) — the POST-LOOP setVolume
+   *   reset below also anchors the player at 0.1 while definitively playing, but
+   *   starting preload at 0.1 prevents any brief full-volume burst if something
+   *   calls player.play() before our post-loop reset reaches the UI thread.
    *
-   * setVolume scale:    0.1–1.0  (plugin minimum is 0.1, not 0.0)
-   * setVolume.duration: seconds  (confirmed from @capgo/native-audio typings)
+   * IMPORTANT: isComplex:true is required so Java's preloadAsset() actually reads
+   * the volume param. Without it the ExoPlayer is initialized at 1.0 (full volume)
+   * regardless of what we pass — a silent bug in @capgo/native-audio's preload API.
    */
-  const targetVol    = _toNativeVolume(layer.volume);
-  const preloadVol   = layer.fadeInSeconds > 0 ? 0.1 : targetVol;
+  const targetVol  = _toNativeVolume(layer.volume);
+  const preloadVol = layer.fadeInSeconds > 0 ? 0.1 : targetVol;
 
   log.debug('[NativeAudio][Fade] preload volume selected', {
     assetId,
     preloadVol,
     targetVol,
     fadeInSeconds: layer.fadeInSeconds,
+    fadeOutSeconds: layer.fadeOutSeconds,
   });
 
   try {
     await NativeAudio.preload({
       assetId,
-      assetPath: layer.fileUrl,
-      isUrl: true,
-      volume: preloadVol,
+      assetPath:       layer.fileUrl,
+      isUrl:           true,
+      // isComplex: true is a Java-side flag not in the TS typings.
+      // Without it preloadAsset() ignores `volume` and `audioChannelNum`,
+      // silently initialising ExoPlayer at full volume (1.0).
+      isComplex:       true,
+      volume:          preloadVol,
       audioChannelNum: 1,
       notificationMetadata: {
         title:      _notificationVibeName || layer.soundName,
         artist:     layer.soundName,
         artworkUrl: _notificationArtworkUrl || undefined,
       },
-    });
+    } as Parameters<typeof NativeAudio.preload>[0]);
     _nativeLayers.add(assetId);
     log.debug('[Artwork] loop preload metadata', { assetId, title: _notificationVibeName, hasArtwork: !!_notificationArtworkUrl });
     log.debug('native preload — OK', { assetId, nativeCount: _nativeLayers.size });
@@ -601,52 +637,75 @@ async function _startLoopAudioNative(
     return;
   }
 
-  // Redundant safety reset before loop(): even if preload volume was cached
-  // from a previous play, this explicit await ensures the native player state
-  // is at 0.1 before playback begins.
-  if (layer.fadeInSeconds > 0) {
-    log.debug('[NativeAudio][Fade] loop fadeIn — safety reset to 0.1 before loop()', { assetId });
-    try {
-      await NativeAudio.setVolume({ assetId, volume: 0.1 });
-    } catch (e) {
-      log.warn('[NativeAudio][Fade] loop fadeIn pre-reset setVolume — failed, fade may start loud', {
-        assetId, err: String(e),
-      });
-    }
-  }
-
-  // Guard: layer may have been stopped while awaiting setVolume above
-  if (!_layers.has(layer.soundId)) {
-    log.warn('native loop — layer removed while awaiting pre-reset, unloading asset', { assetId });
-    void _stopNativeAsset(assetId);
-    return;
-  }
-
   try {
     await NativeAudio.loop({ assetId });
-    log.debug('native loop — started', {
+    log.debug('[NativeAudio][Fade] loop — started', {
       assetId,
       soundId:       layer.soundId,
-      sessionPaused: _sessionPaused,
-      layersSize:    _layers.size,
+      preloadVol,
+      targetVol,
+      fadeInSeconds:  layer.fadeInSeconds,
+      fadeOutSeconds: layer.fadeOutSeconds,
+      sessionPaused:  _sessionPaused,
+      layersSize:     _layers.size,
     });
 
-    // Start the fade-in ramp AFTER loop() confirms playback began.
-    // setVolume with duration ramps from current volume (0.1) to target over fadeInSeconds.
+    /*
+     * POST-LOOP volume anchor + fade-in ramp.
+     *
+     * Why post-loop (not pre-loop)?
+     * Java's call.resolve() can return to JS before the UI-thread runnable from
+     * setVolume() has executed player.setVolume(). A PRE-loop setVolume(0.1) may
+     * therefore race against loop()'s player.play(), and if the setVolume runnable
+     * runs AFTER player.play() the player briefly emits full-volume audio.
+     *
+     * After await loop() the JS bridge has already round-tripped through Java and
+     * the WebView; by the time our next setVolume() reaches the Java UI thread,
+     * loop()'s player.play() runnable has already executed. player.isPlaying()
+     * is reliably TRUE, player.getVolume() reflects the preload value (0.1),
+     * and fadeTo() starts the correct exponential ramp.
+     */
     if (layer.fadeInSeconds > 0 && !_sessionPaused && _nativeLayers.has(assetId)) {
-      const targetVol = _toNativeVolume(layer.volume);
-      log.debug('[NativeAudio][Fade] loop fadeIn — starting ramp to target', {
+      log.debug('[NativeAudio][Fade] loop fadeIn — post-loop anchor reset to 0.1', { assetId });
+
+      // Step 1: anchor at 0.1 while definitively playing — this await guarantees
+      // that when the fade ramp fires, player.getVolume() = 0.1.
+      try {
+        await NativeAudio.setVolume({ assetId, volume: 0.1 });
+        log.debug('[NativeAudio][Fade] loop fadeIn — anchor set OK, volume=0.1', { assetId });
+      } catch (e) {
+        log.warn('[NativeAudio][Fade] loop fadeIn — anchor setVolume(0.1) failed', {
+          assetId, err: String(e),
+        });
+      }
+
+      // Guard: layer may have been stopped while awaiting anchor above
+      if (!_layers.has(layer.soundId) || !_nativeLayers.has(assetId)) {
+        log.warn('[NativeAudio][Fade] loop fadeIn — layer removed during anchor, aborting', { assetId });
+        return;
+      }
+
+      // Step 2: ramp from 0.1 → target over fadeInSeconds (exponential via fadeTo).
+      // duration unit is SECONDS (Java converts to ms internally).
+      const rampTargetVol = _toNativeVolume(layer.volume);
+      log.debug('[NativeAudio][Fade] loop fadeIn — starting exponential ramp', {
         assetId,
-        targetVol,
+        fromVol:      0.1,
+        toVol:        rampTargetVol,
         fadeInSeconds: layer.fadeInSeconds,
+        durationUnit:  'seconds',
       });
       void NativeAudio.setVolume({
         assetId,
-        volume:   targetVol,
+        volume:   rampTargetVol,
         duration: layer.fadeInSeconds,
-      }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn ramp setVolume — failed', {
+      }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn — ramp setVolume failed', {
         assetId, err: String(e),
       }));
+    } else if (layer.fadeInSeconds <= 0) {
+      log.debug('[NativeAudio][Fade] loop — no fadeIn configured, playing at target volume', {
+        assetId, targetVol,
+      });
     }
 
     // Race-condition guard: if the session was paused while we were awaiting
@@ -758,15 +817,25 @@ function _scheduleLayerLifetime(layer: VibeExecutionLayer, managed: ManagedLayer
       if (managed.isNative && layer.fadeOutSeconds > 0) {
         const assetId = _nativeAssetId(layer.soundId);
         if (_nativeLayers.has(assetId)) {
-          log.debug('[NativeAudio][Fade] scheduleLayerLifetime fadeOut — starting', {
+          const currentVolSnapshot = _toNativeVolume(layer.volume);
+          log.debug('[NativeAudio][Fade] loop fadeOut — starting ramp to minimum', {
             assetId,
+            fromVol:        currentVolSnapshot,
+            toVol:          0.1,
             fadeOutSeconds: layer.fadeOutSeconds,
+            durationUnit:   'seconds',
+            stopAfterMs:    fadeOutMs,
           });
+          // Ramp from current target volume down to 0.1 (plugin minimum) over
+          // fadeOutSeconds. Java fadeTo() uses exponential interpolation.
+          // duration unit is SECONDS (Java converts to ms internally).
           void NativeAudio.setVolume({
             assetId,
             volume:   0.1,
             duration: layer.fadeOutSeconds,
-          }).catch((e) => log.warn('[NativeAudio][Fade] fadeOut setVolume — failed', { assetId, err: String(e) }));
+          }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeOut — ramp setVolume failed', {
+            assetId, err: String(e),
+          }));
         }
       }
 
@@ -838,7 +907,9 @@ function _startLoopAudioHtml(
  * on web falls back to HTMLAudioElement. Also falls back to HTML if any
  * native step fails.
  *
- * NOTE: fade in/out is not yet implemented for native loop layers.
+ * Native fade-in: preload at 0.1 → loop() → post-loop setVolume(0.1) anchor
+ * → setVolume(target, fadeInSeconds) exponential ramp. See _startLoopAudioNative.
+ * Native fade-out: scheduled by _scheduleLayerLifetime via setVolume(0.1, duration).
  */
 function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void {
   if (_isNativePlatform) {
