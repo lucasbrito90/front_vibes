@@ -81,6 +81,11 @@ async function deleteVibe(id: number): Promise<boolean> {
   }
 }
 
+/** Player page: restore GET /vibes/:id detail when API fails but offline snapshot exists. */
+function hydrateSelectedVibeFromOffline(vibe: Vibe): void {
+  selectedVibe.value = vibe;
+}
+
 export function useVibes() {
   return {
     vibes,
@@ -92,5 +97,6 @@ export function useVibes() {
     createVibe,
     updateVibe,
     deleteVibe,
+    hydrateSelectedVibeFromOffline,
   };
 }

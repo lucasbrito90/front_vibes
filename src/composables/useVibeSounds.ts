@@ -77,6 +77,11 @@ async function removeVibeSound(vibeId: number, soundId: number): Promise<boolean
   }
 }
 
+/** Player page: restore GET /vibes/:id/sounds when API fails but offline snapshot exists. */
+function hydrateVibeSoundsFromOffline(sounds: VibeSound[]): void {
+  vibeSounds.value = sounds.map((s) => ({ ...s }));
+}
+
 export function useVibeSounds() {
   return {
     vibeSounds,
@@ -86,5 +91,6 @@ export function useVibeSounds() {
     attachSound,
     updateVibeSound,
     removeVibeSound,
+    hydrateVibeSoundsFromOffline,
   };
 }

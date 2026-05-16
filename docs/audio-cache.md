@@ -2,11 +2,13 @@
 
 ## Overview
 
-Two separate mechanisms apply:
+Several mechanisms apply:
 
 1. **ExoPlayer streaming cache** — Automatic, progressive buffering into a 100 MiB LRU disk cache while playing remote HTTPS audio. This improves repeat playback **after** you have streamed online; it does **not** guarantee the full file exists on disk.
 
-2. **Download for offline** — Explicit full-file download via **`CapacitorHttp.request()`** (native HTTP on Android/iOS, **no WebView CORS**) + `@capacitor/filesystem` into `Directory.Data`. Response body is handled as **base64** (native layer for `responseType: 'blob'`) written with `Filesystem.writeFile` **without** `encoding`, so bytes are not interpreted as UTF-8 text. Playback resolves to a local `file://` URI when the manifest entry matches the current remote URL.
+2. **Download for offline (audio files)** — Explicit full-file download via **`CapacitorHttp.request()`** (native HTTP on Android/iOS, **no WebView CORS**) + `@capacitor/filesystem` into `Directory.Data`. Response body is handled as **base64** (native layer for `responseType: 'blob'`) written with `Filesystem.writeFile` **without** `encoding`, so bytes are not interpreted as UTF-8 text. Playback resolves to a local `file://` URI when the manifest entry matches the current remote URL.
+
+3. **Vibe metadata offline snapshot** — `@capacitor/preferences` key **`offline_vibe_manifest_v1`** stores a minimal copy of the vibe record plus the **`VibeSound[]`** returned by `GET /api/vibes/:id/sounds`, written only after a **successful** “Download for offline” (no failed layers). Without this, the player page would call the API on every visit; offline, those calls fail and the execution plan stays empty even though audio files exist under `Directory.Data`.
 
 ---
 
@@ -75,6 +77,34 @@ If Firebase Storage returns a **new** signed URL for the same sound, the manifes
 
 ---
 
+## Audio file cache vs vibe metadata snapshot
+
+| | **Audio files** (`ixora_offline_audio_manifest_v1` + `offline_audio/`) | **Metadata snapshot** (`offline_vibe_manifest_v1`) |
+|---|---|---|
+| **What** | Full audio bytes per layer; maps `vibeId:soundId` → local path + remote URL | JSON: vibe fields for UI + `VibeSound[]` to rebuild `executionPlan` |
+| **When written** | During **Download for offline** per playable HTTPS layer | After the same download completes with **`failed === 0`** and at least one success |
+| **Why** | Guarantees `file://` playback when offline | Lets **VibePlayerPage** hydrate without `GET /api/vibes/:id` or `/sounds` |
+
+### Where metadata is stored
+
+Single Preferences document: **`offline_vibe_manifest_v1`**, shape `{ version: 1, vibes: { "<vibeId>": { vibeId, downloadedAt, vibe, vibeSounds } } }`.
+
+### How the player chooses API vs snapshot
+
+On mount, **VibePlayerPage** loads vibe detail and sounds in parallel (same as online). If **`vibeSounds.length > 0`** after that, it builds the plan from the API. If sounds are **missing** (network error, offline, etc.), it calls **`getOfflineVibeSnapshot(vibeId)`**. If a snapshot exists with sounds, it hydrates **`selectedVibe`** and **`vibeSounds`**, then **`buildPlan()`**. If there is no snapshot and **`navigator.onLine`** is false, it shows a toast: **“This vibe is not available offline.”** When the device is online but the API returns no sounds and there is no snapshot, the page behaves like an empty vibe (warning text only — no toast).
+
+### How Play stays enabled offline
+
+**Play** depends on **`hasPlayableLayers`** (derived from **`executionPlan`**), not on network status. Restoring **`vibeSounds`** from the snapshot repopulates the plan the same way as a successful API response, so **`canUsePlaybackControls`** becomes true when layers resolve to playable URLs (including **`file://`** after **`resolvePlaybackAssetUrl`**).
+
+### Limitations
+
+- Snapshot is **not** updated when the vibe changes on the server until the user runs **Download for offline** again successfully.
+- List/browse screens still need network unless separately cached; only the **player** for a **previously downloaded** vibe is supported offline.
+- Clearing app data removes Preferences and offline files; both manifests must be repopulated by downloading again.
+
+---
+
 ## Testing offline (Android)
 
 **Do not validate real offline behaviour with `ionic capacitor run android -l` (live reload / Vite dev server).** The WebView still expects the dev server; behaviour is not representative of a production install.
@@ -98,9 +128,12 @@ Live reload keeps the dev server in the loop and is **unsuitable** for validatin
 Then:
 
 1. Clear ExoPlayer cache in Settings (optional).
-2. Open a vibe online → **Download for offline**.
+2. Online: open a vibe → **Download for offline** → wait for success.
 3. Enable airplane mode.
-4. Play the vibe — audio should load from `file://`.
+4. Tap stop (if playing), leave the player screen, then open the **same** vibe again — you should see **Offline mode**, **Play** enabled, and the execution plan restored from the snapshot (check DEV panel if needed).
+5. Tap **Play** — audio should load from `file://`.
+6. Optional: open a vibe that was **never** downloaded while still offline — **Play** should stay disabled and you should see **This vibe is not available offline**.
+7. Disable airplane mode — API loads should work again as usual.
 
 ---
 
@@ -135,6 +168,13 @@ Prefix `[AudioCache]`:
 [AudioCache] local URI resolved …
 ```
 
+Prefix `[OfflineVibe]` (metadata snapshot):
+
+```
+[OfflineVibe] snapshot saved …
+[OfflineVibe] snapshot removed …
+```
+
 ---
 
 ## Settings UI
@@ -166,6 +206,7 @@ adb shell run-as io.ionic.starter ls -la files/offline_audio/
 | `src/services/audio-engine/types.ts` | `AudioEngine` interface |
 | `src/services/audio-player.service.ts` | Per-layer preload uses `_resolvedAssetPath()` + `setPlaybackVibeContext` |
 | `src/stores/player.store.ts` | Syncs playback vibe id with audio service |
-| `src/views/VibePlayerPage.vue` | Download for offline |
+| `src/services/offline-vibe-cache.service.ts` | Preferences snapshot (`offline_vibe_manifest_v1`) |
+| `src/views/VibePlayerPage.vue` | Download for offline + offline hydrate on mount |
 | `src/views/SettingsPage.vue` | Clear ExoPlayer cache |
 | `@capgo/native-audio` … `RemoteAudioAsset.java` | ExoPlayer SimpleCache |
