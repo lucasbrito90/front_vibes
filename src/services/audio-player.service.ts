@@ -158,7 +158,7 @@ const _isNativePlatform = Capacitor.isNativePlatform();
 //   'playbackState' events with reason='audioFocusLoss', 'audioFocusLossTransient',
 //   or 'audioFocusGain' so we can sync Pinia state accordingly.
 if (_isNativePlatform) {
-  void NativeAudio.configure({ backgroundPlayback: true, showNotification: true, focus: true }).catch((err: unknown) => {
+  void NativeAudio.configure({ backgroundPlayback: true, showNotification: true, focus: true, debug: true }).catch((err: unknown) => {
     log.warn('NativeAudio.configure failed', { err });
   });
 }
