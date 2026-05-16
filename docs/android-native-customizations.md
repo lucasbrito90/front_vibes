@@ -287,7 +287,7 @@ await NativeAudio.configure({
 
 | Mode | NativeAudio API | Notes |
 |---|---|---|
-| `loop` | `NativeAudio.loop({ assetId })` | Loops indefinitely; fade-in/out via `setVolume({ duration })` |
+| `loop` | `NativeAudio.loop({ assetId })` | Loops indefinitely at target volume (fade disabled — see below) |
 | `once` | `NativeAudio.play({ assetId })` | Plays once; completion detected via `'complete'` event |
 | `interval` | `NativeAudio.play({ assetId })` | Called once per tick; next tick scheduled on `'complete'` |
 
@@ -358,29 +358,30 @@ before each `playVibe()` call via `setNotificationVibeName()` and `setNotificati
 
 ### Known Native Audio Limitations
 
-#### FadeIn disabled for loop playback mode
+#### Fade (fadeIn / fadeOut) — removed temporarily
 
-**Status:** Temporarily disabled — loop layers start at target volume immediately.
+**Status:** Fully removed from runtime and UI as of May 2026.
 
-**Root cause:** `@capgo/native-audio` `loop()` calls `asset.loop()` which only does
-`setRepeatMode(ONE)` + `play()`. It does not set volume to 0 and does not call `fadeIn()`.
-All JS workarounds (post-loop `setVolume`, `loopWithFadeIn` node_modules patch) failed due
-to ExoPlayer `STATE_BUFFERING` timing: `player.isPlaying()` returns `false` during buffering,
-so volume ramps are skipped or arrive too late causing an audible flash at the stale volume.
+**Reason:** `@capgo/native-audio` 8.4.2 cannot reliably apply fade effects on Android:
+
+- `loop()` has no native fadeIn parameter. JS ramp workarounds (post-loop `setVolume`)
+  fail because `player.isPlaying()` returns `false` during ExoPlayer `STATE_BUFFERING`.
+- `play()` + `fadeIn: true` throws `CapacitorException: Index 0 out of bounds for length 0`
+  due to a `float/double` type mismatch in `RemoteAudioAsset.playWithFadeIn` that causes
+  Java to dispatch to the base-class method accessing an empty `audioList`.
+- All patch scripts (`patch-native-audio-fade.cjs`) were removed — they added fragility.
 
 **Current behavior:**
-- UI: fade-in control is hidden in `VibeSoundEditModal.vue` when `play_mode === 'loop'`
-- Runtime: `_startLoopAudioNative()` always calls `NativeAudio.loop({ assetId })` at
-  `targetVol`, ignoring `layer.fadeInSeconds`
-- Database: `fade_in_seconds` value is **preserved** for future compatibility
+- UI: fade-in and fade-out controls are hidden in `VibeSoundEditModal.vue`
+- Runtime: every layer starts and stops at target volume immediately
+- Database: `fade_in_seconds` / `fade_out_seconds` columns are **preserved** for
+  backward compatibility and future use
 
-**FadeIn is still active for:** `once` and `interval` play modes (unaffected).
-
-**Future solution:** A custom Capacitor plugin with a native `loopWithFadeIn()` method
-that runs `setVolume(0) → setRepeatMode(ONE) → play() → fadeIn()` atomically on the
-Android UI thread, with `getPlayWhenReady()`-aware step guards. See
-[`docs/issues/native-loop-fadein.md`](./issues/native-loop-fadein.md) for full context,
-reproduction steps, and the desired native architecture.
+**Future solution:** Build or adopt a custom Capacitor plugin with proper native fade
+support. The `AudioEngine` interface in `src/services/audio-engine/types.ts` is designed
+to make this a drop-in replacement. See
+[`docs/issues/audio-engine-fade-limitations.md`](./issues/audio-engine-fade-limitations.md)
+for full context and requirements.
 
 ---
 
@@ -728,7 +729,8 @@ adb logcat -s IxoraTaskRemoved IxoraForegroundServiceStop IxoraNativeAudioStop N
 
 | Item | Priority | Notes |
 |---|---|---|
-| Fix loop fade-in starting loud ([#3](https://github.com/lucasbrito90/front_vibes/issues/3)) | High | Root cause in `@capgo/native-audio` Android — may require plugin patch or workaround |
+| Reliable fadeIn/fadeOut (all modes) | High | Requires custom Capacitor plugin or engine replacement. See `docs/issues/audio-engine-fade-limitations.md` |
+| Swap audio engine via `AudioEngine` interface | High | `src/services/audio-engine/` provides the abstraction; migrate `audio-player.service.ts` to use it fully |
 | Custom software ducking | Medium | Replace OS-level ducking with app-controlled volume ramp for smoother blending |
 | Offline audio cache | Medium | Pre-cache remote URLs for offline playback; `@capgo/native-audio` partially supports via `clearCache()` |
 | Waveform / visualiser | Low | Requires native audio level sampling; no current plugin support |

@@ -119,37 +119,7 @@
             class="modal-timing-input"
           />
         </div>
-
-        <!-- Fade in — hidden for loop mode (native limitation on Android) -->
-        <div v-if="localPlayMode !== 'loop'" class="modal-timing-field">
-          <label class="modal-timing-label">Fade in</label>
-          <input
-            v-model.number="localFadeInMin"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            class="modal-timing-input"
-          />
-        </div>
-
-        <div class="modal-timing-field">
-          <label class="modal-timing-label">Fade out</label>
-          <input
-            v-model.number="localFadeOutMin"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            class="modal-timing-input"
-          />
-        </div>
       </div>
-
-      <!-- Loop mode: fade-in unavailable notice -->
-      <p v-if="localPlayMode === 'loop'" class="modal-loop-fadein-notice">
-        Fade in is temporarily unavailable for looping sounds on Android.
-      </p>
 
       <!-- Interval semantics hint -->
       <p v-if="localPlayMode === 'interval'" class="modal-interval-hint">
@@ -239,8 +209,6 @@ const toMin = (sec: number | null): number | null =>
 
 const localStartOffsetMin = ref<number | null>(toMin(props.vibeSound.start_offset_seconds));
 const localPlayDurationMin = ref<number | null>(toMin(props.vibeSound.play_duration_seconds));
-const localFadeInMin = ref<number | null>(toMin(props.vibeSound.fade_in_seconds));
-const localFadeOutMin = ref<number | null>(toMin(props.vibeSound.fade_out_seconds));
 
 const toSec = (min: number | null | undefined): number | null =>
   min != null && min !== undefined ? min * 60 : null;
@@ -263,8 +231,6 @@ async function handleSave(): Promise<void> {
       repeat_interval_seconds:  localPlayMode.value === 'interval' ? localRepeatInterval.value : null,
       start_offset_seconds:     toSec(localStartOffsetMin.value),
       play_duration_seconds:    toSec(localPlayDurationMin.value),
-      fade_in_seconds:          toSec(localFadeInMin.value),
-      fade_out_seconds:         toSec(localFadeOutMin.value),
     });
 
     await dismiss({ updated });
@@ -500,14 +466,6 @@ async function handleSave(): Promise<void> {
   color: var(--app-color-text-muted, #94a3b8);
   margin: 10px 20px 0;
   line-height: 1.5;
-}
-
-.modal-loop-fadein-notice {
-  font-size: 12px;
-  color: var(--app-color-text-muted, #94a3b8);
-  margin: 6px 20px 0;
-  line-height: 1.5;
-  font-style: italic;
 }
 
 /* ── Timing ──────────────────────────────────────── */
