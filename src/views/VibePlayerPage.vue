@@ -78,6 +78,10 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
+          <p v-if="!loading && loadedFromOfflineSnapshot" class="player-offline-hint">
+            Offline mode — loaded from your downloaded copy
+          </p>
+
           <!-- DEV only: Player state, execution plan, and runtime logs panels -->
           <template v-if="isDev">
             <!-- Player state — visible on device without ADB -->
@@ -120,6 +124,9 @@
 
                 <span class="player-dev-state-key">plan / playable</span>
                 <strong class="player-dev-state-val">{{ executionPlan.length }} / {{ playableLayers.length }}</strong>
+
+                <span class="player-dev-state-key">offlineSnapshot</span>
+                <strong class="player-dev-state-val">{{ loadedFromOfflineSnapshot }}</strong>
               </div>
             </div>
 
@@ -214,6 +221,11 @@ import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { useVibeSounds } from '@/composables/useVibeSounds';
 import { useVibes } from '@/composables/useVibes';
 import { audioPlayerService } from '@/services/audio-player.service';
+import {
+  getOfflineVibeSnapshot,
+  offlineMetaToVibe,
+  saveOfflineVibeSnapshot,
+} from '@/services/offline-vibe-cache.service';
 import { isExecutionLayerPlayable } from '@/services/player-engine.service';
 import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
 
@@ -225,8 +237,8 @@ const vibeId = computed(() => Number(route.params.id));
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-const { vibes, selectedVibe, fetchVibe } = useVibes();
-const { vibeSounds, fetchVibeSounds }    = useVibeSounds();
+const { vibes, selectedVibe, fetchVibe, hydrateSelectedVibeFromOffline } = useVibes();
+const { vibeSounds, fetchVibeSounds, hydrateVibeSoundsFromOffline }         = useVibeSounds();
 const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
 
 const store = usePlayerStore();
@@ -239,8 +251,10 @@ const {
 
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
-const loading        = ref(false);
-const isDownloading  = ref(false);
+const loading                   = ref(false);
+const isDownloading             = ref(false);
+/** True when sounds + vibe detail were restored from `offline_vibe_manifest_v1` (API had no usable sounds). */
+const loadedFromOfflineSnapshot = ref(false);
 
 // ── Logger ────────────────────────────────────────────────────────────────────
 
@@ -564,6 +578,19 @@ async function handleDownloadForOffline(): Promise<void> {
     } else if (result.succeeded === 0) {
       await showPlaybackToast('No sounds were downloaded.');
     } else {
+      const v = vibe.value;
+      if (v?.id === id && vibeSounds.value.length > 0) {
+        try {
+          await saveOfflineVibeSnapshot(id, v, vibeSounds.value);
+          log.debug('[OfflineVibe] snapshot saved after download', {
+            vibeId: id,
+            layers: vibeSounds.value.length,
+          });
+        } catch (snapErr) {
+          const msg = snapErr instanceof Error ? snapErr.message : String(snapErr);
+          log.warn('[OfflineVibe] snapshot save failed', { vibeId: id, error: msg });
+        }
+      }
       await showPlaybackToast('Downloaded for offline');
     }
   } catch (err) {
@@ -618,15 +645,42 @@ const heroBackground = computed((): Record<string, string> => {
 onMounted(async () => {
   log.debug('mounted', { vibeId: vibeId.value });
   loading.value = true;
+  loadedFromOfflineSnapshot.value = false;
+
   await Promise.all([
     fetchVibe(vibeId.value),
     fetchVibeSounds(vibeId.value),
   ]);
-  buildPlan(vibeSounds.value);
+
+  const id        = vibeId.value;
+  const soundsOk  = vibeSounds.value.length > 0;
+
+  if (soundsOk) {
+    buildPlan(vibeSounds.value);
+  } else {
+    const snap = await getOfflineVibeSnapshot(id);
+    if (snap && snap.vibeId === id && snap.vibeSounds.length > 0) {
+      hydrateSelectedVibeFromOffline(offlineMetaToVibe(snap.vibe));
+      hydrateVibeSoundsFromOffline(snap.vibeSounds);
+      buildPlan(vibeSounds.value);
+      loadedFromOfflineSnapshot.value = true;
+      log.debug('[OfflineVibe] restored snapshot', {
+        vibeId: id,
+        layers: snap.vibeSounds.length,
+      });
+    } else {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await showPlaybackToast('This vibe is not available offline');
+      }
+      buildPlan(vibeSounds.value);
+    }
+  }
+
   loading.value = false;
   log.debug('loaded', {
-    sounds:    vibeSounds.value.length,
-    planLayers: executionPlan.value.length,
+    sounds:           vibeSounds.value.length,
+    planLayers:       executionPlan.value.length,
+    offlineSnapshot:  loadedFromOfflineSnapshot.value,
   });
 
   // Poll service state at 1 Hz for the DEV STATE panel (DEV mode only).
@@ -842,6 +896,14 @@ onUnmounted(() => {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.75);
   letter-spacing: 0.1px;
+}
+
+.player-offline-hint {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(147, 197, 253, 0.95);
+  margin: 10px 0 0;
+  letter-spacing: 0.15px;
 }
 
 /* ── DEV Execution Plan (debug) ───────────────────────── */
