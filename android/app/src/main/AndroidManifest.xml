@@ -11,10 +11,6 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
         <receiver android:name="io.capawesome.capacitorjs.plugins.foregroundservice.NotificationActionBroadcastReceiver" />
-        <!-- onTaskRemoved() is added to AndroidForegroundService via patch-package
-             (patches/@capawesome-team+capacitor-android-foreground-service+8.1.0.patch).
-             No additional manifest entry is needed here — the service is already
-             registered by the plugin's own AAR manifest. -->
         <service android:foregroundServiceType="mediaPlayback" android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService" />
     </application>
     <uses-permission android:name="android.permission.INTERNET" />
