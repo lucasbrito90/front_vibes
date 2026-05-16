@@ -9,5 +9,11 @@
  *   import type { AudioEngine } from '@/services/audio-engine';
  */
 
-export type { AudioEngine, AudioEngineConfig } from './types';
+export type {
+  AudioEngine,
+  AudioEngineConfig,
+  AudioCacheInfo,
+  CacheVibeResult,
+  LayerCacheOutcome,
+} from './types';
 export { nativeAudioEngine as audioEngine } from './native-audio.engine';

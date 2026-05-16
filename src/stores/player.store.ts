@@ -36,6 +36,8 @@ import {
   updateBackgroundAudioTitle,
 } from '@/services/backgroundAudio.service';
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
+import { audioEngine } from '@/services/audio-engine';
+import type { CacheVibeResult } from '@/services/audio-engine';
 import { createLogger } from '@/utils/player-debug';
 
 export type PlaybackState = 'idle' | 'playing' | 'paused';
@@ -363,6 +365,31 @@ export const usePlayerStore = defineStore('player', () => {
     void updateBackgroundAudioTitle(currentVibeName.value).catch(() => undefined);
   }
 
+  // ── Cache management ───────────────────────────────────────────────────────
+
+  /**
+   * Clear the audio disk cache.
+   *
+   * Delegates to AudioEngine.clearAudioCache() which releases the ExoPlayer
+   * SimpleCache and deletes getCacheDir()/media. Safe to call when idle.
+   * Should not be called during active playback.
+   */
+  async function clearAudioCache(): Promise<void> {
+    await audioEngine.clearAudioCache();
+  }
+
+  /**
+   * Warm the ExoPlayer disk cache for a vibe's layers without starting playback.
+   * Each eligible layer (remote HTTPS URL) is preloaded and immediately unloaded
+   * so that cached bytes are available for subsequent plays.
+   *
+   * @param vibeId - The vibe being cached (used in cache-only assetId namespace)
+   * @param layers - Execution layers to warm
+   */
+  async function cacheVibeAudio(vibeId: number, layers: VibeExecutionLayer[]): Promise<CacheVibeResult> {
+    return audioEngine.cacheVibeAudio(vibeId, layers);
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
   return {
@@ -393,5 +420,9 @@ export const usePlayerStore = defineStore('player', () => {
     stopPlayback,
     restartPlayback,
     syncBackgroundAudioTitle,
+
+    // cache
+    clearAudioCache,
+    cacheVibeAudio,
   };
 });

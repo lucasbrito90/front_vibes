@@ -383,6 +383,19 @@ to make this a drop-in replacement. See
 [`docs/issues/audio-engine-fade-limitations.md`](./issues/audio-engine-fade-limitations.md)
 for full context and requirements.
 
+### Audio disk cache
+
+The plugin automatically caches all non-HLS HTTPS audio (e.g. Firebase Storage MP3/OGG)
+via ExoPlayer's `SimpleCache` (100 MiB LRU) stored at `getCacheDir()/media`. This cache
+persists across app restarts and is the foundation for partial offline playback.
+
+The `AudioEngine` interface exposes:
+- `getCacheInfo()` — metadata about the cache (size, location, notes)
+- `clearAudioCache()` — releases `SimpleCache` and deletes `getCacheDir()/media`
+- `cacheVibeAudio(vibeId, layers)` — warms cache via preload+unload (bytes remain on disk)
+
+See [`docs/audio-cache.md`](./audio-cache.md) for full details and offline behaviour.
+
 ---
 
 ## Section 5 — Audio focus handling
@@ -732,7 +745,7 @@ adb logcat -s IxoraTaskRemoved IxoraForegroundServiceStop IxoraNativeAudioStop N
 | Reliable fadeIn/fadeOut (all modes) | High | Requires custom Capacitor plugin or engine replacement. See `docs/issues/audio-engine-fade-limitations.md` |
 | Swap audio engine via `AudioEngine` interface | High | `src/services/audio-engine/` provides the abstraction; migrate `audio-player.service.ts` to use it fully |
 | Custom software ducking | Medium | Replace OS-level ducking with app-controlled volume ramp for smoother blending |
-| Offline audio cache | Medium | Pre-cache remote URLs for offline playback; `@capgo/native-audio` partially supports via `clearCache()` |
+| Offline audio cache (full) | Medium | `AudioEngine.cacheVibeAudio()` warms the 100 MiB ExoPlayer SimpleCache automatically. For true offline (no eviction risk) store to `getFilesDir()`. See `docs/audio-cache.md` |
 | Waveform / visualiser | Low | Requires native audio level sampling; no current plugin support |
 
 ### Lock screen / controls
