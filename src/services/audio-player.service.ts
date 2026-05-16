@@ -1008,12 +1008,22 @@ async function _startOnceAudioNative(
     return;
   }
 
+  // When fading in, preload at minimum volume so the first audible frame is
+  // silent. The ramp to target volume is applied via setVolume() after play().
+  // We do NOT pass fadeIn:true to play() because RemoteAudioAsset.playWithFadeIn
+  // has a float/double signature mismatch that causes Java to dispatch to the
+  // base-class AudioAsset.playWithFadeIn which accesses an empty audioList →
+  // "Index 0 out of bounds for length 0". Using the setVolume ramp path avoids
+  // this and relies on the already-patched fadeTo() which uses getPlayWhenReady().
+  const targetVol  = _toNativeVolume(layer.volume);
+  const preloadVol = layer.fadeInSeconds > 0 ? 0.1 : targetVol;
+
   try {
     await NativeAudio.preload({
       assetId,
       assetPath: layer.fileUrl,
       isUrl: true,
-      volume: _toNativeVolume(layer.volume),
+      volume: preloadVol,
       audioChannelNum: 1,
       notificationMetadata: {
         title:      _notificationVibeName || layer.soundName,
@@ -1023,7 +1033,7 @@ async function _startOnceAudioNative(
     });
     _nativeLayers.add(assetId);
     log.debug('[Artwork] once preload metadata', { assetId, title: _notificationVibeName, hasArtwork: !!_notificationArtworkUrl });
-    log.debug('[NativeAudio][Once] preload — OK', { assetId, nativeCount: _nativeLayers.size });
+    log.debug('[NativeAudio][Once] preload — OK', { assetId, preloadVol, nativeCount: _nativeLayers.size });
   } catch (err) {
     _logNativeFailure('preload (once)', assetId, err);
     log.warn('[NativeAudio][Once] preload — FAILED, falling back to HTML', { assetId, err: String(err) });
@@ -1060,31 +1070,33 @@ async function _startOnceAudioNative(
     }
   });
 
-  // Build play options with native fade in only.
-  //
-  // NOTE: fadeOut and fadeOutStartTime are intentionally NOT passed to play().
-  // On Android (tested with @capgo/native-audio) passing these options causes
-  // "CapacitorException: Index 0 out of bounds for length 0" and play() fails.
-  // Fade out for once layers is handled instead by _scheduleLayerLifetime via
-  // NativeAudio.setVolume({ duration: fadeOutSeconds }) — the same mechanism
-  // used for loop layers — when durationSeconds is configured.
-  // For once layers without durationSeconds, no native fade out is applied.
-  const playOpts: { assetId: string; fadeIn?: boolean; fadeInDuration?: number } = { assetId };
-
-  if (layer.fadeInSeconds > 0) {
-    playOpts.fadeIn         = true;
-    playOpts.fadeInDuration = layer.fadeInSeconds;
-    log.debug('[NativeAudio][Fade] once fadeIn option', { assetId, fadeInSeconds: layer.fadeInSeconds });
-  }
+  // NOTE: We intentionally do NOT pass fadeIn/fadeOut options to play().
+  // - fadeOut/fadeOutStartTime → "Index 0 out of bounds for length 0" (documented above).
+  // - fadeIn: true           → same crash: RemoteAudioAsset.playWithFadeIn has a
+  //   float/double signature mismatch so Java dispatches to AudioAsset.playWithFadeIn
+  //   (base class) which calls audioList.get(0) on an empty list.
+  // FadeIn is instead implemented as: preload at 0.1 → play() → setVolume(target, duration).
+  // This uses the already-patched fadeTo() path which handles STATE_BUFFERING correctly.
 
   try {
-    await NativeAudio.play(playOpts);
+    await NativeAudio.play({ assetId });
     log.debug('[NativeAudio][Once] play — started', {
       assetId,
-      soundId:      layer.soundId,
+      soundId:       layer.soundId,
       sessionPaused: _sessionPaused,
-      layersSize:   _layers.size,
+      layersSize:    _layers.size,
     });
+
+    // Kick off the fade-in ramp immediately after play() so fadeTo() sees
+    // getPlayWhenReady()=true even during STATE_BUFFERING.
+    if (layer.fadeInSeconds > 0 && _nativeLayers.has(assetId)) {
+      log.debug('[NativeAudio][Fade] once fadeIn — starting setVolume ramp', {
+        assetId, fadeInSeconds: layer.fadeInSeconds, targetVol,
+      });
+      void NativeAudio.setVolume({ assetId, volume: targetVol, duration: layer.fadeInSeconds })
+        .catch((e) => log.warn('[NativeAudio][Fade] once fadeIn setVolume failed', { assetId, err: String(e) }));
+    }
+
     // Race guard: if the session was paused while we were preloading,
     // immediately pause the native player so state stays consistent.
     if (_sessionPaused && _nativeLayers.has(assetId)) {

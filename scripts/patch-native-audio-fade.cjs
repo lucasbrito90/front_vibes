@@ -385,4 +385,46 @@ if (alreadyPatched(nativeAudio, NATIVE_AUDIO_SENTINEL)) {
   console.log('[patch-native-audio-fade] NativeAudio.java — patched ✓');
 }
 
+// ─── 4. RemoteAudioAsset.java — fix playWithFadeIn float/double mismatch ──────
+//
+// NativeAudio.java passes fadeInDurationMs as `double` to asset.playWithFadeIn().
+// Java does NOT auto-narrow double→float, so it dispatches to the base class
+// AudioAsset.playWithFadeIn(double, float, double) instead of the RemoteAudioAsset
+// override, which accesses the empty AudioDispatcher list → "Index 0 out of bounds
+// for length 0". Fix: change the parameter type to double and add an explicit cast
+// when calling the private fadeIn(ExoPlayer, float, float) method.
+//
+// This is a separate section (own sentinel) so it can be applied even if section 2
+// has already run (e.g. on a re-install after the initial patch).
+
+const PLAY_WITH_FADE_IN_SENTINEL = 'playWithFadeIn(double time, float volume, double fadeInDurationMs)';
+
+let remote4 = readFile(REMOTE);
+
+if (alreadyPatched(remote4, PLAY_WITH_FADE_IN_SENTINEL)) {
+  console.log('[patch-native-audio-fade] RemoteAudioAsset.java (playWithFadeIn fix) — already patched, skipping');
+} else {
+  const playWithFadeInOld = `    public void playWithFadeIn(double time, float volume, float fadeInDurationMs) throws Exception {`;
+  const playWithFadeInNew = `    public void playWithFadeIn(double time, float volume, double fadeInDurationMs) throws Exception {`;
+
+  if (!remote4.includes(playWithFadeInOld)) {
+    console.error('[patch-native-audio-fade] RemoteAudioAsset.java — playWithFadeIn signature anchor not found');
+    process.exit(1);
+  }
+  remote4 = remote4.replace(playWithFadeInOld, playWithFadeInNew);
+
+  // Also add explicit cast in the method body so the private fadeIn(float) call compiles.
+  const fadeInCallOld = `                            fadeIn(player, fadeInDurationMs, volume);`;
+  const fadeInCallNew = `                            fadeIn(player, (float) fadeInDurationMs, volume);`;
+
+  if (!remote4.includes(fadeInCallOld)) {
+    console.error('[patch-native-audio-fade] RemoteAudioAsset.java — fadeIn call in playWithFadeIn not found');
+    process.exit(1);
+  }
+  remote4 = remote4.replace(fadeInCallOld, fadeInCallNew);
+
+  writeFile(REMOTE, remote4);
+  console.log('[patch-native-audio-fade] RemoteAudioAsset.java (playWithFadeIn fix) — patched ✓');
+}
+
 console.log('[patch-native-audio-fade] Done.');
