@@ -31,3 +31,6 @@ npm-debug.log*
 /platforms
 /plugins
 /www
+
+# Backup files created by ionic capacitor run --live-reload
+*.orig
