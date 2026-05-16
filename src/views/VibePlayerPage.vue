@@ -25,6 +25,11 @@
                 <ion-item button :detail="false" lines="full" @click="handleRestartVibe">
                   Restart vibe
                 </ion-item>
+                <ion-item button :detail="false" lines="full" @click="handleDownloadForOffline"
+                  :disabled="isDownloading || !hasPlayableLayers">
+                  <ion-icon :icon="isDownloading ? cloudDoneOutline : cloudDownloadOutline" slot="start" class="player-menu-icon" />
+                  {{ isDownloading ? 'Downloading…' : 'Download for offline' }}
+                </ion-item>
                 <ion-item button :detail="false" lines="none" @click="handleStopVibe">
                   Stop vibe
                 </ion-item>
@@ -193,6 +198,8 @@ import {
 } from '@ionic/vue';
 import {
   chevronBackOutline,
+  cloudDoneOutline,
+  cloudDownloadOutline,
   ellipsisVertical,
   pauseOutline,
   playOutline,
@@ -232,7 +239,8 @@ const {
 
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
-const loading = ref(false);
+const loading        = ref(false);
+const isDownloading  = ref(false);
 
 // ── Logger ────────────────────────────────────────────────────────────────────
 
@@ -506,6 +514,60 @@ function handleStopVibe(): void {
   store.stopPlayback();
 }
 
+async function handleDownloadForOffline(): Promise<void> {
+  if (isDownloading.value) return;
+
+  if (!executionPlan.value.length || !hasPlayableLayers.value) {
+    await showPlaybackToast('No sounds to download');
+    return;
+  }
+
+  if (!navigator.onLine) {
+    await showPlaybackToast('Connect to the internet to download sounds');
+    return;
+  }
+
+  const id   = vibeId.value;
+  const plan = executionPlan.value;
+
+  log.debug('[AudioCache] download requested', { vibeId: id, layers: plan.length });
+  isDownloading.value = true;
+
+  try {
+    const result = await store.cacheVibeAudio(id, plan);
+
+    log.debug('[AudioCache] cache result', {
+      vibeId:    id,
+      succeeded: result.succeeded,
+      skipped:   result.skipped,
+      failed:    result.failed,
+    });
+
+    if (result.failed > 0) {
+      const failedNames = result.details
+        .filter((d) => d.status === 'failed')
+        .map((d) => d.soundName);
+      log.warn('[AudioCache] failed layers', { vibeId: id, failed: failedNames });
+    }
+
+    if (result.succeeded === 0 && result.failed > 0) {
+      await showPlaybackToast('Could not download sounds. Check your connection.');
+    } else if (result.failed > 0) {
+      await showPlaybackToast(
+        `Downloaded ${result.succeeded} sound${result.succeeded !== 1 ? 's' : ''}. ${result.failed} could not be cached.`,
+      );
+    } else {
+      await showPlaybackToast('Downloaded for offline');
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    log.warn('[AudioCache] download failed', { vibeId: id, error: msg });
+    await showPlaybackToast('Download failed. Try again later.');
+  } finally {
+    isDownloading.value = false;
+  }
+}
+
 // ── Navigation ────────────────────────────────────────────────────────────────
 
 function handleBack(): void {
@@ -761,6 +823,11 @@ onUnmounted(() => {
 .player-menu-ion-content {
   --padding-top: 0;
   --padding-bottom: 0;
+}
+
+.player-menu-icon {
+  font-size: 18px;
+  margin-inline-end: 8px;
 }
 
 .player-status-text {

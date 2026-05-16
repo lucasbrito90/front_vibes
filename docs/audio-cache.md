@@ -165,6 +165,33 @@ live-reload dev build.
 
 ---
 
+## Download for offline (VibePlayerPage)
+
+The three-dot menu (⋮) on the vibe player page includes a **Download for offline** option.
+
+### Behaviour
+
+1. Tapping "Download for offline" calls `playerStore.cacheVibeAudio(vibeId, executionPlan)`.
+2. The button is disabled while a download is in progress (prevents duplicate downloads).
+3. Playback state, `currentVibeId`, and the player UI are unaffected.
+4. A toast summarises the result:
+   - "Downloaded for offline" — all layers cached successfully
+   - "Downloaded N sounds. M could not be cached." — partial success
+   - "Could not download sounds. Check your connection." — all failed
+   - "No sounds to download" — vibe has no playable layers
+   - "Connect to the internet to download sounds" — `navigator.onLine === false`
+
+### Limitations
+
+- **No per-file progress** — the action completes in bulk; there is no progress bar or percentage.
+- **No download size shown** — the 100 MiB LRU cap applies across all vibes globally.
+- **No offline library UI** — there is no list of "downloaded vibes".
+- **LRU eviction** — if the 100 MiB cap is reached, older cached bytes are silently evicted
+  by ExoPlayer's `LeastRecentlyUsedCacheEvictor`. Downloading a second vibe may evict
+  parts of the first if both are large.
+- **Rotating signed URLs** — if a Firebase Storage signed URL changes (file re-upload,
+  permission change), the cache key changes and the file is re-downloaded.
+
 ## Settings UI
 
 The **Settings** page exposes a "Clear audio cache" button that calls
