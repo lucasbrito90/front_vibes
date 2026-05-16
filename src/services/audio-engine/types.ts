@@ -8,14 +8,13 @@
  * swapping the engine for a custom Capacitor plugin or any other library in
  * the future without touching player.store.ts or the UI layer.
  *
- * ## Cache behaviour (@capgo/native-audio 8.4.2 — Android)
- * - ExoPlayer's SimpleCache (100 MB LRU) is wired automatically for all
- *   non-HLS HTTPS URLs via CacheDataSource + ProgressiveMediaSource.
- * - Cache location: Context.getCacheDir()/media (internal app cache).
- * - unload() does NOT evict cached bytes — only the ExoPlayer instance
- *   is released, so a preload+unload cycle is a safe way to warm the cache
- *   without leaving an active asset registered.
- * - clearAudioCache() releases the SimpleCache and deletes the media folder.
+ * ## Streaming cache vs offline download (@capgo/native-audio 8.4.2 — Android)
+ * - ExoPlayer SimpleCache (100 MB LRU) buffers progressively during playback — it
+ *   does **not** guarantee the full file is on disk after preload/prepare.
+ * - “Download for offline” writes the complete file to Directory.Data via fetch +
+ *   `@capacitor/filesystem`; playback resolves to a `file://` URI when the manifest
+ *   matches the current remote URL.
+ * - clearAudioCache() only clears ExoPlayer's cache/media folder — not offline files.
  * See docs/audio-cache.md for full details.
  *
  * ## Future additions (when a proper engine is built)
@@ -79,6 +78,13 @@ export interface AudioEngine {
    * Idempotent — safe to call multiple times.
    */
   configure(config?: AudioEngineConfig): Promise<void>;
+
+  /**
+   * Resolve the asset URL used for preload/play on native: returns a `file://`
+   * URI when a manifest-backed offline copy exists and matches `layer.fileUrl`,
+   * otherwise the remote `layer.fileUrl`. Web always returns `layer.fileUrl`.
+   */
+  resolvePlaybackAssetUrl(layer: VibeExecutionLayer, vibeId: number): Promise<string>;
 
   /**
    * Preload the audio asset for a layer into memory.
@@ -159,20 +165,13 @@ export interface AudioEngine {
   clearAudioCache(): Promise<void>;
 
   /**
-   * Warm the audio cache for a set of layers without starting playback.
+   * Download each eligible remote layer to app storage (full file) without playback.
    *
-   * For each eligible layer (remote HTTPS URL, not currently active):
-   *   1. Preloads with a cache-only assetId (prefix "cache-")
-   *   2. Immediately unloads the ExoPlayer instance
-   *   3. Cached bytes remain in the SimpleCache (unload does not evict)
+   * Uses HTTP fetch + Filesystem (Directory.Data). Does not rely on ExoPlayer
+   * preload as a “download complete” signal.
    *
-   * After this call, subsequent playLayer/loopLayer calls for the same URLs
-   * should start faster as ExoPlayer reads from disk instead of the network.
-   *
-   * Layers with local file:// URLs or that are currently active are skipped.
-   *
-   * @param vibeId - Used in the cache-only assetId to namespace per-vibe
-   * @param layers - Execution layers to warm
+   * @param vibeId - Namespace for on-disk paths and manifest keys
+   * @param layers - Execution layers to download
    */
   cacheVibeAudio(vibeId: number, layers: VibeExecutionLayer[]): Promise<CacheVibeResult>;
 }

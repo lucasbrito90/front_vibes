@@ -111,10 +111,12 @@ export const usePlayerStore = defineStore('player', () => {
     currentVibeName.value       = name;
     currentSoundSummary.value   = soundSummary;
     currentVibeArtworkUrl.value = artworkUrl ?? null;
+    audioPlayerService.setPlaybackVibeContext(id);
   }
 
   function clearCurrentVibe(): void {
     log.debug('clearCurrentVibe');
+    audioPlayerService.setPlaybackVibeContext(null);
     currentVibeId.value         = null;
     currentVibeName.value       = '';
     currentSoundSummary.value   = '';
@@ -269,6 +271,7 @@ export const usePlayerStore = defineStore('player', () => {
     playbackState.value   = 'playing';
     if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
 
+    audioPlayerService.setPlaybackVibeContext(currentVibeId.value);
     log.debug('playPlan — calling audioPlayerService.playPlan()', { valid });
     audioPlayerService.playPlan(layers);
 
@@ -351,6 +354,8 @@ export const usePlayerStore = defineStore('player', () => {
     playbackState.value   = 'playing';
     if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
 
+    audioPlayerService.setPlaybackVibeContext(currentVibeId.value);
+    log.debug('restartPlayback — calling audioPlayerService.restartPlan()', { valid });
     audioPlayerService.restartPlan(layers);
     // Keep / start the foreground service on restart.
     void startBackgroundAudio(currentVibeName.value).catch(() => undefined);

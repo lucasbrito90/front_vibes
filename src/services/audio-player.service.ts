@@ -96,6 +96,7 @@
 import { Capacitor } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { NativeAudio } from '@capgo/native-audio';
+import { audioEngine } from '@/services/audio-engine';
 import type { PlayMode } from './vibe-sound.service';
 import type { VibeExecutionLayer } from './player-engine.service';
 import { hasValidExecutionFileUrl } from './player-engine.service';
@@ -133,6 +134,9 @@ if (_isNativePlatform) {
 let _notificationVibeName   = '';
 let _notificationArtworkUrl = '';
 
+/** Active vibe id for offline manifest lookup — cleared when vibe context clears. */
+let _playbackVibeId: number | null = null;
+
 /**
  * Update the vibe name stored for upcoming NativeAudio preload metadata.
  * Call this from player.store.ts before audioPlayerService.playPlan().
@@ -149,6 +153,20 @@ export function setNotificationVibeName(name: string): void {
 export function setNotificationArtworkUrl(url: string | null): void {
   _notificationArtworkUrl = url ?? '';
   log.debug('[Artwork] notification artwork URL updated', { hasArtwork: !!_notificationArtworkUrl });
+}
+
+/**
+ * Pinia sets the active vibe id before playPlan() so native preload can resolve
+ * offline copies (file://) saved via AudioEngine.cacheVibeAudio().
+ */
+function setPlaybackVibeContext(vibeId: number | null): void {
+  _playbackVibeId = vibeId;
+  log.debug('playbackVibeContext', { vibeId });
+}
+
+async function _resolvedAssetPath(layer: VibeExecutionLayer): Promise<string> {
+  const id = _playbackVibeId ?? 0;
+  return audioEngine.resolvePlaybackAssetUrl(layer, id);
 }
 
 // ── Remote media control callbacks ───────────────────────────────────────────
@@ -506,10 +524,18 @@ async function _startLoopAudioNative(
    */
   const targetVol = _toNativeVolume(layer.volume);
 
+  let assetPath: string;
+  try {
+    assetPath = await _resolvedAssetPath(layer);
+  } catch (err) {
+    log.warn('native preload — resolve URL failed, using remote', { soundId: layer.soundId, err: String(err) });
+    assetPath = layer.fileUrl;
+  }
+
   try {
     await NativeAudio.preload({
       assetId,
-      assetPath:       layer.fileUrl,
+      assetPath,
       isUrl:           true,
       // isComplex: true is a Java-side flag not in the TS typings.
       // Without it preloadAsset() ignores `volume` and `audioChannelNum`,
@@ -531,7 +557,9 @@ async function _startLoopAudioNative(
     log.warn('native preload — FAILED, falling back to HTML', { assetId, err: String(err) });
     if (_layers.has(layer.soundId)) {
       managed.isNative = false;
-      _startLoopAudioHtml(layer, managed, 'preload-failed');
+      void _startLoopAudioHtml(layer, managed, 'preload-failed').catch((e) =>
+        log.warn('HTML loop fallback failed', { err: String(e) }),
+      );
     }
     return;
   }
@@ -566,7 +594,9 @@ async function _startLoopAudioNative(
     _nativeLayers.delete(assetId);
     if (_layers.has(layer.soundId)) {
       managed.isNative = false;
-      _startLoopAudioHtml(layer, managed, 'loop-failed');
+      void _startLoopAudioHtml(layer, managed, 'loop-failed').catch((e) =>
+        log.warn('HTML loop fallback failed', { err: String(e) }),
+      );
     }
   }
 }
@@ -652,13 +682,19 @@ function _beginLayerAfterDelay(layer: VibeExecutionLayer, managed: ManagedLayer)
 }
 
 /** HTMLAudioElement loop — used as fallback on web and when native preload/loop fails. */
-function _startLoopAudioHtml(
+async function _startLoopAudioHtml(
   layer: VibeExecutionLayer,
   managed: ManagedLayer,
   reason: 'web-platform' | 'preload-failed' | 'loop-failed' = 'web-platform',
-): void {
+): Promise<void> {
   log.debug('HTML loop — start', { soundId: layer.soundId, reason });
-  const audio = new Audio(layer.fileUrl);
+  let src = layer.fileUrl;
+  try {
+    src = await _resolvedAssetPath(layer);
+  } catch (err) {
+    log.warn('HTML loop — resolve URL failed, using remote', { soundId: layer.soundId, err: String(err) });
+  }
+  const audio = new Audio(src);
   audio.loop  = true;
   audio.volume = _clampVolume(layer.volume);
   managed.audio = audio;
@@ -677,7 +713,9 @@ function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
     void _startLoopAudioNative(layer, managed);
   } else {
     log.debug('loop backend — HTMLAudioElement (web platform)', { soundId: layer.soundId });
-    _startLoopAudioHtml(layer, managed, 'web-platform');
+    void _startLoopAudioHtml(layer, managed, 'web-platform').catch((e) =>
+      log.warn('HTML loop failed', { soundId: layer.soundId, err: String(e) }),
+    );
   }
 }
 
@@ -685,9 +723,15 @@ function _startLoopAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
  * HTMLAudioElement once implementation — used on web and as fallback when
  * any native once step (preload / play) fails.
  */
-function _startOnceAudioHtml(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+async function _startOnceAudioHtml(layer: VibeExecutionLayer, managed: ManagedLayer): Promise<void> {
   log.debug('HTML once — start', { soundId: layer.soundId });
-  const audio = new Audio(layer.fileUrl);
+  let src = layer.fileUrl;
+  try {
+    src = await _resolvedAssetPath(layer);
+  } catch (err) {
+    log.warn('HTML once — resolve URL failed, using remote', { soundId: layer.soundId, err: String(err) });
+  }
+  const audio = new Audio(src);
   audio.loop = false;
   const target = _clampVolume(layer.volume);
   managed.audio = audio;
@@ -742,10 +786,18 @@ async function _startOnceAudioNative(
 
   const targetVol = _toNativeVolume(layer.volume);
 
+  let assetPath: string;
+  try {
+    assetPath = await _resolvedAssetPath(layer);
+  } catch (err) {
+    log.warn('[NativeAudio][Once] resolve URL failed, using remote', { soundId: layer.soundId, err: String(err) });
+    assetPath = layer.fileUrl;
+  }
+
   try {
     await NativeAudio.preload({
       assetId,
-      assetPath: layer.fileUrl,
+      assetPath,
       isUrl: true,
       volume: targetVol,
       audioChannelNum: 1,
@@ -763,7 +815,7 @@ async function _startOnceAudioNative(
     log.warn('[NativeAudio][Once] preload — FAILED, falling back to HTML', { assetId, err: String(err) });
     if (_layers.has(layer.soundId)) {
       managed.isNative = false;
-      _startOnceAudioHtml(layer, managed);
+      void _startOnceAudioHtml(layer, managed).catch((e) => log.warn('HTML once fallback failed', { err: String(e) }));
     }
     return;
   }
@@ -817,7 +869,7 @@ async function _startOnceAudioNative(
     _nativeOnceCompleteCallbacks.delete(assetId);
     if (_layers.has(layer.soundId)) {
       managed.isNative = false;
-      _startOnceAudioHtml(layer, managed);
+      void _startOnceAudioHtml(layer, managed).catch((e) => log.warn('HTML once fallback failed', { err: String(e) }));
     }
   }
 }
@@ -834,7 +886,9 @@ function _startOnceAudio(layer: VibeExecutionLayer, managed: ManagedLayer): void
     void _startOnceAudioNative(layer, managed);
   } else {
     log.debug('once backend — HTMLAudioElement (web platform)', { soundId: layer.soundId });
-    _startOnceAudioHtml(layer, managed);
+    void _startOnceAudioHtml(layer, managed).catch((e) =>
+      log.warn('HTML once failed', { soundId: layer.soundId, err: String(e) }),
+    );
   }
 }
 
@@ -862,10 +916,18 @@ async function _startIntervalAudioNative(
     return;
   }
 
+  let assetPath: string;
+  try {
+    assetPath = await _resolvedAssetPath(layer);
+  } catch (err) {
+    log.warn('[NativeAudio][Interval] resolve URL failed, using remote', { soundId: layer.soundId, err: String(err) });
+    assetPath = layer.fileUrl;
+  }
+
   try {
     await NativeAudio.preload({
       assetId,
-      assetPath: layer.fileUrl,
+      assetPath,
       isUrl: true,
       volume: _toNativeVolume(layer.volume),
       audioChannelNum: 1,
@@ -959,13 +1021,20 @@ function _scheduleNextIntervalGap(layer: VibeExecutionLayer, managed: ManagedLay
  * A new short-lived audio element is created for each tick. The existing
  * element (if any) is torn down before the new one starts.
  */
-function _intervalPlayTickHtml(layer: VibeExecutionLayer, managed: ManagedLayer): void {
+async function _intervalPlayTickHtml(layer: VibeExecutionLayer, managed: ManagedLayer): Promise<void> {
   /* Previous tick still alive (shouldn't happen normally, but guard) */
   if (managed.audio !== null) {
     _tearDownIntervalTickAudio(managed);
   }
 
-  const audio = new Audio(layer.fileUrl);
+  let src = layer.fileUrl;
+  try {
+    src = await _resolvedAssetPath(layer);
+  } catch (err) {
+    log.warn('[Interval][HTML] resolve URL failed, using remote', { soundId: layer.soundId, err: String(err) });
+  }
+
+  const audio = new Audio(src);
   audio.loop = false;
   const target = _clampVolume(layer.volume);
 
@@ -1099,7 +1168,9 @@ function _intervalPlayTick(layer: VibeExecutionLayer, managed: ManagedLayer): vo
   if (managed.isNative) {
     void _intervalPlayTickNative(layer, managed);
   } else {
-    _intervalPlayTickHtml(layer, managed);
+    void _intervalPlayTickHtml(layer, managed).catch((e) =>
+      log.warn('[Interval][HTML] tick failed', { soundId: layer.soundId, err: String(e) }),
+    );
   }
 }
 
@@ -1486,4 +1557,5 @@ export const audioPlayerService = {
   hasActiveLayers,
   isSessionPaused,
   countValidLayers,
+  setPlaybackVibeContext,
 };

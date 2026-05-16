@@ -15,11 +15,10 @@
  * in audio-player.service.ts. A full migration is a future task documented in
  * docs/issues/audio-engine-fade-limitations.md.
  *
- * ## Cache architecture (@capgo/native-audio 8.4.2 — Android)
- * ExoPlayer uses SimpleCache (100 MiB LRU) backed by getCacheDir()/media.
- * unload() releases only the ExoPlayer instance — cached bytes remain on disk.
- * This means preload+unload is a safe cache-warming pattern: the asset is
- * buffered through CacheDataSource and stays on disk for future playback.
+ * ## Streaming cache architecture (@capgo/native-audio 8.4.2 — Android)
+ * ExoPlayer uses SimpleCache (100 MiB LRU) under getCacheDir()/media during http(s)
+ * playback — progressive buffering only; it is not a guaranteed full-file download.
+ * Guaranteed offline copies live in Directory.Data via offline-audio-storage.ts.
  * See docs/audio-cache.md for full details.
  */
 
@@ -27,6 +26,7 @@ import { NativeAudio } from '@capgo/native-audio';
 import { Capacitor } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
+import { downloadLayerForOffline, getOfflinePlaybackUriIfValid } from './offline-audio-storage';
 import type {
   AudioEngine,
   AudioEngineConfig,
@@ -70,7 +70,20 @@ export class NativeAudioEngine implements AudioEngine {
       fade:  false,
       focus: true,
       ...(config?.debug ? { debug: true } : {}),
-    });
+      // Plugin typings omit several runtime-supported keys (cf. audio-player.service.ts).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+  }
+
+  /** @inheritdoc */
+  async resolvePlaybackAssetUrl(layer: VibeExecutionLayer, vibeId: number): Promise<string> {
+    try {
+      const uri = await getOfflinePlaybackUriIfValid(vibeId, layer.soundId, layer.fileUrl);
+      return uri ?? layer.fileUrl;
+    } catch (err) {
+      console.warn(`${LOG_CACHE} playback resolve — fallback remote`, err);
+      return layer.fileUrl;
+    }
   }
 
   /**
@@ -188,15 +201,15 @@ export class NativeAudioEngine implements AudioEngine {
       hasCacheSupport: isNative,
       maxSizeBytes:    isNative ? NATIVE_CACHE_MAX_BYTES : null,
       location:        isNative
-        ? 'Android internal cache: getCacheDir()/media (ExoPlayer SimpleCache LRU)'
+        ? 'Streaming LRU: getCacheDir()/media · Offline files: Directory.Data/offline_audio/'
         : 'Not applicable — web platform uses browser HTTP cache',
       notes: [
-        'Cache is automatic for non-HLS HTTPS URLs (e.g. Firebase Storage MP3/OGG).',
+        'ExoPlayer SimpleCache buffers progressively during HTTPS playback — not a full-file guarantee.',
+        '“Download for offline” stores complete files in Directory.Data (Capacitor Filesystem).',
+        'clearAudioCache() only clears ExoPlayer cache/media — offline downloads are kept.',
         'HLS (.m3u8) URLs use StreamAudioAsset which bypasses SimpleCache.',
-        'unload() does NOT evict cached bytes — preload+unload safely warms cache.',
-        'clearAudioCache() releases SimpleCache and deletes the cache/media folder.',
-        'Rotating signed Firebase Storage URLs may not deduplicate cache entries.',
-        'OS may evict cache when device storage is low.',
+        'Rotating signed Firebase Storage URLs invalidate offline manifest entries.',
+        'OS may evict ExoPlayer cache when device storage is low.',
       ],
     };
   }
@@ -237,14 +250,18 @@ export class NativeAudioEngine implements AudioEngine {
       failed:    result.failed,
     });
 
+    if (result.failed > 0) {
+      const failedDetail = result.details
+        .filter((d) => d.status === 'failed')
+        .map((d) => ({ soundId: d.soundId, name: d.soundName, error: d.error }));
+      console.warn(`${LOG_CACHE} cache result — failed layers`, failedDetail);
+    }
+
     return result;
   }
 
   /**
-   * Warms cache for a single layer using a temporary cache-only assetId.
-   * The assetId uses the "cache-" prefix so it never conflicts with active
-   * playback layers ("vibe-layer-{soundId}") even if the same sound is
-   * currently playing.
+   * Full-file offline download for one layer (native only).
    */
   private async _cacheOneLayer(vibeId: number, layer: VibeExecutionLayer): Promise<LayerCacheOutcome> {
     const base: Omit<LayerCacheOutcome, 'status' | 'error'> = {
@@ -252,56 +269,28 @@ export class NativeAudioEngine implements AudioEngine {
       soundName: layer.soundName,
     };
 
-    // Skip local file:// assets (no remote caching applies)
     const url = layer.fileUrl?.trim() ?? '';
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       console.log(`${LOG_CACHE} skip (non-remote URL)`, { soundId: layer.soundId });
       return { ...base, status: 'skipped' };
     }
 
-    // Use a separate "cache-only" assetId so we don't collide with an active layer
-    const cacheAssetId = `cache-vibe-${vibeId}-sound-${layer.soundId}`;
+    if (!Capacitor.isNativePlatform()) {
+      console.log(`${LOG_CACHE} skip (offline download requires native build)`, { soundId: layer.soundId });
+      return { ...base, status: 'skipped' };
+    }
 
-    // Clean up any orphaned cache asset from a previous interrupted warm
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const preloaded = await NativeAudio.isPreloaded({ assetId: cacheAssetId } as any);
-      if (preloaded?.found) {
-        await NativeAudio.stop({ assetId: cacheAssetId }).catch(() => null);
-        await NativeAudio.unload({ assetId: cacheAssetId }).catch(() => null);
-      }
-    } catch { /* ignore */ }
-
-    console.log(`${LOG_CACHE} preload (cache-only) — start`, {
-      soundId: layer.soundId,
-      cacheAssetId,
-    });
+    console.log(`${LOG_CACHE} download requested`, { vibeId, soundId: layer.soundId });
 
     try {
-      await NativeAudio.preload({
-        assetId:   cacheAssetId,
-        assetPath: url,
-        isUrl:     true,
-        volume:    0.1,
-        audioChannelNum: 1,
-      } as Parameters<typeof NativeAudio.preload>[0]);
-
-      // Immediately unload the ExoPlayer instance.
-      // Cached bytes remain in SimpleCache — unload() does not evict them.
-      await NativeAudio.stop({ assetId: cacheAssetId }).catch(() => null);
-      await NativeAudio.unload({ assetId: cacheAssetId }).catch(() => null);
-
-      console.log(`${LOG_CACHE} cache-only asset unloaded (bytes remain in disk cache)`, {
-        soundId: layer.soundId,
-        cacheAssetId,
-      });
-
+      await downloadLayerForOffline(vibeId, layer);
+      console.log(`${LOG_CACHE} download — success`, { vibeId, soundId: layer.soundId });
       return { ...base, status: 'cached' };
     } catch (err) {
       const errorStr = err instanceof Error ? err.message : String(err);
-      console.warn(`${LOG_CACHE} preload (cache-only) — failed`, {
+      console.warn(`${LOG_CACHE} download — failed`, {
+        vibeId,
         soundId: layer.soundId,
-        cacheAssetId,
         error: errorStr,
       });
       return { ...base, status: 'failed', error: errorStr };

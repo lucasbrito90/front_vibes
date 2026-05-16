@@ -527,6 +527,11 @@ async function handleDownloadForOffline(): Promise<void> {
     return;
   }
 
+  if (!Capacitor.isNativePlatform()) {
+    await showPlaybackToast('Offline download is available in the installed app (Android/iOS), not in the browser.');
+    return;
+  }
+
   const id   = vibeId.value;
   const plan = executionPlan.value;
 
@@ -554,8 +559,10 @@ async function handleDownloadForOffline(): Promise<void> {
       await showPlaybackToast('Could not download sounds. Check your connection.');
     } else if (result.failed > 0) {
       await showPlaybackToast(
-        `Downloaded ${result.succeeded} sound${result.succeeded !== 1 ? 's' : ''}. ${result.failed} could not be cached.`,
+        `Downloaded ${result.succeeded} sound${result.succeeded !== 1 ? 's' : ''}. ${result.failed} could not be downloaded.`,
       );
+    } else if (result.succeeded === 0) {
+      await showPlaybackToast('No sounds were downloaded.');
     } else {
       await showPlaybackToast('Downloaded for offline');
     }
