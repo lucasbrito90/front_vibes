@@ -589,19 +589,17 @@ async function _startLoopAudioNative(
   }
 
   /*
-   * Preload volume selection:
-   * - No fade-in: preload at target volume so loop() starts at the right level.
-   * - Fade-in configured: preload at 0 (silence). loopWithFadeIn() sets
-   *   player.setVolume(0f) synchronously before player.play() on the UI thread,
-   *   so the preload value only matters if play() is called externally between
-   *   preload and our loop call. Preloading at 0 is the safest default.
+   * Preload at target volume.
+   *
+   * FadeIn is intentionally NOT applied for loop mode — see TODO below.
+   * We always preload at targetVol so loop() starts at the correct level.
    *
    * IMPORTANT: isComplex:true is required so Java's preloadAsset() actually reads
    * the volume param. Without it the ExoPlayer is initialized at 1.0 (full volume)
    * regardless of what we pass — a silent bug in @capgo/native-audio's preload API.
    */
   const targetVol  = _toNativeVolume(layer.volume);
-  const preloadVol = layer.fadeInSeconds > 0 ? 0 : targetVol;
+  const preloadVol = targetVol;
 
   log.debug('[NativeAudio][Fade] preload volume selected', {
     assetId,
@@ -648,67 +646,34 @@ async function _startLoopAudioNative(
   }
 
   try {
-    /*
-     * Native loop with built-in fadeIn.
-     *
-     * Why not the old JS workaround (loop() + setVolume(ramp))?
-     * ─────────────────────────────────────────────────────────
-     * 1. loop() resolves the Capacitor bridge immediately after scheduling
-     *    player.play() on the Android UI thread — the JS promise settles
-     *    while the player is still in STATE_BUFFERING (loading the remote URL).
-     * 2. Any subsequent setVolume() bridge calls therefore arrive on the UI
-     *    thread while player.isPlaying() == false (Media3 returns false during
-     *    STATE_BUFFERING). The old RemoteAudioAsset.setVolume() gated fadeTo()
-     *    on player.isPlaying(), so the fade was silently skipped and the volume
-     *    jumped to the target directly.
-     * 3. Even after patching setVolume() to use getPlayWhenReady(), there is
-     *    still a bridge round-trip race: the JS ramp setVolume arrives after
-     *    the preloaded volume (0.1) has already been applied to the AudioTrack,
-     *    resulting in a single-frame flash of the stale/preloaded volume.
-     *
-     * loopWithFadeIn() (new native path):
-     * ─────────────────────────────────────────────────────────
-     * • Runs entirely on the Android UI thread inside a single runOnUiThread().
-     * • Sequence: setVolume(0) → setRepeatMode(ONE) → play() → fadeIn().
-     * • Volume is 0 before play() touches the AudioTrack, so there is no flash.
-     * • fadeIn() checks getPlayWhenReady() so it keeps stepping during buffering.
-     * • No async round-trips between the volume anchor and the fade ramp.
-     */
-    const hasFadeIn = layer.fadeInSeconds > 0;
+    // TODO(ixora-audio): Native fadeIn for loop mode is temporarily disabled.
+    // @capgo/native-audio loop() does not support true native fadeIn.
+    // All JS volume-ramp workarounds (setVolume after loop(), loopWithFadeIn patch)
+    // caused unstable playback: audio briefly started at the preloaded/stale volume
+    // because the Capacitor bridge resolves before ExoPlayer leaves STATE_BUFFERING.
+    // Until a proper native Capacitor plugin is built, loop layers start immediately
+    // at target volume. The layer.fadeInSeconds value is preserved in the DB for
+    // future use; it is simply not applied at runtime for loop playback.
+    //
+    // Future solution: implement a custom Capacitor plugin with a native
+    // loopWithFadeIn() method that runs entirely on the Android UI thread:
+    //   player.setVolume(0f) → setRepeatMode(ONE) → play() → fadeIn()
+    // See docs/issues/native-loop-fadein.md for full context.
 
-    if (hasFadeIn) {
-      const managed = _layers.get(layer.soundId);
-      if (managed) managed.nativeFadeInEndEpoch = Date.now() + layer.fadeInSeconds * 1_000;
-
-      log.debug('[NativeAudio][Fade] loop — native loopWithFadeIn', {
-        assetId,
-        soundId:       layer.soundId,
-        targetVol,
-        fadeInSeconds: layer.fadeInSeconds,
-        sessionPaused: _sessionPaused,
-      });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (NativeAudio.loop as any)({
-        assetId,
-        volume:         targetVol,
-        fadeIn:         true,
-        fadeInDuration: layer.fadeInSeconds,
-      });
-    } else {
-      log.debug('[NativeAudio][Fade] loop — no fadeIn, starting at target volume', {
-        assetId, soundId: layer.soundId, targetVol,
-      });
-      await NativeAudio.loop({ assetId });
-    }
-
-    log.debug('[NativeAudio][Fade] loop — bridge resolved', {
-      assetId, hasFadeIn, sessionPaused: _sessionPaused,
+    log.debug('native loop — starting at target volume (fadeIn disabled for loop mode)', {
+      assetId,
+      soundId:       layer.soundId,
+      targetVol,
+      fadeInSeconds: layer.fadeInSeconds, // persisted but not applied
+      sessionPaused: _sessionPaused,
     });
 
+    await NativeAudio.loop({ assetId });
+
+    log.debug('native loop — bridge resolved', { assetId, sessionPaused: _sessionPaused });
+
     // Race-condition guard: if the session was paused while we were awaiting
-    // the loop() bridge call, immediately pause the native player so state
-    // stays consistent.
+    // loop(), immediately pause the native player so state stays consistent.
     if (_sessionPaused && _nativeLayers.has(assetId)) {
       log.debug('native loop — session was paused during preload, pausing immediately', { assetId });
       void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race)', assetId, e));
