@@ -311,6 +311,15 @@ interface ManagedLayer {
 
   intervalTickEndedHandler: (() => void) | null;
   intervalTickErrorHandler: (() => void) | null;
+
+  /**
+   * Wall-clock epoch (ms) when the native loop fade-in is scheduled to
+   * complete. Non-null means a fadeIn was requested and may still be in
+   * progress (or was interrupted by a pause). Used by resumeAll() to restart
+   * an interrupted fade after audio-focus regain or a user-initiated resume.
+   * Set to null when the fade completes or the layer is stopped.
+   */
+  nativeFadeInEndEpoch: number | null;
 }
 
 const _layers = new Map<number, ManagedLayer>();
@@ -679,29 +688,47 @@ async function _startLoopAudioNative(
         });
       }
 
-      // Guard: layer may have been stopped while awaiting anchor above
+      // Guard: layer removed OR session paused during the anchor await.
+      // _sessionPaused can flip to true here if audioFocusLossTransient fires
+      // while the bridge round-trip for setVolume(0.1) is in flight — e.g. when
+      // the ForegroundService startup causes a brief OS-level audio focus change.
       if (!_layers.has(layer.soundId) || !_nativeLayers.has(assetId)) {
         log.warn('[NativeAudio][Fade] loop fadeIn — layer removed during anchor, aborting', { assetId });
         return;
       }
 
-      // Step 2: ramp from 0.1 → target over fadeInSeconds (exponential via fadeTo).
-      // duration unit is SECONDS (Java converts to ms internally).
       const rampTargetVol = _toNativeVolume(layer.volume);
-      log.debug('[NativeAudio][Fade] loop fadeIn — starting exponential ramp', {
-        assetId,
-        fromVol:      0.1,
-        toVol:        rampTargetVol,
-        fadeInSeconds: layer.fadeInSeconds,
-        durationUnit:  'seconds',
-      });
-      void NativeAudio.setVolume({
-        assetId,
-        volume:   rampTargetVol,
-        duration: layer.fadeInSeconds,
-      }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn — ramp setVolume failed', {
-        assetId, err: String(e),
-      }));
+      const managed       = _layers.get(layer.soundId);
+
+      if (_sessionPaused) {
+        // Session was paused during the anchor await (typically a transient
+        // audio-focus loss caused by ForegroundService startup). Don't start
+        // the ramp now — the race guard below will pause the player. Record the
+        // fade intent so resumeAll() can restart the ramp from 0.1 once focus
+        // is regained.
+        if (managed) managed.nativeFadeInEndEpoch = Date.now() + layer.fadeInSeconds * 1_000;
+        log.debug('[NativeAudio][Fade] loop fadeIn — session paused during anchor, deferring ramp', {
+          assetId, rampTargetVol, fadeInSeconds: layer.fadeInSeconds,
+        });
+      } else {
+        // Step 2: ramp from 0.1 → target over fadeInSeconds (exponential via fadeTo).
+        // duration unit is SECONDS (Java converts to ms internally).
+        if (managed) managed.nativeFadeInEndEpoch = Date.now() + layer.fadeInSeconds * 1_000;
+        log.debug('[NativeAudio][Fade] loop fadeIn — starting exponential ramp', {
+          assetId,
+          fromVol:       0.1,
+          toVol:         rampTargetVol,
+          fadeInSeconds: layer.fadeInSeconds,
+          durationUnit:  'seconds',
+        });
+        void NativeAudio.setVolume({
+          assetId,
+          volume:   rampTargetVol,
+          duration: layer.fadeInSeconds,
+        }).catch((e) => log.warn('[NativeAudio][Fade] loop fadeIn — ramp setVolume failed', {
+          assetId, err: String(e),
+        }));
+      }
     } else if (layer.fadeInSeconds <= 0) {
       log.debug('[NativeAudio][Fade] loop — no fadeIn configured, playing at target volume', {
         assetId, targetVol,
@@ -709,7 +736,8 @@ async function _startLoopAudioNative(
     }
 
     // Race-condition guard: if the session was paused while we were awaiting
-    // loop(), immediately pause the native player so state stays consistent.
+    // loop() or the anchor setVolume(), immediately pause the native player so
+    // state stays consistent.
     if (_sessionPaused && _nativeLayers.has(assetId)) {
       log.debug('native loop — session was paused during preload, pausing immediately', { assetId });
       void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race)', assetId, e));
@@ -1453,6 +1481,7 @@ function playLayer(layer: VibeExecutionLayer): void {
     onceEndedHandler:             null,
     intervalTickEndedHandler:     null,
     intervalTickErrorHandler:     null,
+    nativeFadeInEndEpoch:         null,
   };
 
   _layers.set(layer.soundId, managed);
@@ -1721,7 +1750,47 @@ function resumeAll(): void {
 
       const assetId = _nativeAssetId(layer.soundId);
       if (_nativeLayers.has(assetId)) {
-        void NativeAudio.resume({ assetId }).catch((e) => _logNativeFailure('resume', assetId, e));
+        const fadeEndEpoch = managed.nativeFadeInEndEpoch;
+
+        void NativeAudio.resume({ assetId })
+          .then(async () => {
+            // Restart an interrupted native fade-in if we're still within the
+            // original fade window. This handles the common case where a brief
+            // audio-focus loss (e.g. ForegroundService startup) pauses the
+            // player mid-ramp or before the ramp starts, and focus is then
+            // regained via audioFocusGain.
+            if (fadeEndEpoch === null) return;
+            if (!_layers.has(layer.soundId) || !_nativeLayers.has(assetId)) return;
+
+            const remainingMs = fadeEndEpoch - Date.now();
+            if (remainingMs > 500) {
+              const remainingSec = remainingMs / 1_000;
+              log.debug('[NativeAudio][Fade] resumeAll — restarting interrupted fade-in', {
+                assetId, remainingSec, targetVol: _toNativeVolume(layer.volume),
+              });
+              // Re-anchor at 0.1 so fadeTo reads the correct initial volume.
+              await NativeAudio.setVolume({ assetId, volume: 0.1 });
+              if (!_layers.has(layer.soundId) || !_nativeLayers.has(assetId)) return;
+              void NativeAudio.setVolume({
+                assetId,
+                volume:   _toNativeVolume(layer.volume),
+                duration: remainingSec,
+              }).catch((e) => log.warn('[NativeAudio][Fade] resumeAll — fade restart failed', {
+                assetId, err: String(e),
+              }));
+            } else {
+              // Fade complete or < 500 ms remaining — jump straight to target.
+              managed.nativeFadeInEndEpoch = null;
+              log.debug('[NativeAudio][Fade] resumeAll — fade window expired, jumping to target', {
+                assetId, targetVol: _toNativeVolume(layer.volume),
+              });
+              void NativeAudio.setVolume({ assetId, volume: _toNativeVolume(layer.volume) })
+                .catch((e) => log.warn('[NativeAudio][Fade] resumeAll — jump setVolume failed', {
+                  assetId, err: String(e),
+                }));
+            }
+          })
+          .catch((e) => _logNativeFailure('resume', assetId, e));
       }
       continue;
     }
