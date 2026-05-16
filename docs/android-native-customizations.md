@@ -383,18 +383,24 @@ to make this a drop-in replacement. See
 [`docs/issues/audio-engine-fade-limitations.md`](./issues/audio-engine-fade-limitations.md)
 for full context and requirements.
 
-### Audio disk cache
+### Audio disk cache & offline files
 
-The plugin automatically caches all non-HLS HTTPS audio (e.g. Firebase Storage MP3/OGG)
-via ExoPlayer's `SimpleCache` (100 MiB LRU) stored at `getCacheDir()/media`. This cache
-persists across app restarts and is the foundation for partial offline playback.
+ExoPlayer caches non-HLS HTTPS audio progressively into `SimpleCache` (100 MiB LRU) at
+`getCacheDir()/media`. That improves repeat streaming but **does not** guarantee the whole
+file is on disk after `prepare()` alone.
+
+Guaranteed offline copies use **`@capacitor/filesystem`** (`Directory.Data/offline_audio/`)
+plus a small manifest in **`@capacitor/preferences`**. After `npx cap sync`, the Filesystem
+plugin is registered on Android/iOS like other Capacitor dependencies.
 
 The `AudioEngine` interface exposes:
-- `getCacheInfo()` — metadata about the cache (size, location, notes)
-- `clearAudioCache()` — releases `SimpleCache` and deletes `getCacheDir()/media`
-- `cacheVibeAudio(vibeId, layers)` — warms cache via preload+unload (bytes remain on disk)
+- `getCacheInfo()` — metadata (streaming cache vs offline storage paths)
+- `clearAudioCache()` — releases ExoPlayer `SimpleCache` only (offline files kept)
+- `cacheVibeAudio(vibeId, layers)` — **full-file** `fetch` + Filesystem write (native)
+- `resolvePlaybackAssetUrl(layer, vibeId)` — `file://` when offline copy matches current URL
 
-See [`docs/audio-cache.md`](./audio-cache.md) for full details and offline behaviour.
+See [`docs/audio-cache.md`](./audio-cache.md) for full details, adb paths, and why **live reload**
+is unsuitable for offline validation.
 
 ---
 

@@ -2,216 +2,134 @@
 
 ## Overview
 
-The Ixora app uses `@capgo/native-audio` (ExoPlayer on Android) to stream audio from
-Firebase Storage. ExoPlayer's built-in disk cache (`SimpleCache`) is wired automatically
-for all non-HLS remote HTTPS URLs, providing faster subsequent playback and the foundation
-for limited offline use.
+Two separate mechanisms apply:
+
+1. **ExoPlayer streaming cache** — Automatic, progressive buffering into a 100 MiB LRU disk cache while playing remote HTTPS audio. This improves repeat playback **after** you have streamed online; it does **not** guarantee the full file exists on disk.
+
+2. **Download for offline** — Explicit full-file download via `fetch` + `@capacitor/filesystem` into `Directory.Data`. Playback resolves to a local `file://` URI when the stored manifest entry matches the current remote URL.
 
 ---
 
-## How the cache works (Android)
+## ExoPlayer streaming cache (Android)
+
+Used transparently by `@capgo/native-audio` for non-HLS HTTPS URLs (`RemoteAudioAsset`).
+
+### Important limitation
+
+`prepare()` / initial buffering only pulls enough data to reach `STATE_READY` and keep playback smooth — **not necessarily the entire file**. Therefore:
+
+- Offline playback after **only** streaming (without using **Download for offline**) may work if enough of the file was buffered and not evicted — but this is **best-effort**, not guaranteed.
 
 ### Cache engine
 
 | Property | Value |
 |---|---|
 | Implementation | ExoPlayer `SimpleCache` + `CacheDataSource` + `LeastRecentlyUsedCacheEvictor` |
-| Max size | **100 MiB** (`MAX_CACHE_SIZE = 100 * 1024 * 1024`) |
-| Eviction policy | LRU (Least Recently Used) |
-| Location | `Context.getCacheDir()/media` (internal app cache — not accessible to the user) |
-| Typical path | `/data/data/io.ionic.starter/cache/media` |
+| Max size | **100 MiB** |
+| Location | `Context.getCacheDir()/media` |
 
-### What gets cached
+### clearAudioCache()
 
-| URL type | Cached? | How |
-|---|---|---|
-| Firebase Storage MP3/OGG/WAV (HTTPS) | ✅ Yes | `RemoteAudioAsset` → `CacheDataSource` → `SimpleCache` |
-| Any non-HLS `http://` or `https://` URL | ✅ Yes | Same path |
-| HLS `.m3u8` streams | ❌ No | `StreamAudioAsset` uses `HlsMediaSource` — bypasses `SimpleCache` |
-| Local `file://` assets | ❌ N/A | Not a remote fetch |
-| Web platform (`ionic serve`) | ❌ N/A | Browser HTTP cache only |
+`audioEngine.clearAudioCache()` releases this cache and deletes `getCacheDir()/media`.
 
-### When does caching happen?
-
-Caching occurs automatically during `preload()` and `play()`/`loop()` — any time ExoPlayer
-reads bytes from the network through `CacheDataSource`. There is no explicit "cache this file"
-API; it happens transparently as part of normal audio buffering.
-
-### Does the cache persist between sessions?
-
-**Yes.** Files under `getCacheDir()` survive:
-- App backgrounding
-- App close and reopen
-- Device restart
-
-The cache is evicted by:
-- OS storage pressure (Android may clear internal cache when disk is full)
-- User or system "Clear Cache" action in Android Settings
-- App uninstall
-- Calling `audioEngine.clearAudioCache()`
-
-### Does unload() remove cached bytes?
-
-**No.** `unload()` releases only the ExoPlayer instance (`player.release()`). The cached
-bytes in `SimpleCache` remain on disk. This is the key property that makes the
-preload+unload cache-warming pattern work.
+It does **not** delete offline downloads under `Directory.Data/offline_audio/`.
 
 ---
 
-## Cache management API
+## Download for offline (guaranteed full file)
 
-All cache operations go through the `AudioEngine` interface to maintain the abstraction.
-**Do not call `NativeAudio.clearCache()` directly from components or stores.**
+### Implementation
+
+| Step | What happens |
+|---|---|
+| Download | `fetch(layer.fileUrl)` → blob → base64 → `Filesystem.writeFile` under `Directory.Data` |
+| Manifest | `@capacitor/preferences` key `ixora_offline_audio_manifest_v1` maps `vibeId:soundId` → `{ relativePath, remoteUrl, savedAt }` |
+| Playback | `audioEngine.resolvePlaybackAssetUrl(layer, vibeId)` returns `Filesystem.getUri(...)` when `remoteUrl === layer.fileUrl` and the file still exists |
+| Native preload | `audio-player.service.ts` passes the resolved URI with `isUrl: true` → NativeAudio loads `file://` via `ParcelFileDescriptor` (not `RemoteAudioAsset`) |
+
+Files are stored under paths like:
+
+`offline_audio/vibe_{vibeId}/sound_{soundId}.{ext}`
+
+### UI entry point
+
+The three-dot menu (⋮) on **VibePlayerPage** → **Download for offline** calls `playerStore.cacheVibeAudio(vibeId, executionPlan)`.
+
+### Matching remote URLs
+
+If Firebase Storage returns a **new** signed URL for the same sound, the manifest entry no longer matches `layer.fileUrl` and playback falls back to HTTPS until the user downloads again.
+
+---
+
+## Testing offline (Android)
+
+**Do not validate real offline behaviour with `ionic capacitor run android -l` (live reload / Vite dev server).** The WebView still expects the dev server; behaviour is not representative of a production install.
+
+Use a **production or non-live-reload** binary, for example:
+
+```bash
+ionic capacitor run android --no-sync --external
+# (without -l), or build APK/AAB and install
+```
+
+Then:
+
+1. Clear ExoPlayer cache in Settings (optional).
+2. Open a vibe online → **Download for offline**.
+3. Enable airplane mode.
+4. Play the vibe — audio should load from `file://`.
+
+---
+
+## API summary
+
+All capabilities go through `AudioEngine` / `audioEngine` — do not call `NativeAudio.clearCache()` from UI or stores.
 
 ```typescript
 import { audioEngine } from '@/services/audio-engine';
 
-// Get cache metadata (synchronous, no I/O)
-const info = audioEngine.getCacheInfo();
-// info.hasCacheSupport  → true on Android native
-// info.maxSizeBytes     → 104857600 (100 MiB)
-// info.location         → 'Android internal cache: getCacheDir()/media ...'
+await audioEngine.clearAudioCache(); // ExoPlayer cache only
 
-// Clear the entire cache
-await audioEngine.clearAudioCache();
+const result = await audioEngine.cacheVibeAudio(vibeId, layers); // full-file download (native)
 
-// Warm cache for a vibe's layers (preload + immediately unload)
-const result = await audioEngine.cacheVibeAudio(vibeId, layers);
-// result.succeeded  → number of layers successfully warmed
-// result.skipped    → number skipped (non-HTTPS, already active, etc.)
-// result.failed     → number of errors
-// result.details    → per-layer outcome array
+await audioEngine.resolvePlaybackAssetUrl(layer, vibeId); // used internally by audio-player.service
 ```
 
-### clearAudioCache()
-
-Calls `NativeAudio.clearCache()` which:
-1. Calls `SimpleCache.release()` on the static cache instance
-2. Sets the static field to `null` (next preload recreates it)
-3. Recursively deletes `getCacheDir()/media`
-
-**Safe to call when no audio is currently playing.** Calling while audio is actively
-streaming may cause ExoPlayer errors for in-flight reads (the cache backend disappears
-mid-stream). The `SettingsPage` UI only exposes this option when no vibe is playing.
-
-### cacheVibeAudio(vibeId, layers)
-
-For each eligible layer (remote HTTPS URL):
-
-1. Generates a **cache-only assetId**: `cache-vibe-{vibeId}-sound-{soundId}`
-   — separate namespace from active playback ids (`vibe-layer-{soundId}`)
-2. Calls `NativeAudio.preload()` → ExoPlayer buffers through `CacheDataSource`
-   → bytes are written to `SimpleCache` on disk
-3. Immediately calls `NativeAudio.stop()` + `NativeAudio.unload()` — the
-   ExoPlayer instance is released but cached bytes remain
-4. Returns the result summary
-
-Layers are processed sequentially (not in parallel) to avoid overwhelming the
-Android I/O thread or triggering ExoPlayer resource exhaustion.
-
----
-
-## Offline behaviour
-
-### Current state (partial offline support)
-
-| Scenario | Behaviour |
-|---|---|
-| Audio previously streamed in same session | ExoPlayer reads from in-memory buffer — works |
-| Audio cached via cacheVibeAudio() or prior playback | ExoPlayer reads from disk cache — likely works |
-| Audio never cached, no network | ExoPlayer fails to connect — falls back to HTMLAudioElement (also fails) |
-| Firebase Storage signed URL changed since caching | Cache miss — re-download on next play |
-
-### Limitation: signed URL cache keys
-
-Firebase Storage download URLs include a signed access token in the query string.
-ExoPlayer uses the **full URL** as the cache key. If the token rotates (e.g. because the
-file was re-uploaded or permissions changed), the new URL is a different cache key and
-the cached bytes are not reused.
-
-For ambient audio files that rarely change, this is not a significant issue in practice.
-
-### Full offline support — future work
-
-True offline playback requires:
-1. Downloading the full audio file before going offline
-2. Storing it in a location that is not subject to OS cache eviction
-3. Substituting the local file path when the device is offline
-
-This is tracked in `docs/issues/audio-engine-fade-limitations.md` under
-"Future additions". The `AudioEngine.cacheVibeAudio()` method is the foundation
-for this — a future version would persist files to `getFilesDir()` instead of
-relying on the LRU `getCacheDir()`.
+Pinia sets `audioPlayerService.setPlaybackVibeContext(vibeId)` whenever vibe context is set so preloads resolve offline paths correctly.
 
 ---
 
 ## Logs
 
-All cache operations log with the `[AudioCache]` prefix:
+Prefix `[AudioCache]`:
 
 ```
-[AudioCache] clear — started
-[AudioCache] clear — success
 [AudioCache] cacheVibeAudio — started { vibeId, layerCount }
-[AudioCache] preload (cache-only) — start { soundId, cacheAssetId }
-[AudioCache] cache-only asset unloaded (bytes remain in disk cache) { soundId, cacheAssetId }
-[AudioCache] cacheVibeAudio — done { vibeId, succeeded, skipped, failed }
-[AudioCache] skip (non-remote URL) { soundId }
-[AudioCache] preload (cache-only) — failed { soundId, error }
+[AudioCache] download requested { vibeId, soundId }
+[AudioCache] download — saved { vibeId, soundId, relativePath }
+[AudioCache] download — failed { vibeId, soundId, error }
+[AudioCache] playback resolve — using offline file { vibeId, soundId }
+[AudioCache] clear — started / success / failed
 ```
-
-Use `adb logcat -s chromium` or the browser dev-tools console to see these in the
-live-reload dev build.
 
 ---
 
-## Download for offline (VibePlayerPage)
-
-The three-dot menu (⋮) on the vibe player page includes a **Download for offline** option.
-
-### Behaviour
-
-1. Tapping "Download for offline" calls `playerStore.cacheVibeAudio(vibeId, executionPlan)`.
-2. The button is disabled while a download is in progress (prevents duplicate downloads).
-3. Playback state, `currentVibeId`, and the player UI are unaffected.
-4. A toast summarises the result:
-   - "Downloaded for offline" — all layers cached successfully
-   - "Downloaded N sounds. M could not be cached." — partial success
-   - "Could not download sounds. Check your connection." — all failed
-   - "No sounds to download" — vibe has no playable layers
-   - "Connect to the internet to download sounds" — `navigator.onLine === false`
-
-### Limitations
-
-- **No per-file progress** — the action completes in bulk; there is no progress bar or percentage.
-- **No download size shown** — the 100 MiB LRU cap applies across all vibes globally.
-- **No offline library UI** — there is no list of "downloaded vibes".
-- **LRU eviction** — if the 100 MiB cap is reached, older cached bytes are silently evicted
-  by ExoPlayer's `LeastRecentlyUsedCacheEvictor`. Downloading a second vibe may evict
-  parts of the first if both are large.
-- **Rotating signed URLs** — if a Firebase Storage signed URL changes (file re-upload,
-  permission change), the cache key changes and the file is re-downloaded.
-
 ## Settings UI
 
-The **Settings** page exposes a "Clear audio cache" button that calls
-`audioEngine.clearAudioCache()` via the Pinia player store action `clearAudioCache()`.
-
-The button shows a confirmation alert before proceeding to avoid accidental cache wipes.
+**Clear audio cache** clears only the ExoPlayer `SimpleCache` (`getCacheDir()/media`). Offline files in `Directory.Data` remain until overwritten by a new download or app uninstall.
 
 ---
 
 ## adb debugging
 
 ```bash
-# Watch cache-related logs
-adb logcat | grep -i "AudioCache\|SimpleCache\|CacheDataSource"
+adb logcat | grep -i "AudioCache"
 
-# Check cache directory size on device
+# ExoPlayer streaming cache
 adb shell du -sh /data/data/io.ionic.starter/cache/media
 
-# List cached files
-adb shell ls -la /data/data/io.ionic.starter/cache/media/
+# Offline downloads (path varies by applicationId)
+adb shell run-as io.ionic.starter ls -la files/offline_audio/
 ```
 
 ---
@@ -220,9 +138,11 @@ adb shell ls -la /data/data/io.ionic.starter/cache/media/
 
 | File | Role |
 |---|---|
-| `src/services/audio-engine/types.ts` | `AudioCacheInfo`, `CacheVibeResult`, `AudioEngine` interface |
-| `src/services/audio-engine/native-audio.engine.ts` | `clearAudioCache()`, `cacheVibeAudio()`, `getCacheInfo()` |
-| `src/services/audio-engine/index.ts` | Public barrel export |
-| `src/stores/player.store.ts` | `clearAudioCache()` action (delegates to audioEngine) |
-| `src/views/SettingsPage.vue` | "Clear audio cache" UI button |
-| `node_modules/@capgo/native-audio/android/.../RemoteAudioAsset.java` | Native cache implementation |
+| `src/services/audio-engine/offline-audio-storage.ts` | Fetch + Filesystem + manifest + URI resolution |
+| `src/services/audio-engine/native-audio.engine.ts` | `cacheVibeAudio`, `resolvePlaybackAssetUrl`, `clearAudioCache`, `getCacheInfo` |
+| `src/services/audio-engine/types.ts` | `AudioEngine` interface |
+| `src/services/audio-player.service.ts` | Per-layer preload uses `_resolvedAssetPath()` + `setPlaybackVibeContext` |
+| `src/stores/player.store.ts` | Syncs playback vibe id with audio service |
+| `src/views/VibePlayerPage.vue` | Download for offline |
+| `src/views/SettingsPage.vue` | Clear ExoPlayer cache |
+| `@capgo/native-audio` … `RemoteAudioAsset.java` | ExoPlayer SimpleCache |
