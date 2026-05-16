@@ -16,6 +16,12 @@ import com.getcapacitor.BridgeActivity;
  *   Fires window event 'audioBecomingNoisy' consumed by audio-focus.service.ts.
  *   The receiver is registered in onResume and unregistered in onPause to avoid
  *   leaking the registration when the activity is destroyed.
+ *
+ * Task removal (app swiped from recents):
+ *   Handled natively in AndroidForegroundService.onTaskRemoved() via a patch-package
+ *   patch on @capawesome-team/capacitor-android-foreground-service. That service is
+ *   already registered in the manifest by the plugin's own AAR — no additional entry
+ *   in this app's AndroidManifest.xml is required. See patches/ directory.
  */
 public class MainActivity extends BridgeActivity {
 
