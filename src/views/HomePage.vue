@@ -8,33 +8,64 @@
 
     <ion-content class="home-ion-content" :fullscreen="true">
       <div class="page-shell page-content home-inner">
-        <p class="home-greeting">{{ greeting }}</p>
-        <p v-if="displayName" class="home-name">{{ displayName }}</p>
-        <p v-if="emailHint" class="home-email">{{ emailHint }}</p>
+        <AppLoadingState
+          v-if="loading && !vibes.length && !error"
+          compact
+          title="Loading…"
+          description="Fetching your vibes"
+        />
 
-        <router-link class="home-continue-card app-surface-card" to="/vibes">
-          <div class="home-continue-copy">
-            <span class="home-continue-label">Continue your vibe</span>
-            <span class="home-continue-sub">Open My Vibes and pick up where you left off</span>
+        <AppErrorState
+          v-else-if="error && !vibes.length"
+          compact
+          title="Couldn’t load your vibes"
+          :description="error"
+          retry-label="Try again"
+          @retry="fetchVibes"
+        />
+
+        <template v-else>
+          <p class="home-greeting">{{ greeting }}</p>
+          <p v-if="displayName" class="home-name">{{ displayName }}</p>
+          <p v-if="emailHint" class="home-email">{{ emailHint }}</p>
+
+          <AppEmptyState
+            v-if="!vibes.length"
+            variant="card"
+            class="home-onboarding"
+            :icon="sparklesOutline"
+            title="Create your first vibe"
+            description="Layer ambient sounds into a mix you can play anywhere — online or offline after download."
+            action-label="New vibe"
+            @action="goCreateVibe"
+          />
+
+          <template v-else>
+            <router-link class="home-continue-card app-surface-card" to="/vibes">
+              <div class="home-continue-copy">
+                <span class="home-continue-label">Continue your vibe</span>
+                <span class="home-continue-sub">Open My Vibes and pick up where you left off</span>
+              </div>
+              <ion-icon :icon="chevronForwardOutline" class="home-continue-chevron" />
+            </router-link>
+          </template>
+
+          <div class="home-actions">
+            <ion-button expand="block" class="home-btn-primary" router-link="/vibes">
+              My Vibes
+            </ion-button>
+            <ion-button expand="block" fill="outline" class="home-btn-outline" router-link="/settings">
+              Settings
+            </ion-button>
           </div>
-          <ion-icon :icon="chevronForwardOutline" class="home-continue-chevron" />
-        </router-link>
-
-        <div class="home-actions">
-          <ion-button expand="block" class="home-btn-primary" router-link="/vibes">
-            My Vibes
-          </ion-button>
-          <ion-button expand="block" fill="outline" class="home-btn-outline" router-link="/settings">
-            Settings
-          </ion-button>
-        </div>
+        </template>
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import {
   IonButton,
   IonContent,
@@ -44,10 +75,25 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/vue';
-import { chevronForwardOutline } from 'ionicons/icons';
+import { chevronForwardOutline, sparklesOutline } from 'ionicons/icons';
+import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useVibes } from '@/composables/useVibes';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 
+const router = useRouter();
 const { currentUser } = useAuth();
+const { vibes, loading, error, fetchVibes } = useVibes();
+
+onMounted(() => {
+  void fetchVibes();
+});
+
+function goCreateVibe(): void {
+  router.push('/vibes/create');
+}
 
 const greeting = computed(() => {
   const h = new Date().getHours();
@@ -102,6 +148,10 @@ const emailHint = computed(() => {
   font-size: var(--app-font-size-body-md);
   color: var(--app-color-text-secondary);
   word-break: break-all;
+}
+
+.home-onboarding {
+  margin-top: var(--app-space-7);
 }
 
 .home-continue-card {

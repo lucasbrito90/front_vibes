@@ -62,9 +62,17 @@
           <p class="settings-hint settings-hint--tight">
             Downloaded vibes are available without internet.
           </p>
-          <p v-if="!offlineDownloadList.length" class="settings-download-empty">
-            No vibes saved for offline yet. Use <strong>Download for offline</strong> in the player menu (⋮).
-          </p>
+          <div
+            v-if="!offlineDownloadList.length"
+            class="app-surface-card settings-card settings-card--static settings-downloads-empty-wrap"
+          >
+            <AppEmptyState
+              variant="compact"
+              :icon="cloudOfflineOutline"
+              title="No offline downloads yet"
+              description="Use Download for offline from the player menu (⋮) when you're online."
+            />
+          </div>
           <div v-else class="app-surface-card settings-card settings-card--static settings-downloads-card">
             <div
               v-for="snap in offlineDownloadList"
@@ -212,6 +220,7 @@ import { useAuth } from '@/composables/useAuth';
 import { themeMode, setThemeMode, type ThemeMode } from '@/composables/useThemeMode';
 import type { OfflineVibeSnapshot } from '@/services/offline-vibe-cache.service';
 import { getOfflineVibeSnapshots, removeDownloadedVibe } from '@/services/offline-downloads.service';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
 const playerStore = usePlayerStore();
 const { logout } = useAuth();
@@ -476,11 +485,8 @@ async function handleSignOut(): Promise<void> {
   margin-top: 0;
 }
 
-.settings-download-empty {
-  margin: var(--app-space-3) 0 0;
-  font-size: var(--app-font-size-body-sm);
-  color: var(--app-color-text-secondary);
-  line-height: 1.5;
+.settings-downloads-empty-wrap {
+  margin-top: var(--app-space-3);
 }
 
 .settings-downloads-card {
