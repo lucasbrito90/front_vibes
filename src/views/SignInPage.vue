@@ -1,22 +1,20 @@
 <template>
   <ion-page class="auth-page">
-    <ion-header class="auth-header">
+    <ion-header class="auth-header ion-no-border">
       <ion-toolbar class="auth-toolbar">
         <ion-buttons slot="start">
-          <ion-button class="auth-icon-button" fill="clear">
+          <ion-button class="auth-icon-button" fill="clear" @click="goBack">
             <ion-icon class="auth-back-button" :icon="chevronBackOutline" />
           </ion-button>
         </ion-buttons>
+        <ion-title class="auth-toolbar-title">Sign in</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="auth-content">
-      <div class="auth-screen">
-        <h1 class="auth-title auth-signin-title">Sign In</h1>
-        <p class="auth-subtitle">
-          Use the same method that you created your
-          <br />
-          account with.
+      <div class="auth-screen auth-flow-body">
+        <p class="auth-subtitle auth-flow-lead">
+          Use the same method you signed up with.
         </p>
 
         <div class="auth-social-group">
@@ -39,7 +37,7 @@
         </div>
 
         <div class="auth-divider">
-          <span>Or sign up with email</span>
+          <span>Or continue with email</span>
         </div>
 
         <form class="auth-form" @submit.prevent="handleEmailLogin">
@@ -76,8 +74,8 @@
         <router-link class="auth-link" to="/forgot-password">Forgot password?</router-link>
 
         <p class="auth-footer">
-          Don't have an account?
-          <router-link to="/sign-up">Sign Up</router-link>
+          Don’t have an account?
+          <router-link to="/sign-up">Sign up</router-link>
         </p>
       </div>
     </ion-content>
@@ -96,23 +94,30 @@ import {
   IonItem,
   IonPage,
   IonText,
+  IonTitle,
   IonToolbar,
 } from '@ionic/vue';
 import { chevronBackOutline, eyeOffOutline, logoApple } from 'ionicons/icons';
+import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
+const router = useRouter();
 const { loginWithEmail, loginWithGoogle, loading, error } = useAuth();
 
 const email = ref('');
 const password = ref('');
 const showPassword = ref(false);
 
+function goBack(): void {
+  void router.replace('/sign-in-sign-up');
+}
+
 async function handleGoogleLogin() {
   try {
     await loginWithGoogle();
     window.location.replace('/home');
   } catch {
-    // error.value is already set inside loginWithGoogle via useAuth
+    /* error surfaced via useAuth */
   }
 }
 
@@ -121,7 +126,7 @@ async function handleEmailLogin() {
     await loginWithEmail(email.value, password.value);
     window.location.replace('/home');
   } catch {
-    // error.value is already set inside loginWithEmail via useAuth
+    /* error surfaced via useAuth */
   }
 }
 </script>

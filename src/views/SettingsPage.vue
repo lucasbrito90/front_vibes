@@ -1,46 +1,107 @@
 <template>
-  <ion-page>
+  <ion-page class="tab-page">
     <ion-header class="ion-no-border">
-      <ion-toolbar class="settings-toolbar">
-        <ion-title class="settings-title">Settings</ion-title>
+      <ion-toolbar class="tab-toolbar">
+        <ion-title>Settings</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" class="settings-content">
+    <ion-content :fullscreen="true" class="settings-ion-content">
+      <div class="page-shell page-content settings-wrap">
+        <!-- Audio -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Audio</h2>
+          <div class="app-surface-card settings-card">
+            <button
+              type="button"
+              class="settings-tile"
+              :disabled="!cacheInfo.hasCacheSupport || isClearingCache || isPlaybackActive"
+              @click="handleClearCacheTap"
+            >
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap">
+                  <ion-icon :icon="musicalNotesOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Clear streaming cache</span>
+                  <span class="settings-tile-sub">{{ cacheSubtitle }}</span>
+                </div>
+              </div>
+              <ion-spinner v-if="isClearingCache" name="crescent" class="settings-tile-spinner" />
+              <ion-icon v-else :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+          <p class="settings-hint">
+            Clears ExoPlayer’s temporary disk cache (about 100 MB). Offline files you downloaded from the player menu are kept until you remove them or reinstall the app.
+          </p>
+        </section>
 
-      <!-- Audio Cache Section -->
-      <div class="settings-section">
-        <p class="settings-section-label">Audio</p>
-
-        <div class="settings-card">
-          <div class="settings-row" @click="handleClearCacheTap">
-            <div class="settings-row-left">
-              <ion-icon :icon="cloudOfflineOutline" class="settings-row-icon" />
-              <div class="settings-row-text">
-                <span class="settings-row-title">Clear audio cache</span>
-                <span class="settings-row-sub">{{ cacheSubtitle }}</span>
+        <!-- Offline -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Offline</h2>
+          <div class="app-surface-card settings-card settings-card--static">
+            <div class="settings-tile settings-tile--static">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap settings-icon-wrap--muted">
+                  <ion-icon :icon="cloudDownloadOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Downloaded vibes</span>
+                  <span class="settings-tile-sub">
+                    Use <strong>Download for offline</strong> in the player menu (⋮). Metadata is saved so you can reopen the vibe without the network.
+                  </span>
+                </div>
               </div>
             </div>
-            <ion-spinner v-if="isClearingCache" name="crescent" class="settings-row-spinner" />
-            <ion-icon v-else :icon="chevronForwardOutline" class="settings-row-chevron" />
           </div>
-        </div>
+        </section>
 
-        <p class="settings-section-hint">
-          Ixora caches audio files locally (up to 100 MB) for faster playback. Clearing the cache frees space — files are re-downloaded next time you play.
-        </p>
+        <!-- Account -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Account</h2>
+          <div class="app-surface-card settings-card">
+            <button type="button" class="settings-tile settings-tile--danger" @click="handleSignOut">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap settings-icon-wrap--danger">
+                  <ion-icon :icon="logOutOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Sign out</span>
+                  <span class="settings-tile-sub">Leave this device</span>
+                </div>
+              </div>
+              <ion-icon :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+        </section>
+
+        <!-- App -->
+        <section class="settings-block">
+          <h2 class="settings-heading">App</h2>
+          <div class="app-surface-card settings-card settings-card--static">
+            <div class="settings-tile settings-tile--static">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap settings-icon-wrap--brand">
+                  <span class="settings-brand-mark">I</span>
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Ixora</span>
+                  <span class="settings-tile-sub">Ambient layers for focus, rest, and calm.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-      <!-- Confirmation alert -->
       <ion-alert
         :is-open="showConfirm"
-        header="Clear audio cache?"
-        message="Cached audio files will be deleted. They will be re-downloaded next time you play a vibe."
+        header="Clear streaming cache?"
+        message="Cached streamed audio will be deleted. Offline downloads are not removed."
         :buttons="confirmButtons"
         @didDismiss="showConfirm = false"
       />
 
-      <!-- Toast feedback -->
       <ion-toast
         :is-open="showToast"
         :message="toastMessage"
@@ -48,7 +109,6 @@
         position="bottom"
         @didDismiss="showToast = false"
       />
-
     </ion-content>
   </ion-page>
 </template>
@@ -66,20 +126,23 @@ import {
   IonToast,
   IonToolbar,
 } from '@ionic/vue';
-import { chevronForwardOutline, cloudOfflineOutline } from 'ionicons/icons';
+import {
+  chevronForwardOutline,
+  cloudDownloadOutline,
+  logOutOutline,
+  musicalNotesOutline,
+} from 'ionicons/icons';
 import { usePlayerStore } from '@/stores/player.store';
 import { audioEngine } from '@/services/audio-engine';
+import { useAuth } from '@/composables/useAuth';
 
 const playerStore = usePlayerStore();
-
-// ── State ─────────────────────────────────────────────────────────────────────
+const { logout } = useAuth();
 
 const isClearingCache = ref(false);
 const showConfirm     = ref(false);
 const showToast       = ref(false);
 const toastMessage    = ref('');
-
-// ── Computed ──────────────────────────────────────────────────────────────────
 
 const cacheInfo = audioEngine.getCacheInfo();
 
@@ -91,21 +154,14 @@ const cacheSubtitle = computed(() => {
 
 const isPlaybackActive = computed(() => playerStore.playbackState !== 'idle');
 
-// ── Alert buttons ─────────────────────────────────────────────────────────────
-
 const confirmButtons = [
-  {
-    text: 'Cancel',
-    role: 'cancel',
-  },
+  { text: 'Cancel', role: 'cancel' },
   {
     text: 'Clear',
     role: 'destructive',
     handler: () => { void doClearCache(); },
   },
 ];
-
-// ── Handlers ──────────────────────────────────────────────────────────────────
 
 function handleClearCacheTap(): void {
   if (!cacheInfo.hasCacheSupport || isClearingCache.value) return;
@@ -120,10 +176,10 @@ async function doClearCache(): Promise<void> {
   isClearingCache.value = true;
   try {
     await playerStore.clearAudioCache();
-    showToastMessage('Audio cache cleared.');
+    showToastMessage('Streaming cache cleared.');
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    showToastMessage(`Failed to clear cache: ${msg}`);
+    showToastMessage(`Could not clear cache: ${msg}`);
   } finally {
     isClearingCache.value = false;
   }
@@ -133,116 +189,155 @@ function showToastMessage(msg: string): void {
   toastMessage.value = msg;
   showToast.value    = true;
 }
+
+async function handleSignOut(): Promise<void> {
+  try {
+    await logout();
+    window.location.replace('/sign-in-sign-up');
+  } catch {
+    showToastMessage('Could not sign out. Try again.');
+  }
+}
 </script>
 
 <style scoped>
-.settings-toolbar {
-  --background: var(--app-color-bg, #0f172a);
-  --border-style: none;
-  padding-top: 4px;
+.settings-ion-content {
+  --background: var(--app-color-surface-subtle);
 }
 
-.settings-title {
-  font-size: var(--app-font-size-h6, 18px);
-  font-weight: var(--app-font-weight-bold, 700);
-  color: var(--app-color-text-primary, #f1f5f9);
+.settings-wrap {
+  padding-top: var(--app-space-2);
 }
 
-.settings-content {
-  --background: var(--app-color-bg, #0f172a);
+.settings-block + .settings-block {
+  margin-top: var(--app-space-7);
 }
 
-/* ── Section ── */
-
-.settings-section {
-  padding: 28px 16px 0;
-}
-
-.settings-section-label {
+.settings-heading {
+  margin: 0 0 var(--app-space-3);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--app-color-text-secondary, #94a3b8);
-  margin: 0 0 8px 4px;
+  color: var(--app-color-text-muted);
 }
 
-.settings-section-hint {
-  font-size: 12px;
-  color: var(--app-color-text-secondary, #94a3b8);
-  margin: 8px 4px 0;
-  line-height: 1.5;
+.settings-card--static {
+  box-shadow: var(--app-shadow-soft);
 }
 
-/* ── Card ── */
-
-.settings-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-/* ── Row ── */
-
-.settings-row {
+.settings-tile {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  gap: var(--app-space-4);
+  width: 100%;
+  padding: var(--app-space-4) var(--app-space-5);
+  border: none;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
-  gap: 12px;
   transition: background 0.15s;
 }
 
-.settings-row:active {
-  background: rgba(255, 255, 255, 0.04);
+.settings-tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-.settings-row-left {
+.settings-tile:not(:disabled):active {
+  background: rgba(29, 172, 146, 0.06);
+}
+
+.settings-tile--static {
+  cursor: default;
+}
+
+.settings-tile--static:active {
+  background: transparent;
+}
+
+.settings-tile--danger:not(:disabled):active {
+  background: rgba(247, 85, 85, 0.08);
+}
+
+.settings-tile-left {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-4);
+  min-width: 0;
+}
+
+.settings-icon-wrap {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-primary-100);
+  color: var(--app-color-primary-600);
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
-
-.settings-row-icon {
+  justify-content: center;
   font-size: 20px;
-  color: var(--app-color-text-secondary, #94a3b8);
-  flex-shrink: 0;
 }
 
-.settings-row-text {
+.settings-icon-wrap--muted {
+  background: var(--app-color-surface-subtle);
+  color: var(--app-color-text-secondary);
+}
+
+.settings-icon-wrap--danger {
+  background: rgba(247, 85, 85, 0.12);
+  color: var(--ion-color-danger);
+}
+
+.settings-icon-wrap--brand {
+  background: var(--app-gradient-primary);
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.settings-brand-mark {
+  line-height: 1;
+}
+
+.settings-tile-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 
-.settings-row-title {
-  font-size: var(--app-font-size-body-md, 14px);
-  font-weight: 500;
-  color: var(--app-color-text-primary, #f1f5f9);
+.settings-tile-title {
+  font-size: var(--app-font-size-body-md);
+  font-weight: 600;
+  color: var(--app-color-text-primary);
 }
 
-.settings-row-sub {
-  font-size: 12px;
-  color: var(--app-color-text-secondary, #94a3b8);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.settings-tile-sub {
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-secondary);
+  line-height: 1.45;
 }
 
-.settings-row-chevron {
-  font-size: 16px;
-  color: rgba(148, 163, 184, 0.4);
+.settings-tile-chevron {
   flex-shrink: 0;
+  font-size: 18px;
+  color: var(--app-color-text-muted);
 }
 
-.settings-row-spinner {
-  --color: var(--app-color-text-secondary, #94a3b8);
-  width: 18px;
-  height: 18px;
+.settings-tile-spinner {
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
+  color: var(--app-color-primary-500);
+}
+
+.settings-hint {
+  margin: var(--app-space-3) 0 0;
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-muted);
+  line-height: 1.5;
 }
 </style>

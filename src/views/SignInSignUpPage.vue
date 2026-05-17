@@ -6,11 +6,11 @@
           <img
             class="auth-entry-hero-image"
             src="https://www.figma.com/api/mcp/asset/139068fd-60aa-45ea-a41f-059245c61f1a"
-            alt="Clarity hero"
+            alt="Ixora ambient hero"
           />
           <div class="auth-entry-hero-overlay">
-            <h1>CLARITY</h1>
-            <p>Your reset begins here.</p>
+            <h1>IXORA</h1>
+            <p>Layer ambient sound. Find your vibe.</p>
           </div>
         </section>
 
@@ -33,14 +33,17 @@
             </span>
           </ion-button>
 
-          <ion-button class="auth-submit auth-entry-email-button" expand="block" @click="router.push('/sign-in')">
-            <ion-icon :icon="mailOutline" />
+          <ion-button class="auth-submit auth-entry-email-button" expand="block" router-link="/sign-in">
+            <span class="auth-entry-email-inner">
+              <ion-icon :icon="mailOutline" />
+              Continue with email
+            </span>
           </ion-button>
         </div>
 
         <p class="auth-entry-footer">
           Not a member?
-          <router-link to="/sign-up">Sign Up</router-link>
+          <router-link to="/sign-up">Sign up</router-link>
         </p>
       </div>
     </ion-content>

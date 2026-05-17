@@ -1,0 +1,59 @@
+/**
+ * Global layout shells — safe-area, max-width, and tab/auth consistency.
+ * Imported after variables.css / theme.css in main.ts.
+ */
+
+:root {
+  --app-page-max-width: 440px;
+  --app-tab-header-offset: max(env(safe-area-inset-top, 0px), var(--app-space-2));
+  --app-page-pad-x: max(var(--app-space-4), env(safe-area-inset-left), env(safe-area-inset-right));
+}
+
+/* ── Generic shells ─────────────────────────────────────────── */
+
+.page-shell {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--app-page-max-width);
+  margin-inline: auto;
+  padding-left: max(var(--app-space-4), env(safe-area-inset-left));
+  padding-right: max(var(--app-space-4), env(safe-area-inset-right));
+}
+
+.page-content {
+  padding-bottom: calc(var(--app-space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Tab stack pages (inside TabsLayout) */
+.tab-page ion-content {
+  --background: var(--app-color-bg);
+}
+
+.tab-toolbar {
+  --background: var(--app-color-bg);
+  --border-width: 0;
+  --min-height: 52px;
+  padding-top: var(--app-tab-header-offset);
+}
+
+.tab-toolbar ion-title,
+.tab-toolbar .toolbar-title-text {
+  font-size: var(--app-font-size-h6);
+  font-weight: var(--app-font-weight-bold);
+  color: var(--app-color-text-primary);
+}
+
+/* Auth stack — toolbar aligns with safe-area */
+.auth-toolbar {
+  padding-top: env(safe-area-inset-top, 0px);
+  --min-height: calc(52px + env(safe-area-inset-top, 0px));
+}
+
+/* Premium card surface (settings / home) */
+.app-surface-card {
+  background: var(--app-color-surface);
+  border: 1px solid var(--app-color-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: var(--app-shadow-card);
+  overflow: hidden;
+}

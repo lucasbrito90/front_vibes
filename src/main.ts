@@ -38,6 +38,7 @@ import '@ionic/vue/css/display.css';
 import './theme/variables.css';
 import './theme/theme.css';
 import './theme/auth.css';
+import './theme/layout.css';
 
 // ── Google Auth initialisation ────────────────────────────────────────────────
 // Initialize the plugin once at startup so it is ready before the first sign-in
