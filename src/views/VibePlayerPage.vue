@@ -370,6 +370,11 @@ import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
+import {
+  getVibeArtworkUrl,
+  getVibePlayerBackgroundUrl,
+  getVibePlayerBackgroundStyle,
+} from '@/utils/artwork';
 
 // ── Route / Router ────────────────────────────────────────────────────────────
 
@@ -433,14 +438,12 @@ const vibe = computed(() =>
   ?? (selectedVibe.value?.id === vibeId.value ? selectedVibe.value : null),
 );
 
-const heroHasArtwork = computed(
-  () => !!(vibe.value?.player_background_url ?? vibe.value?.thumbnail_url),
-);
+const heroHasArtwork = computed(() => !!getVibePlayerBackgroundUrl(vibe.value));
 
 /** Remount background layer for a short fade-in when vibe or artwork changes. */
 const heroBgKey = computed(() => {
   const v = vibe.value;
-  return `${vibeId.value}-${v?.player_background_url ?? v?.thumbnail_url ?? 'gradient'}`;
+  return `${vibeId.value}-${getVibePlayerBackgroundUrl(v) ?? 'gradient'}`;
 });
 
 function playModeShort(layer: VibeExecutionLayer): string {
@@ -709,7 +712,7 @@ async function togglePlayback(): Promise<void> {
     vibeId:       vibeId.value,
     vibeName:     vibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    artworkUrl:   vibe.value?.artwork_url ?? vibe.value?.thumbnail_url ?? null,
+    artworkUrl: getVibeArtworkUrl(vibe.value),
     layers:       executionPlan.value,
   });
 
@@ -760,7 +763,7 @@ async function handleRestartVibe(): Promise<void> {
     vibeId:       vibeId.value,
     vibeName:     vibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    artworkUrl:   vibe.value?.artwork_url ?? vibe.value?.thumbnail_url ?? null,
+    artworkUrl: getVibeArtworkUrl(vibe.value),
     layers:       executionPlan.value,
   });
 
@@ -875,35 +878,9 @@ function handleBack(): void {
   router.back();
 }
 
-// ── Hero background ───────────────────────────────────────────────────────────
-// Priority: player_background_url → thumbnail_url → gradient fallback.
-// The API already resolves player_background_url ?? thumbnail_url server-side,
-// so player_background_url is the correct field to use here.
+// ── Hero background (shared helpers in @/utils/artwork) ───────────────────────
 
-const gradients = [
-  'linear-gradient(168deg, #1a0b2e 0%, #2d1b4e 38%, #0c1222 100%)',
-  'linear-gradient(168deg, #3b0a28 0%, #581c3d 42%, #120810 100%)',
-  'linear-gradient(168deg, #062c24 0%, #0d4f42 45%, #061018 100%)',
-  'linear-gradient(168deg, #3b2408 0%, #6b3410 48%, #140804 100%)',
-  'linear-gradient(168deg, #141439 0%, #252560 42%, #070714 100%)',
-];
-
-const heroBackground = computed((): Record<string, string> => {
-  // player_background_url is already resolved by the API (fallback: thumbnail_url).
-  const bgUrl = vibe.value?.player_background_url ?? vibe.value?.thumbnail_url;
-  if (bgUrl) {
-    log.debug('[Artwork] player background — using image', { bgUrl });
-    return {
-      backgroundImage:    `url('${bgUrl}')`,
-      backgroundSize:     'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat:   'no-repeat',
-    };
-  }
-  const id = vibe.value?.id ?? 0;
-  log.debug('[Artwork] player background — fallback gradient', { id });
-  return { background: gradients[id % gradients.length] };
-});
+const heroBackground = computed(() => getVibePlayerBackgroundStyle(vibe.value));
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 

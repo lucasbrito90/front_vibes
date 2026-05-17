@@ -41,12 +41,20 @@
           />
 
           <template v-else>
-            <router-link class="home-continue-card app-surface-card" to="/vibes">
-              <div class="home-continue-copy">
-                <span class="home-continue-label">Continue your vibe</span>
-                <span class="home-continue-sub">Open My Vibes and pick up where you left off</span>
+            <router-link
+              v-if="continueVibe"
+              class="home-continue-card app-artwork-card-enter"
+              :style="continueCardStyle"
+              to="/vibes"
+            >
+              <div class="home-continue-scrim" aria-hidden="true" />
+              <div class="home-continue-inner">
+                <div class="home-continue-copy">
+                  <span class="home-continue-label">Continue your vibe</span>
+                  <span class="home-continue-sub">Open My Vibes and pick up where you left off</span>
+                </div>
+                <ion-icon :icon="chevronForwardOutline" class="home-continue-chevron" />
               </div>
-              <ion-icon :icon="chevronForwardOutline" class="home-continue-chevron" />
             </router-link>
           </template>
 
@@ -79,6 +87,7 @@ import { chevronForwardOutline, sparklesOutline } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useVibes } from '@/composables/useVibes';
+import { getVibeCardBackgroundStyle } from '@/utils/artwork';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -86,6 +95,16 @@ import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 const router = useRouter();
 const { currentUser } = useAuth();
 const { vibes, loading, error, fetchVibes } = useVibes();
+
+const continueVibe = computed(
+  () => vibes.value.find((v) => v.is_active) ?? vibes.value[0] ?? null,
+);
+
+const continueCardStyle = computed(() => {
+  const v = continueVibe.value;
+  if (!v) return {};
+  return getVibeCardBackgroundStyle(v, 0);
+});
 
 onMounted(() => {
   void fetchVibes();
@@ -156,14 +175,40 @@ const emailHint = computed(() => {
 
 .home-continue-card {
   margin-top: var(--app-space-7);
+  display: block;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--app-radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--app-shadow-card);
+  text-decoration: none;
+  color: inherit;
+  min-height: 104px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.home-continue-scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    rgba(0, 0, 0, 0.58) 0%,
+    rgba(0, 0, 0, 0.22) 52%,
+    rgba(0, 0, 0, 0.48) 100%
+  );
+}
+
+.home-continue-inner {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--app-space-4);
   padding: var(--app-space-5) var(--app-space-5);
-  text-decoration: none;
-  color: inherit;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  min-height: 104px;
+  box-sizing: border-box;
 }
 
 .home-continue-card:active {
@@ -180,19 +225,22 @@ const emailHint = computed(() => {
 .home-continue-label {
   font-size: var(--app-font-size-body-lg);
   font-weight: var(--app-font-weight-bold);
-  color: var(--app-color-text-primary);
+  color: rgba(255, 255, 255, 0.96);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55);
 }
 
 .home-continue-sub {
   font-size: var(--app-font-size-body-sm);
-  color: var(--app-color-text-secondary);
+  color: rgba(255, 255, 255, 0.78);
   line-height: var(--app-line-height-body);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
 }
 
 .home-continue-chevron {
   flex-shrink: 0;
   font-size: 22px;
-  color: var(--app-color-text-muted);
+  color: rgba(255, 255, 255, 0.88);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
 
 .home-actions {
