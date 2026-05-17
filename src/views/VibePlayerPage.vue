@@ -23,6 +23,7 @@
             <ion-content class="player-menu-ion-content">
               <ion-list lines="full">
                 <ion-item button :detail="false" lines="full" @click="handleRestartVibe">
+                  <ion-icon :icon="refreshOutline" slot="start" class="player-menu-icon" />
                   Restart vibe
                 </ion-item>
                 <ion-item button :detail="false" lines="full" @click="handleDownloadForOffline"
@@ -31,6 +32,7 @@
                   {{ isDownloading ? 'Downloading…' : 'Download for offline' }}
                 </ion-item>
                 <ion-item button :detail="false" lines="none" @click="handleStopVibe">
+                  <ion-icon :icon="stopCircleOutline" slot="start" class="player-menu-icon" />
                   Stop vibe
                 </ion-item>
               </ion-list>
@@ -213,6 +215,8 @@ import {
   ellipsisVertical,
   pauseOutline,
   playOutline,
+  refreshOutline,
+  stopCircleOutline,
 } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
