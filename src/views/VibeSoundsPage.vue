@@ -352,6 +352,8 @@ async function handleSave(): Promise<void> {
 .sounds-toolbar {
   --background: transparent;
   --border-style: none;
+  padding-top: env(safe-area-inset-top, 0px);
+  --min-height: calc(56px + env(safe-area-inset-top, 0px));
 }
 
 .sounds-toolbar-title {
@@ -369,7 +371,8 @@ async function handleSave(): Promise<void> {
   position: relative;
   height: 200px;
   background: linear-gradient(160deg, #0d7a7a 0%, #0e6b8a 50%, #1a4a6e 100%);
-  margin-top: -56px; /* slide under the transparent toolbar */
+  /* Slide under transparent toolbar (includes notch / status inset). */
+  margin-top: calc(-56px - env(safe-area-inset-top, 0px));
   display: flex;
   align-items: flex-end;
   padding: 24px 20px;

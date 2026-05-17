@@ -1,13 +1,13 @@
 <template>
-  <ion-page>
+  <ion-page class="tab-page">
     <ion-header class="ion-no-border">
-      <ion-toolbar class="vibes-toolbar">
-        <ion-title class="vibes-toolbar-title">My Vibes</ion-title>
+      <ion-toolbar class="tab-toolbar">
+        <ion-title>My Vibes</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content :fullscreen="true">
-      <div class="vibes-content">
+      <div class="vibes-content page-shell">
 
         <div v-if="loading && !vibes.length" class="vibes-state">
           <ion-spinner name="crescent" color="primary" />
@@ -128,23 +128,12 @@ async function handleDelete(id: number) {
 </script>
 
 <style scoped>
-.vibes-toolbar {
-  --background: var(--app-color-bg);
-  --border-style: none;
-  padding-top: 4px;
-}
-
-.vibes-toolbar-title {
-  font-size: var(--app-font-size-h6);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-color-text-primary);
-}
-
 /* ── Page content ─────────────────────────────── */
 
 .vibes-content {
-  /* Extra bottom padding clears the FAB (72px) above the tab bar */
-  padding: 8px 20px 100px;
+  /* Extra bottom padding clears the FAB (72px) above the tab bar + safe area */
+  padding-top: var(--app-space-2);
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ── Empty / loading states ───────────────────── */
@@ -161,7 +150,7 @@ async function handleDelete(id: number) {
 
 .vibes-state-title {
   font-size: var(--app-font-size-h6);
-  font-weight: var(--app-font-weight-semibold);
+  font-weight: var(--app-font-weight-bold);
   color: var(--app-color-text-primary);
   margin: 0;
 }

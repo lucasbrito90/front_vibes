@@ -3,6 +3,7 @@ import { RouteRecordRaw } from 'vue-router';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/services/firebase';
 import { createLogger } from '@/utils/player-debug';
+import { syncStatusBarWithRoute } from '@/composables/useStatusBarStyle';
 
 const log = createLogger('Router');
 
@@ -17,6 +18,12 @@ declare module 'vue-router' {
      * full-screen or fixed-bottom UI that would clash with the mini player.
      */
     hideMiniPlayer?: boolean;
+    /**
+     * Status bar icon style for Capacitor native builds.
+     * `light` → dark icons on light backgrounds (most app screens).
+     * `dark` → light icons on dark backgrounds (immersive player).
+     */
+    statusBarTheme?: 'light' | 'dark';
   }
 }
 
@@ -60,7 +67,7 @@ const routes: Array<RouteRecordRaw> = [
      * page whenever audio is playing. It will reappear (with slide-up animation)
      * when the user navigates back to a tab route such as /vibes.
      */
-    meta: { requiresAuth: true, hideMiniPlayer: true },
+    meta: { requiresAuth: true, hideMiniPlayer: true, statusBarTheme: 'dark' },
   },
 
   // ── Authenticated routes (tab bar visible) ────────────────────────────────
@@ -152,6 +159,7 @@ router.afterEach((to, from) => {
     to:             to.fullPath,
     hideMiniPlayer: !!to.meta.hideMiniPlayer,
   });
+  void syncStatusBarWithRoute(to);
 });
 
 export default router;

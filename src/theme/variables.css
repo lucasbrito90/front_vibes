@@ -84,4 +84,7 @@
   --app-radius-sm: 8px;
   --app-radius-md: 12px;
   --app-radius-lg: 20px;
+
+  --app-shadow-card: 0 4px 24px rgba(15, 23, 42, 0.07);
+  --app-shadow-soft: 0 2px 12px rgba(15, 23, 42, 0.06);
 }
