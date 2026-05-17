@@ -21,11 +21,13 @@
 
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { toastController } from '@ionic/vue';
 
 import {
   audioPlayerService,
   setSessionEndedCallback,
   setMediaControlCallbacks,
+  setPlaybackPrepareCallbacks,
   setNotificationVibeName,
   setNotificationArtworkUrl,
 } from '@/services/audio-player.service';
@@ -40,9 +42,10 @@ import { audioEngine } from '@/services/audio-engine';
 import type { CacheVibeResult } from '@/services/audio-engine';
 import { createLogger } from '@/utils/player-debug';
 
-export type PlaybackState = 'idle' | 'playing' | 'paused';
+export type PlaybackState = 'idle' | 'preparing' | 'playing' | 'paused' | 'error';
 
 const log = createLogger('PlayerStore');
+const uxLog = createLogger('PlayerUX');
 
 // Non-reactive timer ref — lives outside the store so Pinia never wraps it.
 let _timerRef: ReturnType<typeof setInterval> | null = null;
@@ -143,6 +146,63 @@ export const usePlayerStore = defineStore('player', () => {
     void stopBackgroundAudio();
   });
 
+  /** Prepare handshake — transition to playing only after Native/HTML confirms audible start. */
+  setPlaybackPrepareCallbacks({
+    onPrepared() {
+      if (playbackState.value !== 'preparing') {
+        if (import.meta.env.DEV) {
+          console.log('[PlaybackState] onPrepared ignored (not preparing)', {
+            state: playbackState.value,
+          });
+        }
+        return;
+      }
+      const prev = playbackState.value;
+      playbackState.value = 'playing';
+      _logTransition('playbackState', prev, 'playing');
+      beginSessionClock();
+      if (import.meta.env.DEV) uxLog.debug('[PlayerUX] preparing → playing');
+    },
+    onFailed() {
+      if (playbackState.value !== 'preparing') return;
+
+      if (import.meta.env.DEV) {
+        console.warn('[PlaybackState] prepare failed — resetting session');
+        uxLog.warn('[PlayerUX] playback prepare failed', {
+          vibeId: currentVibeId.value,
+          svcLayers: audioPlayerService.hasActiveLayers(),
+        });
+      }
+
+      audioPlayerService.stopAll();
+      const prev = playbackState.value;
+      playbackState.value   = 'error';
+      hasActiveLayers.value = false;
+      _logTransition('playbackState', prev, 'error');
+      resetElapsed();
+      clearCurrentVibe();
+      setNotificationVibeName('');
+      setNotificationArtworkUrl(null);
+      void stopBackgroundAudio();
+
+      void (async () => {
+        const toast = await toastController.create({
+          message:  'Unable to start playback. Check your connection and try again.',
+          duration: 3_000,
+          position: 'bottom',
+          color:    'danger',
+        });
+        await toast.present();
+      })();
+
+      window.setTimeout(() => {
+        if (playbackState.value !== 'error') return;
+        _logTransition('playbackState', 'error', 'idle');
+        playbackState.value = 'idle';
+      }, 2_400);
+    },
+  });
+
   // ── Media control callbacks ────────────────────────────────────────────────
   // NativeAudio fires 'playbackState' events with reason='remotePlay/Pause/Stop'
   // when the user taps lock-screen or notification media controls. The audio
@@ -152,10 +212,12 @@ export const usePlayerStore = defineStore('player', () => {
   setMediaControlCallbacks({
     onPlay() {
       log.debug('[MediaSession] remote play received');
+      if (playbackState.value === 'preparing') return;
       if (playbackState.value === 'paused') resumePlayback();
     },
     onPause() {
       log.debug('[MediaSession] remote pause received');
+      if (playbackState.value === 'preparing') return;
       if (playbackState.value === 'playing') pausePlayback();
     },
     onStop() {
@@ -170,6 +232,7 @@ export const usePlayerStore = defineStore('player', () => {
   setAudioFocusCallbacks({
     onBecomingNoisy() {
       log.debug('[AudioFocus] headset/BT disconnected — pausing');
+      if (playbackState.value === 'preparing') return;
       if (playbackState.value === 'playing') pausePlayback();
     },
   });
@@ -209,9 +272,10 @@ export const usePlayerStore = defineStore('player', () => {
       return false;
     }
 
+    resetElapsed();
+
     // Set vibe context BEFORE audio engine starts so the Mini Player is
-    // immediately visible on the very first reactive flush, even while the
-    // async native preload/loop is still in flight.
+    // immediately visible while native preload runs ("preparing").
     setCurrentVibe(id, vibeName, soundSummary, artworkUrl);
 
     // Push vibe name + artwork to audio service so every upcoming
@@ -219,17 +283,10 @@ export const usePlayerStore = defineStore('player', () => {
     setNotificationVibeName(vibeName);
     setNotificationArtworkUrl(artworkUrl ?? null);
 
-    // Optimistic update: commit playing state now. Native preload is async
-    // (fire-and-forget), so the service's hasActiveLayers() is still true once
-    // the layer is registered — but we need Vue to render 'playing' before any
-    // duration timer could possibly fire and reset the state.
     const prevState = playbackState.value;
     hasActiveLayers.value = true;
-    playbackState.value   = 'playing';
-    if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
-
-    // Reset + start elapsed clock immediately so the timer is in sync.
-    beginSessionClock();
+    playbackState.value   = 'preparing';
+    if (prevState !== 'preparing') _logTransition('playbackState', prevState, 'preparing');
 
     // Hand off to the audio engine. playPlan() stops any previous session
     // first (under _playPlanInProgress guard), then registers new layers.
@@ -266,10 +323,12 @@ export const usePlayerStore = defineStore('player', () => {
       return false;
     }
 
+    resetElapsed();
+
     const prevState = playbackState.value;
     hasActiveLayers.value = true;
-    playbackState.value   = 'playing';
-    if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
+    playbackState.value   = 'preparing';
+    if (prevState !== 'preparing') _logTransition('playbackState', prevState, 'preparing');
 
     audioPlayerService.setPlaybackVibeContext(currentVibeId.value);
     log.debug('playPlan — calling audioPlayerService.playPlan()', { valid });
@@ -290,6 +349,7 @@ export const usePlayerStore = defineStore('player', () => {
       playbackState: playbackState.value,
       svcHasActive:  audioPlayerService.hasActiveLayers(),
     });
+    if (playbackState.value === 'preparing') return;
     audioPlayerService.pauseAll();
     if (audioPlayerService.hasActiveLayers()) {
       const prev = playbackState.value;
@@ -304,6 +364,7 @@ export const usePlayerStore = defineStore('player', () => {
       playbackState: playbackState.value,
       svcHasActive:  audioPlayerService.hasActiveLayers(),
     });
+    if (playbackState.value === 'preparing') return;
     audioPlayerService.resumeAll();
     if (audioPlayerService.hasActiveLayers()) {
       const prev = playbackState.value;
@@ -349,10 +410,12 @@ export const usePlayerStore = defineStore('player', () => {
       return false;
     }
 
+    resetElapsed();
+
     hasActiveLayers.value = true;
     const prevState = playbackState.value;
-    playbackState.value   = 'playing';
-    if (prevState !== 'playing') _logTransition('playbackState', prevState, 'playing');
+    playbackState.value   = 'preparing';
+    if (prevState !== 'preparing') _logTransition('playbackState', prevState, 'preparing');
 
     audioPlayerService.setPlaybackVibeContext(currentVibeId.value);
     log.debug('restartPlayback — calling audioPlayerService.restartPlan()', { valid });

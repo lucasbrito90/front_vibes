@@ -40,7 +40,7 @@
 
         <!-- ── Center: Play / Pause ──────────────────── -->
         <div class="player-center">
-          <div v-if="loading" class="player-spinner-wrap">
+          <div v-if="loading || isThisVibePreparing" class="player-spinner-wrap">
             <ion-spinner name="crescent" class="player-spinner" />
           </div>
 
@@ -79,7 +79,7 @@
           </div>
 
           <p v-if="!loading && loadedFromOfflineSnapshot" class="player-offline-hint">
-            Offline mode — loaded from your downloaded copy
+            Offline mode
           </p>
 
           <!-- DEV only: Player state, execution plan, and runtime logs panels -->
@@ -109,6 +109,9 @@
 
                 <span class="player-dev-state-key">isRoutePaused</span>
                 <strong class="player-dev-state-val" :class="isThisVibePaused ? 'player-dev-state--paused' : 'player-dev-state--idle'">{{ isThisVibePaused }}</strong>
+
+                <span class="player-dev-state-key">isRoutePreparing</span>
+                <strong class="player-dev-state-val" :class="isThisVibePreparing ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ isThisVibePreparing }}</strong>
 
                 <span class="player-dev-state-key">store.hasActive</span>
                 <strong class="player-dev-state-val" :class="hasActiveLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ hasActiveLayers }}</strong>
@@ -307,6 +310,11 @@ const isThisVibePaused = computed(
   () => currentVibeId.value === vibeId.value && playbackState.value === 'paused',
 );
 
+/** True while this vibe is waiting for the audio engine to confirm the first audible layer. */
+const isThisVibePreparing = computed(
+  () => currentVibeId.value === vibeId.value && playbackState.value === 'preparing',
+);
+
 /** True when a DIFFERENT vibe is currently playing or paused. */
 const isAnotherVibePlaying = computed(
   () => currentVibeId.value !== null && currentVibeId.value !== vibeId.value,
@@ -317,17 +325,22 @@ const isAnotherVibePlaying = computed(
  *  - this vibe has playable sounds (can start/pause/resume), OR
  *  - this vibe is already active (pause/resume even if plan became invalid), OR
  *  - another vibe is playing (so the user can switch to this one).
+ * While THIS vibe is preparing, controls stay disabled to prevent double-starts.
  */
 const canUsePlaybackControls = computed(
   () =>
-    hasPlayableLayers.value
-    || isThisVibePlaying.value
-    || isThisVibePaused.value
-    || isAnotherVibePlaying.value,
+    !isThisVibePreparing.value
+    && (
+      hasPlayableLayers.value
+      || isThisVibePlaying.value
+      || isThisVibePaused.value
+      || isAnotherVibePlaying.value
+    ),
 );
 
 const warningText = computed((): string | null => {
   if (loading.value) return null;
+  if (isThisVibePreparing.value) return null;
   if (!vibeSounds.value.length) return 'No sounds configured';
   if (isAnotherVibePlaying.value) return 'Another vibe is playing — tap Play to switch';
   if (!hasPlayableLayers.value) return 'No playable sounds for this phase';
@@ -366,16 +379,18 @@ function formatElapsed(s: number): string {
 }
 
 const statusText = computed((): string => {
+  if (isThisVibePreparing.value) return 'Starting playback…';
   if (isThisVibePlaying.value) return `Playing • ${formatElapsed(elapsedSeconds.value)}`;
   if (isThisVibePaused.value)  return `Paused • ${formatElapsed(elapsedSeconds.value)}`;
   if (isAnotherVibePlaying.value) return 'Another vibe is playing';
   return 'Ready';
 });
 
-/** Dot reflects whether THIS vibe is playing or paused. */
+/** Dot reflects whether THIS vibe is playing, paused, or preparing. */
 const statusDotClass = computed((): Record<string, boolean> => ({
   'player-status-dot--active': isThisVibePlaying.value,
   'player-status-dot--paused': isThisVibePaused.value,
+  'player-status-dot--preparing': isThisVibePreparing.value,
 }));
 
 const centerIcon = computed(() =>
@@ -383,6 +398,7 @@ const centerIcon = computed(() =>
 );
 
 const centerAriaLabel = computed((): string => {
+  if (isThisVibePreparing.value) return 'Starting playback';
   if (!loading.value && !canUsePlaybackControls.value) return 'Playback unavailable';
   if (isThisVibePlaying.value) return 'Pause';
   if (isThisVibePaused.value)  return 'Resume';
@@ -412,7 +428,7 @@ async function togglePlayback(): Promise<void> {
     loading:          loading.value,
   });
 
-  if (loading.value) return;
+  if (loading.value || isThisVibePreparing.value) return;
 
   // ── Case B: this vibe is playing → pause ─────────────────────────────────
   if (isThisVibePlaying.value) {
@@ -485,7 +501,7 @@ async function togglePlayback(): Promise<void> {
 }
 
 async function handleRestartVibe(): Promise<void> {
-  if (loading.value) return;
+  if (loading.value || isThisVibePreparing.value) return;
 
   if (!vibeSounds.value.length) {
     await showPlaybackToast('No sounds configured');
@@ -668,6 +684,9 @@ onMounted(async () => {
         vibeId: id,
         layers: snap.vibeSounds.length,
       });
+      if (import.meta.env.DEV) {
+        console.log('[OfflineMode] vibe UI hydrated from offline snapshot', { vibeId: id });
+      }
     } else {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         await showPlaybackToast('This vibe is not available offline');
@@ -881,6 +900,11 @@ onUnmounted(() => {
   box-shadow: 0 0 6px rgba(251, 191, 36, 0.55);
 }
 
+.player-status-dot--preparing {
+  background: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.55);
+}
+
 .player-menu-ion-content {
   --padding-top: 0;
   --padding-bottom: 0;
@@ -1024,6 +1048,8 @@ onUnmounted(() => {
 .player-dev-state--idle    { color: rgba(199, 210, 254, 0.5); }
 .player-dev-state--playing { color: #34d399; }
 .player-dev-state--paused  { color: #fbbf24; }
+.player-dev-state--preparing { color: #38bdf8; }
+.player-dev-state--error { color: #f87171; }
 
 /* ── DEV Logs panel ─────────────────────────────────── */
 

@@ -38,10 +38,13 @@
         <button
           type="button"
           class="mini-player-btn"
+          :class="{ 'mini-player-btn--disabled': playbackState === 'preparing' }"
+          :disabled="playbackState === 'preparing'"
           :aria-label="playPauseLabel"
           @click.stop="handlePlayPause"
         >
-          <ion-icon :icon="playPauseIcon" />
+          <ion-spinner v-if="showPlayPauseSpinner" name="crescent" class="mini-player-spinner" />
+          <ion-icon v-else :icon="playPauseIcon" />
         </button>
 
         <button
@@ -58,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonIcon } from '@ionic/vue';
+import { IonIcon, IonSpinner } from '@ionic/vue';
 import {
   pauseOutline,
   playOutline,
@@ -91,7 +94,9 @@ const isVisible = computed(
   () =>
     !route.meta.hideMiniPlayer
     && currentVibeId.value !== null
-    && (playbackState.value === 'playing' || playbackState.value === 'paused'),
+    && (playbackState.value === 'playing'
+      || playbackState.value === 'paused'
+      || playbackState.value === 'preparing'),
 );
 
 watch(isVisible, (next, prev) => {
@@ -121,9 +126,10 @@ const artworkGradient = computed(() => ({
 
 // ── Display text ──────────────────────────────────────────────────────────────
 
-const stateLabel = computed(() =>
-  playbackState.value === 'playing' ? 'Playing' : 'Paused',
-);
+const stateLabel = computed(() => {
+  if (playbackState.value === 'preparing') return 'Starting…';
+  return playbackState.value === 'playing' ? 'Playing' : 'Paused';
+});
 
 const metaText = computed(() => {
   const base = currentSoundSummary.value;
@@ -135,6 +141,7 @@ const metaText = computed(() => {
 const dotClass = computed(() => ({
   'mini-player-dot--playing': playbackState.value === 'playing',
   'mini-player-dot--paused':  playbackState.value === 'paused',
+  'mini-player-dot--preparing': playbackState.value === 'preparing',
 }));
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -143,11 +150,15 @@ const playPauseIcon = computed(() =>
   playbackState.value === 'playing' ? pauseOutline : playOutline,
 );
 
-const playPauseLabel = computed(() =>
-  playbackState.value === 'playing' ? 'Pause' : 'Resume',
-);
+const showPlayPauseSpinner = computed(() => playbackState.value === 'preparing');
+
+const playPauseLabel = computed(() => {
+  if (playbackState.value === 'preparing') return 'Starting playback';
+  return playbackState.value === 'playing' ? 'Pause' : 'Resume';
+});
 
 function handlePlayPause(): void {
+  if (playbackState.value === 'preparing') return;
   if (playbackState.value === 'playing') {
     log.debug('pause tapped');
     store.pausePlayback();
@@ -279,6 +290,11 @@ function navigateToPlayer(): void {
   box-shadow: 0 0 5px rgba(251, 191, 36, 0.50);
 }
 
+.mini-player-dot--preparing {
+  background: #38bdf8;
+  box-shadow: 0 0 5px rgba(56, 189, 248, 0.55);
+}
+
 /* ── Controls ────────────────────────────────────────────── */
 .mini-player-controls {
   display: flex;
@@ -308,6 +324,17 @@ function navigateToPlayer(): void {
 .mini-player-btn:active {
   transform: scale(0.88);
   background: rgba(255, 255, 255, 0.20);
+}
+
+.mini-player-btn--disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.mini-player-spinner {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Stop button — subtle danger surface */

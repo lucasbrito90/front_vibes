@@ -77,7 +77,7 @@ export function useAppLifecycleAudio(): void {
         return;
       }
 
-      if (store.playbackState === 'playing') {
+      if (store.playbackState === 'playing' || store.playbackState === 'preparing') {
         /*
          * Fallback path (web or foreground service not running):
          * Immediately soft-pause before Android suspends the WebView.
