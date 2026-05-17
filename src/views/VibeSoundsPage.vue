@@ -118,9 +118,78 @@
           <h2 class="sounds-library-title">Browse sounds</h2>
           <p class="sounds-library-sub">Tap a card to add or remove it from your mix.</p>
         </div>
-        <div class="sounds-categories app-fade-in">
+
+        <div class="sounds-browse-tools page-shell">
+          <div class="sounds-search-box sounds-search-box--browse">
+            <ion-icon :icon="searchOutline" class="sounds-search-icon" aria-hidden="true" />
+            <input
+              v-model="searchQuery"
+              type="search"
+              placeholder="Search rain, fire, forest…"
+              class="sounds-search-input"
+              enterkeyhint="search"
+              autocomplete="off"
+              autocorrect="off"
+            />
+          </div>
+
+          <p class="sounds-filter-label">Category</p>
+          <div class="sounds-chip-scroll-outer">
+            <div class="sounds-chip-row">
+              <button
+                v-for="opt in categoryChipOptions"
+                :key="'cat-' + opt.key"
+                type="button"
+                class="sounds-filter-chip app-pressable"
+                :class="{ 'sounds-filter-chip--active': selectedCategoryKey === opt.key }"
+                @click="selectedCategoryKey = opt.key"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <template v-if="moodChipOptions.length > 0">
+            <p class="sounds-filter-label">Mood</p>
+            <div class="sounds-chip-scroll-outer">
+              <div class="sounds-chip-row">
+                <button
+                  type="button"
+                  class="sounds-filter-chip app-pressable"
+                  :class="{ 'sounds-filter-chip--active': selectedMoodTag === null }"
+                  @click="selectedMoodTag = null"
+                >
+                  Any
+                </button>
+                <button
+                  v-for="tag in moodChipOptions"
+                  :key="'mood-' + tag"
+                  type="button"
+                  class="sounds-filter-chip app-pressable"
+                  :class="{ 'sounds-filter-chip--active': selectedMoodTag === tag }"
+                  @click="toggleMoodTag(tag)"
+                >
+                  {{ tag }}
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <AppEmptyState
+          v-if="isFilteredEmpty"
+          class="sounds-filter-empty page-shell"
+          variant="compact"
+          :icon="searchOutline"
+          title="No sounds found"
+          description="Try a different search or clear your filters."
+          action-label="Clear filters"
+          @action="clearFilters"
+        />
+
+        <div v-else class="sounds-categories app-fade-in">
         <div
-          v-for="(group, category) in soundsByCategory"
+          v-for="(group, category) in filteredSoundsByCategory"
           :key="category"
           class="sounds-category"
         >
@@ -253,6 +322,7 @@ import {
   checkmarkOutline,
   chevronBackOutline,
   musicalNotesOutline,
+  searchOutline,
   settingsOutline,
 } from 'ionicons/icons';
 import { computed, onMounted, ref, watch } from 'vue';
@@ -321,20 +391,133 @@ function syncFromBackend(): void {
   selectedIds.value = new Set(ids);
 }
 
-/** Catalog grouped by category (no search UI in this sprint). */
-const soundsByCategory = computed(() =>
-  sounds.value.reduce<Record<string, Sound[]>>((acc, sound) => {
-    const cat = sound.category?.trim() || 'Other';
+/** Preset ordering hints for category chips (merged with real catalog categories). */
+const CATEGORY_CHIP_PRESETS = [
+  'Rain',
+  'Fire',
+  'Forest',
+  'Focus',
+  'Sleep',
+  'Nature',
+  'Ambient',
+] as const;
+
+const searchQuery = ref('');
+/** Raw category key from API, or `__all__`. */
+const selectedCategoryKey = ref<string>('__all__');
+/** One of `getSoundMoodTags` values from the catalog, or none. */
+const selectedMoodTag = ref<string | null>(null);
+
+const isCatalogEmpty = computed(() => sounds.value.length === 0);
+
+function normalizedCategoryKey(sound: Sound): string {
+  return sound.category?.trim() || 'Other';
+}
+
+function soundMatchesSearchQuery(sound: Sound, q: string): boolean {
+  if (!q) return true;
+  const name = sound.name.toLowerCase();
+  const catRaw = (sound.category ?? '').toLowerCase();
+  const catLabel = getSoundCategoryLabel(sound).toLowerCase();
+  const moods = getSoundMoodTags(sound).map((m) => m.toLowerCase());
+  return (
+    name.includes(q)
+    || catRaw.includes(q)
+    || catLabel.includes(q)
+    || moods.some((m) => m.includes(q))
+  );
+}
+
+const filteredSounds = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase();
+  return sounds.value.filter((sound) => {
+    if (!soundMatchesSearchQuery(sound, q)) return false;
+    if (selectedCategoryKey.value !== '__all__') {
+      if (normalizedCategoryKey(sound) !== selectedCategoryKey.value) return false;
+    }
+    if (selectedMoodTag.value != null) {
+      const moods = getSoundMoodTags(sound);
+      if (!moods.includes(selectedMoodTag.value)) return false;
+    }
+    return true;
+  });
+});
+
+const filteredSoundsByCategory = computed(() =>
+  filteredSounds.value.reduce<Record<string, Sound[]>>((acc, sound) => {
+    const cat = normalizedCategoryKey(sound);
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(sound);
     return acc;
   }, {}),
 );
 
-const isCatalogEmpty = computed(() => Object.keys(soundsByCategory.value).length === 0);
+const isFilteredEmpty = computed(
+  () => sounds.value.length > 0 && filteredSounds.value.length === 0,
+);
+
+function presetRankForCategoryLabel(label: string): number {
+  const low = label.toLowerCase();
+  for (let i = 0; i < CATEGORY_CHIP_PRESETS.length; i++) {
+    const p = CATEGORY_CHIP_PRESETS[i].toLowerCase();
+    if (low === p || low.includes(p) || p.includes(low)) return i;
+  }
+  return CATEGORY_CHIP_PRESETS.length;
+}
+
+const categoryChipOptions = computed(() => {
+  const map = new Map<string, string>();
+  for (const s of sounds.value) {
+    const raw = normalizedCategoryKey(s);
+    map.set(raw, getSoundCategoryLabel({ category: raw }));
+  }
+  const sorted = [...map.entries()].sort(([_, la], [__, lb]) => {
+    const ra = presetRankForCategoryLabel(la);
+    const rb = presetRankForCategoryLabel(lb);
+    if (ra !== rb) return ra - rb;
+    return la.localeCompare(lb, undefined, { sensitivity: 'base' });
+  });
+  return [{ key: '__all__', label: 'All' }, ...sorted.map(([key, label]) => ({ key, label }))];
+});
+
+const MOOD_CHIP_LIMIT = 7;
+
+const moodChipOptions = computed(() => {
+  const freq = new Map<string, number>();
+  for (const s of sounds.value) {
+    for (const tag of getSoundMoodTags(s)) {
+      freq.set(tag, (freq.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...freq.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], undefined, { sensitivity: 'base' }))
+    .slice(0, MOOD_CHIP_LIMIT)
+    .map(([tag]) => tag);
+});
+
+function toggleMoodTag(tag: string): void {
+  selectedMoodTag.value = selectedMoodTag.value === tag ? null : tag;
+}
+
+function clearFilters(): void {
+  searchQuery.value = '';
+  selectedCategoryKey.value = '__all__';
+  selectedMoodTag.value = null;
+}
 
 const emptyCatalogDescription =
   'There are no sounds in the catalog right now. Check back soon or try another account.';
+
+watch(moodChipOptions, (tags) => {
+  if (selectedMoodTag.value != null && !tags.includes(selectedMoodTag.value)) {
+    selectedMoodTag.value = null;
+  }
+});
+
+watch(categoryChipOptions, (opts) => {
+  const keys = new Set(opts.map((o) => o.key));
+  if (!keys.has(selectedCategoryKey.value)) selectedCategoryKey.value = '__all__';
+});
 
 /** Rows for the horizontal “Selected layers” strip */
 interface SelectedLayerRow {
@@ -743,6 +926,114 @@ async function handleSave(): Promise<void> {
   color: var(--app-color-text-muted, #64748b);
   margin: 6px 0 0;
   line-height: 1.45;
+}
+
+/* ── Browse search & filter chips ───────────────── */
+.sounds-browse-tools {
+  padding-bottom: 8px;
+}
+
+.sounds-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--app-color-surface, #f1f5f9);
+  border: 1px solid var(--app-color-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 48px;
+}
+
+.sounds-search-box--browse {
+  margin-bottom: 14px;
+}
+
+.sounds-search-icon {
+  color: var(--app-color-text-muted, #94a3b8);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sounds-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+  color: var(--app-color-text-primary, #0f172a);
+}
+
+.sounds-search-input::placeholder {
+  color: var(--app-color-text-muted, #94a3b8);
+}
+
+.sounds-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-color-text-muted, #64748b);
+  margin: 0 0 8px;
+}
+
+.sounds-chip-scroll-outer {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.sounds-chip-scroll-outer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  background: linear-gradient(to right, transparent, var(--app-color-bg, #fff));
+  pointer-events: none;
+}
+
+.sounds-chip-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.sounds-chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.sounds-filter-chip {
+  flex-shrink: 0;
+  appearance: none;
+  border: 1px solid var(--app-color-border, #e2e8f0);
+  background: var(--app-color-surface, #f8fafc);
+  color: var(--app-color-text-secondary, #475569);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    border-color var(--app-motion-fast) var(--app-ease-standard),
+    color var(--app-motion-fast) var(--app-ease-standard),
+    box-shadow var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.sounds-filter-chip--active {
+  border-color: var(--ion-color-primary, #1dac92);
+  background: var(--ion-color-primary-tint, #d1faf3);
+  color: var(--app-color-text-primary, #0f172a);
+  box-shadow: 0 1px 4px rgba(29, 172, 146, 0.2);
+}
+
+.sounds-filter-empty {
+  padding-top: var(--app-space-4);
+  padding-bottom: var(--app-space-4);
 }
 
 /* ── Empty / loading / hint ─────────────────────── */
