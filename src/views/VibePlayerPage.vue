@@ -1,19 +1,28 @@
 <template>
   <ion-page class="player-page">
     <ion-content :fullscreen="true" class="player-content">
-      <div class="player-wrap" :style="heroBackground">
+      <div class="player-wrap">
+        <!-- Background layer (keyed for subtle enter transition on vibe / artwork change) -->
+        <div
+          :key="heroBgKey"
+          class="player-bg"
+          :class="{ 'player-bg--image': heroHasArtwork }"
+          :style="heroBackground"
+          aria-hidden="true"
+        />
 
-        <!-- Depth overlay — transparent top, dark bottom -->
-        <div class="player-overlay" />
+        <!-- Legibility: gradient wash + vignette -->
+        <div class="player-overlay" aria-hidden="true" />
+        <div class="player-overlay player-overlay--vignette" aria-hidden="true" />
 
         <!-- ── Header ───────────────────────────────── -->
-        <div class="player-header">
+        <header class="player-header">
           <button type="button" class="player-icon-btn" aria-label="Back" @click="handleBack">
             <ion-icon :icon="chevronBackOutline" />
           </button>
           <button
             type="button"
-            class="player-icon-btn"
+            class="player-icon-btn player-icon-btn--menu"
             :id="menuTriggerId"
             aria-label="Options"
           >
@@ -54,11 +63,15 @@
               </ion-list>
             </ion-content>
           </ion-popover>
-        </div>
+        </header>
 
         <!-- ── Center: Play / Pause ──────────────────── -->
         <div class="player-center">
-          <div v-if="loading || isThisVibePreparing" class="player-spinner-wrap">
+          <div
+            v-if="loading || isThisVibePreparing"
+            class="player-spinner-wrap"
+            :class="{ 'player-spinner-wrap--preparing': isThisVibePreparing && !loading }"
+          >
             <AppLoadingState
               compact
               tone="inverse"
@@ -68,8 +81,13 @@
 
           <button
             v-else
+            type="button"
             class="player-control-btn"
-            :class="{ 'player-control-btn--disabled': !canUsePlaybackControls }"
+            :class="{
+              'player-control-btn--disabled': !canUsePlaybackControls,
+              'player-control-btn--playing': isThisVibePlaying,
+              'player-control-btn--paused': isThisVibePaused,
+            }"
             :disabled="!canUsePlaybackControls"
             :aria-label="centerAriaLabel"
             @click="togglePlayback"
@@ -105,13 +123,36 @@
             description="Connect to the internet or use Download for offline from the menu when you’re online."
           />
 
-          <p v-if="!loading && warningText && !playbackErroredThisVibe && !offlineUnavailableAfterLoad" class="player-warning">
+          <p
+            v-if="!loading && warningText && !playbackErroredThisVibe && !offlineUnavailableAfterLoad"
+            class="player-warning player-warning--banner"
+          >
             {{ warningText }}
           </p>
 
-          <p class="player-label">AMBIENT MIX</p>
-          <h1 class="player-title">{{ vibe?.name ?? '…' }}</h1>
-          <p class="player-sounds-text">{{ soundsSummary }}</p>
+          <div class="player-identity">
+            <p class="player-label">Ambient mix</p>
+            <h1 class="player-title">{{ vibe?.name ?? '…' }}</h1>
+            <p v-if="vibe?.description" class="player-desc">{{ vibe.description }}</p>
+            <p class="player-sounds-text">{{ soundsSummary }}</p>
+          </div>
+
+          <div
+            v-if="!loading && badgeItems.length > 0"
+            class="player-badge-row"
+            role="status"
+            aria-label="Session indicators"
+          >
+            <span
+              v-for="b in badgeItems"
+              :key="b.key"
+              class="player-badge"
+              :class="`player-badge--${b.tone}`"
+            >
+              <ion-icon :icon="b.icon" class="player-badge__icon" aria-hidden="true" />
+              {{ b.label }}
+            </span>
+          </div>
 
           <div class="player-status-row">
             <span
@@ -121,14 +162,50 @@
             <span class="player-status-text">{{ statusText }}</span>
           </div>
 
-          <p v-if="vibeOfflineReady" class="player-offline-available">
-            <ion-icon :icon="checkmarkCircleOutline" />
-            Available offline
-          </p>
-
-          <p v-if="!loading && loadedFromOfflineSnapshot" class="player-offline-hint">
-            Offline mode
-          </p>
+          <section
+            v-if="executionPlan.length > 0 && !loading"
+            class="player-layers"
+            aria-label="Sound layers in this vibe"
+          >
+            <h2 class="player-layers-heading">Sound layers</h2>
+            <ul class="player-layer-list">
+              <li
+                v-for="layer in executionPlan"
+                :key="layer.soundId"
+                class="player-layer-card"
+                :class="{ 'player-layer-card--muted': !isExecutionLayerPlayable(layer) }"
+              >
+                <div class="player-layer-card-top">
+                  <span class="player-layer-name">{{ layer.soundName }}</span>
+                  <span class="player-layer-mode">{{ playModeShort(layer) }}</span>
+                </div>
+                <div class="player-layer-chips">
+                  <span class="player-layer-chip">{{ layer.volume }}% volume</span>
+                  <span
+                    v-if="layer.durationSeconds != null"
+                    class="player-layer-chip"
+                  >
+                    {{ formatDuration(layer.durationSeconds) }} clip
+                  </span>
+                  <span
+                    v-if="layer.playMode === 'interval' && layer.repeatIntervalSeconds != null"
+                    class="player-layer-chip"
+                  >
+                    {{ formatDuration(layer.repeatIntervalSeconds) }} apart
+                  </span>
+                  <span v-if="layer.startsAtSeconds > 0" class="player-layer-chip">
+                    after {{ formatDuration(layer.startsAtSeconds) }}
+                  </span>
+                  <span v-if="layer.fadeInSeconds > 0" class="player-layer-chip">
+                    fade in {{ layer.fadeInSeconds }}s
+                  </span>
+                  <span v-if="layer.fadeOutSeconds > 0" class="player-layer-chip">
+                    fade out {{ layer.fadeOutSeconds }}s
+                  </span>
+                </div>
+              </li>
+            </ul>
+          </section>
 
           <!-- DEV only: Player state, execution plan, and runtime logs panels -->
           <template v-if="isDev">
@@ -260,8 +337,10 @@ import {
   cloudDownloadOutline,
   cloudOfflineOutline,
   ellipsisVertical,
+  pauseCircleOutline,
   pauseOutline,
   playOutline,
+  pulseOutline,
   refreshOutline,
   stopCircleOutline,
   trashOutline,
@@ -282,7 +361,11 @@ import {
   saveOfflineVibeSnapshot,
 } from '@/services/offline-vibe-cache.service';
 import { isVibeDownloaded, removeDownloadedVibe } from '@/services/offline-downloads.service';
-import { isExecutionLayerPlayable } from '@/services/player-engine.service';
+import {
+  formatDuration,
+  isExecutionLayerPlayable,
+  type VibeExecutionLayer,
+} from '@/services/player-engine.service';
 import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
@@ -349,6 +432,31 @@ const vibe = computed(() =>
   vibes.value.find((v) => v.id === vibeId.value)
   ?? (selectedVibe.value?.id === vibeId.value ? selectedVibe.value : null),
 );
+
+const heroHasArtwork = computed(
+  () => !!(vibe.value?.player_background_url ?? vibe.value?.thumbnail_url),
+);
+
+/** Remount background layer for a short fade-in when vibe or artwork changes. */
+const heroBgKey = computed(() => {
+  const v = vibe.value;
+  return `${vibeId.value}-${v?.player_background_url ?? v?.thumbnail_url ?? 'gradient'}`;
+});
+
+function playModeShort(layer: VibeExecutionLayer): string {
+  switch (layer.playMode) {
+    case 'loop':
+      return 'Loop';
+    case 'once':
+      return 'Once';
+    case 'interval':
+      return layer.repeatIntervalSeconds != null
+        ? `Every ${formatDuration(layer.repeatIntervalSeconds)}`
+        : 'Interval';
+    default:
+      return layer.playMode;
+  }
+}
 
 // ── Execution plan helpers ────────────────────────────────────────────────────
 
@@ -472,6 +580,54 @@ const statusDotClass = computed((): Record<string, boolean> => ({
   'player-status-dot--paused': isThisVibePaused.value,
   'player-status-dot--preparing': isThisVibePreparing.value,
 }));
+
+type PlayerBadgeTone = 'success' | 'info' | 'warn' | 'neutral';
+
+interface PlayerBadgeItem {
+  key: string;
+  label: string;
+  icon: string;
+  tone: PlayerBadgeTone;
+}
+
+/** Discrete chips for offline context + transient playback states. */
+const badgeItems = computed((): PlayerBadgeItem[] => {
+  if (loading.value) return [];
+  const items: PlayerBadgeItem[] = [];
+  if (loadedFromOfflineSnapshot.value) {
+    items.push({
+      key: 'offline-mode',
+      label: 'Offline mode',
+      icon:  cloudOfflineOutline,
+      tone:  'info',
+    });
+  }
+  if (vibeOfflineReady.value) {
+    items.push({
+      key: 'available-offline',
+      label: 'Available offline',
+      icon:  checkmarkCircleOutline,
+      tone:  'success',
+    });
+  }
+  if (isThisVibePreparing.value) {
+    items.push({
+      key: 'preparing',
+      label: 'Preparing',
+      icon:  pulseOutline,
+      tone:  'neutral',
+    });
+  }
+  if (isThisVibePaused.value) {
+    items.push({
+      key: 'paused',
+      label: 'Paused',
+      icon:  pauseCircleOutline,
+      tone:  'warn',
+    });
+  }
+  return items;
+});
 
 const centerIcon = computed(() =>
   isThisVibePlaying.value ? pauseOutline : playOutline,
@@ -725,11 +881,11 @@ function handleBack(): void {
 // so player_background_url is the correct field to use here.
 
 const gradients = [
-  'linear-gradient(160deg, #3a1c71 0%, #4a1890 55%, #1a1a6e 100%)',
-  'linear-gradient(160deg, #b0298a 0%, #8b2fc9 100%)',
-  'linear-gradient(160deg, #1dac92 0%, #0e7490 55%, #0f3f5c 100%)',
-  'linear-gradient(160deg, #d97706 0%, #b45309 55%, #7c2d12 100%)',
-  'linear-gradient(160deg, #4338ca 0%, #6d28d9 100%)',
+  'linear-gradient(168deg, #1a0b2e 0%, #2d1b4e 38%, #0c1222 100%)',
+  'linear-gradient(168deg, #3b0a28 0%, #581c3d 42%, #120810 100%)',
+  'linear-gradient(168deg, #062c24 0%, #0d4f42 45%, #061018 100%)',
+  'linear-gradient(168deg, #3b2408 0%, #6b3410 48%, #140804 100%)',
+  'linear-gradient(168deg, #141439 0%, #252560 42%, #070714 100%)',
 ];
 
 const heroBackground = computed((): Record<string, string> => {
@@ -834,21 +990,78 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
-/* ── Dark gradient overlay ───────────────────────────── */
+/* ── Background artwork / gradient ───────────────────── */
+.player-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transform-origin: center center;
+  animation: player-bg-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+@keyframes player-bg-enter {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+.player-bg--image {
+  animation-name: player-bg-enter, player-bg-drift;
+  animation-duration: 0.55s, 18s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease-in-out;
+  animation-fill-mode: both, none;
+  animation-iteration-count: 1, infinite;
+  animation-direction: normal, alternate;
+}
+
+@keyframes player-bg-drift {
+  from {
+    transform: scale(1.03) translate(0, 0);
+  }
+  to {
+    transform: scale(1.05) translate(-0.6%, 0.4%);
+  }
+}
+
+/* Gradient hero — no Ken Burns drift */
+.player-bg:not(.player-bg--image) {
+  animation: player-bg-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Overlays ────────────────────────────────────────── */
 .player-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.12) 0%,
-    rgba(0, 0, 0, 0.0)  25%,
-    rgba(0, 0, 0, 0.25) 60%,
-    rgba(0, 0, 0, 0.82) 100%
-  );
+  z-index: 1;
   pointer-events: none;
+  transition: opacity 0.45s ease;
+  background: linear-gradient(
+    185deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(0, 0, 0, 0.08) 28%,
+    rgba(0, 0, 0, 0.18) 52%,
+    rgba(0, 0, 0, 0.88) 100%
+  );
+}
+
+.player-overlay--vignette {
+  background: radial-gradient(
+    ellipse 90% 75% at 50% 38%,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0.28) 62%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.92;
 }
 
 /* ── Header ──────────────────────────────────────────── */
@@ -858,24 +1071,47 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(env(safe-area-inset-top, 20px) + 12px) 20px 12px;
+  padding: calc(env(safe-area-inset-top, 20px) + 10px) max(20px, env(safe-area-inset-right)) 14px max(20px, env(safe-area-inset-left));
 }
 
 .player-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #fff;
-  font-size: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 10, 18, 0.42);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 22px;
   cursor: pointer;
   padding: 0;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 28px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.18s ease,
+    background 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.player-icon-btn:hover {
+  background: rgba(14, 18, 30, 0.55);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.player-icon-btn:active {
+  transform: scale(0.93);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.player-icon-btn--menu {
+  border-radius: 14px;
 }
 
 /* ── Center: Play button ─────────────────────────────── */
@@ -886,12 +1122,30 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 140px;
 }
 
 .player-spinner-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.player-spinner-wrap--preparing {
+  animation: player-preparing-halo 1.5s ease-in-out infinite;
+}
+
+@keyframes player-preparing-halo {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0));
+    opacity: 1;
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.35));
+    opacity: 0.96;
+  }
 }
 
 .player-spinner {
@@ -901,110 +1155,263 @@ onUnmounted(() => {
 }
 
 .player-control-btn {
-  width: 92px;
-  height: 92px;
+  width: 108px;
+  height: 108px;
   border-radius: 50%;
-  border: 2.5px solid rgba(255, 255, 255, 0.85);
-  background: rgba(20, 20, 30, 0.52);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  border: 2px solid rgba(255, 255, 255, 0.88);
+  background: linear-gradient(
+    155deg,
+    rgba(28, 32, 48, 0.72) 0%,
+    rgba(12, 14, 22, 0.58) 100%
+  );
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
-  transition: transform 0.1s, opacity 0.15s;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.28s ease,
+    border-color 0.28s ease,
+    opacity 0.22s ease,
+    filter 0.28s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.player-control-btn:active {
+.player-control-btn:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18) inset,
+    0 16px 44px rgba(0, 0, 0, 0.5),
+    0 0 48px rgba(29, 172, 146, 0.18);
+}
+
+.player-control-btn:active:not(:disabled) {
   transform: scale(0.94);
 }
 
+.player-control-btn--playing {
+  border-color: rgba(167, 243, 208, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 12px 48px rgba(0, 0, 0, 0.48),
+    0 0 52px rgba(74, 222, 128, 0.28);
+}
+
+.player-control-btn--paused {
+  border-color: rgba(251, 191, 36, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 36px rgba(251, 191, 36, 0.22);
+}
+
 .player-control-btn--disabled {
-  opacity: 0.35;
+  opacity: 0.38;
   cursor: not-allowed;
+  filter: grayscale(0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .player-control-icon {
-  font-size: 36px;
+  font-size: 40px;
+  margin-left: 3px;
+}
+
+.player-control-btn--playing .player-control-icon {
+  margin-left: 0;
 }
 
 /* ── Bottom panel ────────────────────────────────────── */
 .player-bottom {
   position: relative;
   z-index: 2;
-  padding: 24px 28px calc(env(safe-area-inset-bottom, 20px) + 32px);
+  padding: 20px max(24px, env(safe-area-inset-right)) calc(env(safe-area-inset-bottom, 20px) + 36px) max(24px, env(safe-area-inset-left));
+}
+
+.player-inline-state {
+  margin-bottom: var(--app-space-4, 16px);
 }
 
 .player-warning {
   font-size: 12px;
-  color: rgba(255, 200, 100, 0.9);
-  font-weight: 500;
-  margin: 0 0 10px;
-  letter-spacing: 0.2px;
+  color: rgba(253, 224, 138, 0.96);
+  font-weight: 600;
+  margin: 0 0 14px;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+}
+
+.player-warning--banner {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(180, 83, 9, 0.22);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.player-identity {
+  margin-bottom: 4px;
 }
 
 .player-label {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 2px;
-  color: rgba(255, 255, 255, 0.55);
-  margin: 0 0 8px;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.48);
+  margin: 0 0 10px;
   text-transform: uppercase;
 }
 
 .player-title {
-  font-size: 30px;
+  font-size: clamp(26px, 7vw, 34px);
   font-weight: 800;
   color: #fff;
-  margin: 0 0 8px;
-  line-height: 1.15;
-  letter-spacing: -0.3px;
+  margin: 0 0 10px;
+  line-height: 1.12;
+  letter-spacing: -0.4px;
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.55);
+}
+
+.player-desc {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.68);
+  margin: 0 0 12px;
+  max-width: 36rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .player-sounds-text {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.62);
   margin: 0 0 18px;
   line-height: 1.5;
+  font-weight: 500;
+}
+
+/* ── Premium badges ──────────────────────────────────── */
+.player-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.player-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  transition: transform 0.18s ease, box-shadow 0.22s ease;
+}
+
+.player-badge:active {
+  transform: scale(0.97);
+}
+
+.player-badge__icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  opacity: 0.95;
+}
+
+.player-badge--success {
+  color: rgba(220, 252, 231, 0.98);
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+.player-badge--info {
+  color: rgba(219, 234, 254, 0.95);
+  background: rgba(59, 130, 246, 0.26);
+  border-color: rgba(147, 197, 253, 0.38);
+}
+
+.player-badge--warn {
+  color: rgba(254, 243, 198, 0.98);
+  background: rgba(245, 158, 11, 0.26);
+  border-color: rgba(253, 224, 138, 0.42);
+}
+
+.player-badge--neutral {
+  color: rgba(241, 245, 249, 0.94);
+  background: rgba(148, 163, 184, 0.22);
+  border-color: rgba(226, 232, 240, 0.35);
 }
 
 /* ── Status row ──────────────────────────────────────── */
 .player-status-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
 .player-status-dot {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.38);
   flex-shrink: 0;
-  transition: background 0.3s;
+  transition:
+    background 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.35s ease;
 }
 
 .player-status-dot--active {
   background: #4ade80;
-  box-shadow: 0 0 6px rgba(74, 222, 128, 0.7);
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.85);
+  transform: scale(1.05);
 }
 
 .player-status-dot--paused {
   background: #fbbf24;
-  box-shadow: 0 0 6px rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.65);
 }
 
 .player-status-dot--preparing {
   background: #38bdf8;
-  box-shadow: 0 0 6px rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.65);
+  animation: player-dot-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes player-dot-pulse {
+  50% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
 }
 
 .player-menu-ion-content {
   --padding-top: 0;
   --padding-bottom: 0;
+}
+
+.player-menu-ion-content :deep(ion-item) {
+  --ripple-color: rgba(29, 172, 146, 0.35);
+  --transition: background 0.18s ease;
 }
 
 .player-menu-icon {
@@ -1014,36 +1421,113 @@ onUnmounted(() => {
 
 .player-status-text {
   font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
-  letter-spacing: 0.1px;
-}
-
-.player-offline-available {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 0 0;
-  font-size: 13px;
   font-weight: 600;
-  color: rgba(167, 243, 208, 0.96);
-  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.02em;
 }
 
-.player-offline-available ion-icon {
-  font-size: 18px;
-  flex-shrink: 0;
+/* ── Sound layers ────────────────────────────────────── */
+.player-layers {
+  margin-top: 4px;
+  padding-bottom: 8px;
 }
 
-.player-offline-hint {
+.player-layers-heading {
+  margin: 0 0 12px;
   font-size: 12px;
-  font-weight: 600;
-  color: rgba(147, 197, 253, 0.95);
-  margin: 10px 0 0;
-  letter-spacing: 0.15px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
 }
 
-/* ── DEV Execution Plan (debug) ───────────────────────── */
+.player-layer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-layer-card {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(12, 14, 22, 0.42) 100%
+  );
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.2s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.player-layer-card:active {
+  transform: scale(0.99);
+}
+
+.player-layer-card--muted {
+  opacity: 0.52;
+  border-style: dashed;
+}
+
+.player-layer-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.player-layer-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.94);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.player-layer-mode {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(167, 243, 208, 0.92);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(29, 172, 146, 0.22);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.player-layer-card--muted .player-layer-mode {
+  color: rgba(248, 250, 252, 0.65);
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.player-layer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.player-layer-chip {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.82);
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  letter-spacing: 0.02em;
+}
 .player-dev-panel {
   margin-top: 20px;
   border: 1.5px dashed rgba(245, 158, 11, 0.55);
