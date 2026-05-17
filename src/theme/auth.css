@@ -1,10 +1,10 @@
 .auth-page {
-  --background: #ffffff;
+  --background: var(--app-color-bg);
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 .auth-content {
-  --background: #ffffff;
+  --background: var(--app-color-bg);
 }
 
 .auth-header {
@@ -23,7 +23,7 @@
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0.2px;
-  color: #121826;
+  color: var(--app-color-text-primary);
 }
 
 .auth-screen {
@@ -39,7 +39,7 @@
   height: 24px;
   margin-top: 12px;
   margin-bottom: 24px;
-  color: #121826;
+  color: var(--app-color-text-primary);
 }
 
 .auth-icon-button {
@@ -81,7 +81,7 @@
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: 0.2px;
-  color: #121826;
+  color: var(--app-color-text-primary);
 }
 
 .auth-title {
@@ -90,14 +90,14 @@
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.3px;
-  color: #121826;
+  color: var(--app-color-text-primary);
 }
 
 .auth-subtitle {
   margin: 8px 0 0;
   font-size: 14px;
   line-height: 1.4;
-  color: #64748b;
+  color: var(--app-color-text-secondary);
   letter-spacing: 0.2px;
 }
 
@@ -112,10 +112,10 @@
 .auth-social-button {
   width: 100%;
   min-height: 56px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--app-color-border);
   border-radius: 12px;
-  background: #ffffff;
-  color: #121826;
+  background: var(--app-color-bg);
+  color: var(--app-color-text-primary);
   font-size: 16px;
   font-weight: 500;
   text-transform: none;
@@ -148,7 +148,7 @@
 
 .auth-social-apple-icon {
   font-size: 22px;
-  color: #121826;
+  color: var(--app-color-text-primary);
 }
 
 .auth-social-google-icon {
@@ -170,12 +170,12 @@
   content: '';
   height: 1px;
   flex: 1;
-  background: #f1f5f9;
+  background: var(--app-color-border);
 }
 
 .auth-divider span {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--app-color-text-muted);
   letter-spacing: 0.2px;
 }
 
@@ -187,7 +187,7 @@
 }
 
 .auth-item {
-  --background: #f1f5f9;
+  --background: var(--app-color-surface-subtle);
   --border-color: transparent;
   --border-width: 0;
   --inner-border-width: 0;
@@ -196,14 +196,14 @@
 }
 
 .auth-item ion-input {
-  --placeholder-color: #94a3b8;
+  --placeholder-color: var(--app-color-text-muted);
   --placeholder-opacity: 1;
-  color: #121826;
+  color: var(--app-color-text-primary);
   font-size: 14px;
 }
 
 .auth-item ion-icon {
-  color: #94a3b8;
+  color: var(--app-color-text-muted);
 }
 
 .auth-submit {
@@ -234,7 +234,7 @@
   font-size: 14px;
   line-height: 1.4;
   letter-spacing: 0.2px;
-  color: #121826;
+  color: var(--app-color-text-primary);
   width: 100%;
 }
 
@@ -296,7 +296,7 @@
 
 .auth-success-subtitle {
   margin-top: 8px;
-  color: #64748b;
+  color: var(--app-color-text-secondary);
   width: 100%;
   max-width: 334px;
 }
@@ -385,7 +385,7 @@
   font-size: 16px;
   line-height: 1.4;
   letter-spacing: 0.2px;
-  color: #121826;
+  color: var(--app-color-text-primary);
 }
 
 .auth-entry-footer a {
@@ -396,9 +396,9 @@
 }
 
 .home-page {
-  --background: #ffffff;
+  --background: var(--app-color-bg);
 }
 
 .home-content {
-  --background: #ffffff;
+  --background: var(--app-color-bg);
 }

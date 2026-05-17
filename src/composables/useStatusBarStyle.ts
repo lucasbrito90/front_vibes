@@ -12,8 +12,13 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import type { RouteLocationNormalizedLoaded } from 'vue-router';
 
+import { getEffectiveChromeTheme } from '@/theme/theme-state';
+
 const LIGHT_BG = '#ffffff';
-const DARK_BG  = '#000000';
+/** Full-screen immersive player (hero / OLED edge). */
+const DARK_BG = '#000000';
+/** Shell chrome in dark UI mode — matches Material baseline used by Ionic dark palette. */
+const UI_DARK_SHELL_BG = '#121212';
 
 async function safeBar(call: () => Promise<void>): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
@@ -42,12 +47,25 @@ export async function applyDarkStatusBar(): Promise<void> {
   });
 }
 
+/** Tab/auth/settings surfaces in dark mode — light glyphs on dark gray bar. */
+export async function applyUiDarkShellStatusBar(): Promise<void> {
+  await safeBar(async () => {
+    await StatusBar.show();
+    await StatusBar.setStyle({ style: Style.Dark });
+    await StatusBar.setBackgroundColor({ color: UI_DARK_SHELL_BG });
+  });
+}
+
 /**
  * Reads `meta.statusBarTheme` from the matched route (deepest child wins via Vue Router).
- * Defaults to light when omitted.
+ * When omitted, follows shell theme: light surfaces → dark glyphs (Style.Light); dark shell → light glyphs (Style.Dark).
  */
 export async function syncStatusBarWithRoute(to: RouteLocationNormalizedLoaded): Promise<void> {
-  const theme = to.meta.statusBarTheme as 'light' | 'dark' | undefined;
-  if (theme === 'dark') await applyDarkStatusBar();
+  const routeTheme = to.meta.statusBarTheme as 'light' | 'dark' | undefined;
+  if (routeTheme === 'dark') {
+    await applyDarkStatusBar();
+    return;
+  }
+  if (getEffectiveChromeTheme() === 'dark') await applyUiDarkShellStatusBar();
   else await applyLightStatusBar();
 }

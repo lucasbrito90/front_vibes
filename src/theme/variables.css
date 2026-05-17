@@ -1,3 +1,5 @@
+@import '@ionic/vue/css/palettes/dark.class.css';
+
 /* Ionic design tokens mapped from Figma Design System (node 127:2). */
 :root {
   /* Core Ionic color roles */
@@ -87,4 +89,50 @@
 
   --app-shadow-card: 0 4px 24px rgba(15, 23, 42, 0.07);
   --app-shadow-soft: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+/*
+ * Dark shell — toggled via `html.ion-palette-dark` (see useThemeMode).
+ * Same specificity as Ionic palette rules (`.ion-palette-dark.md`) so import order after `dark.class.css` lets these tokens win.
+ */
+.ion-palette-dark.md,
+.ion-palette-dark.ios {
+  --ion-color-primary: #1dac92;
+  --ion-color-primary-rgb: 29, 172, 146;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #1a987f;
+  --ion-color-primary-tint: #34b49d;
+
+  --ion-color-secondary: #64748b;
+  --ion-color-secondary-rgb: 100, 116, 139;
+  --ion-color-secondary-contrast: #f8fafc;
+  --ion-color-secondary-contrast-rgb: 248, 250, 252;
+  --ion-color-secondary-shade: #586776;
+  --ion-color-secondary-tint: #738396;
+
+  --ion-background-color: var(--app-color-bg);
+  --ion-background-color-rgb: 18, 18, 18;
+  --ion-text-color: var(--app-color-text-primary);
+  --ion-text-color-rgb: 241, 245, 249;
+
+  --app-color-bg: #121212;
+  --app-color-surface: #1e1e1e;
+  --app-color-surface-subtle: #262626;
+  --app-color-border: #334155;
+  --app-color-text-primary: #f1f5f9;
+  --app-color-text-secondary: #94a3b8;
+  --app-color-text-muted: #64748b;
+
+  --app-color-primary-100: rgba(29, 172, 146, 0.22);
+  --app-color-primary-200: rgba(29, 172, 146, 0.32);
+  --app-color-primary-300: rgba(29, 172, 146, 0.42);
+  --app-color-primary-400: #3dc4ad;
+  --app-color-primary-500: #1dac92;
+  --app-color-primary-600: #7ee8d8;
+
+  --app-gradient-primary: linear-gradient(180deg, #1dac92 0%, #178f7a 100%);
+
+  --app-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.45);
+  --app-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.35);
 }

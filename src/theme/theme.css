@@ -86,7 +86,7 @@ ion-button[data-variant='primary'] {
 
 ion-button.btn-outline,
 ion-button[data-variant='outline'] {
-  --background: #ffffff;
+  --background: var(--app-color-bg);
   --color: var(--app-color-text-primary);
   --border-color: var(--app-color-border);
   --border-style: solid;
