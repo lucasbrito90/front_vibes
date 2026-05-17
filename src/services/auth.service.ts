@@ -8,124 +8,60 @@ import {
   signInWithPopup,
   createUserWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from 'firebase/auth';
+import { shallowRef } from 'vue';
 import { Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { auth } from './firebase';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+/** Stored Firebase ID token for native/offline-adjacent flows (mirrored by useAuth). */
+export const FIREBASE_TOKEN_PREFS_KEY = 'firebase_id_token';
 
-// ── Backend sync ──────────────────────────────────────────────────────────────
+export type LaravelUser = {
+  id: number;
+  firebase_uid: string;
+  name: string;
+  email: string;
+  avatar_url: string | null;
+  role: string;
+  admin_access_status: string;
+};
 
-async function syncUserWithBackend(idToken: string): Promise<void> {
-  if (!API_BASE_URL) {
-    return;
-  }
+export const LARAVEL_SYNC_FAILURE_MESSAGE =
+  'We could not finish setting up your account. Please try again.';
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/firebase`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-        Accept: 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      // Firebase auth succeeded; backend sync is best-effort.
-      console.warn('[auth] Backend sync returned', response.status);
-    }
-  } catch (err) {
-    // Network failure — not a reason to abort a successful Firebase login.
-    console.warn('[auth] Backend sync failed (network):', err);
+export class LaravelSyncError extends Error {
+  constructor(
+    message: string,
+    public readonly causeDetail?: unknown,
+  ) {
+    super(message);
+    this.name = 'LaravelSyncError';
   }
 }
 
-// ── Token helper ──────────────────────────────────────────────────────────────
+/** Laravel profile returned by the last successful `/api/auth/sync`. */
+export const laravelUser = shallowRef<LaravelUser | null>(null);
 
-async function getIdToken(user?: User | null): Promise<string | null> {
-  const currentUser = user ?? auth.currentUser;
-  if (!currentUser) return null;
-  return currentUser.getIdToken();
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+
+/** Firebase UID for which `laravelUser` was populated this session. */
+let syncedFirebaseUid: string | null = null;
+
+function clearBackendSession(): void {
+  syncedFirebaseUid = null;
+  laravelUser.value = null;
 }
 
-// ── Google Sign-In ────────────────────────────────────────────────────────────
-//
-// Strategy:
-//   Native (Android / iOS) → @codetrix-studio/capacitor-google-auth
-//     Opens the native Google account picker.
-//     Returns an ID token which is exchanged for a Firebase credential.
-//     Does NOT depend on WebView popups or redirects.
-//
-//   Web (browser) → Firebase signInWithPopup
-//     Standard Firebase popup flow.  Unchanged from before.
-//
-// Both paths converge on `signInWithCredential` (native) or the credential
-// returned by `signInWithPopup` (web), then sync the Firebase ID token with
-// the Laravel backend.
-
-async function loginWithGoogle(): Promise<UserCredential> {
-  let credential: UserCredential;
-
-  if (Capacitor.isNativePlatform()) {
-    // ── Native path ──────────────────────────────────────────────────────────
-    // GoogleAuth.signIn() opens the OS-level Google account picker.
-    // The returned idToken can be directly exchanged for a Firebase credential.
-    const googleUser = await GoogleAuth.signIn();
-    const idToken = googleUser.authentication?.idToken;
-
-    if (!idToken) {
-      throw new Error(
-        'Google Sign-In succeeded but did not return an ID token. ' +
-        'Verify that VITE_GOOGLE_WEB_CLIENT_ID is set to the correct Web Client ID.',
-      );
-    }
-
-    const googleCredential = GoogleAuthProvider.credential(idToken);
-    credential = await signInWithCredential(auth, googleCredential);
-  } else {
-    // ── Web path ─────────────────────────────────────────────────────────────
-    const provider = new GoogleAuthProvider();
-    credential = await signInWithPopup(auth, provider);
+function logDev(...args: unknown[]): void {
+  if (import.meta.env.DEV) {
+    console.warn('[auth]', ...args);
   }
-
-  const idToken = await getIdToken(credential.user);
-  if (idToken) {
-    await syncUserWithBackend(idToken);
-  }
-
-  return credential;
 }
 
-// ── Email / Password ──────────────────────────────────────────────────────────
-
-async function loginWithEmail(email: string, password: string): Promise<UserCredential> {
-  const credential = await signInWithEmailAndPassword(auth, email, password);
-  const idToken = await getIdToken(credential.user);
-
-  if (idToken) {
-    await syncUserWithBackend(idToken);
-  }
-
-  return credential;
-}
-
-async function signUpWithEmail(email: string, password: string): Promise<UserCredential> {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  const idToken = await getIdToken(credential.user);
-
-  if (idToken) {
-    await syncUserWithBackend(idToken);
-  }
-
-  return credential;
-}
-
-// ── Session ───────────────────────────────────────────────────────────────────
-
-async function logout(): Promise<void> {
-  // Sign out of Google as well so the next sign-in shows the account picker
-  // rather than silently re-using the last account.
+async function abortFirebaseSessionAfterFailedSync(): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     try {
       await GoogleAuth.signOut();
@@ -133,6 +69,160 @@ async function logout(): Promise<void> {
       // Ignore — GoogleAuth may not be initialised if user never signed in with Google.
     }
   }
+  await signOut(auth);
+}
+
+async function syncUserWithBackend(idToken: string, firebaseUid: string): Promise<LaravelUser> {
+  const base = API_BASE_URL?.trim();
+  if (!base) {
+    logDev('Laravel sync: VITE_API_BASE_URL is not set');
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('VITE_API_BASE_URL missing'));
+  }
+
+  const url = `${base.replace(/\/$/, '')}/api/auth/sync`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        Accept: 'application/json',
+      },
+    });
+  } catch (err) {
+    logDev('Laravel sync network error', err);
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, err);
+  }
+
+  if (!response.ok) {
+    let body = '';
+    try {
+      body = await response.text();
+    } catch {
+      /* ignore */
+    }
+    logDev('Laravel sync HTTP error', response.status, body);
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, { status: response.status, body });
+  }
+
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch (err) {
+    logDev('Laravel sync invalid JSON', err);
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, err);
+  }
+
+  const data = (json as { data?: LaravelUser }).data;
+  if (!data || typeof data.id !== 'number' || typeof data.firebase_uid !== 'string') {
+    logDev('Laravel sync unexpected payload', json);
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, json);
+  }
+
+  laravelUser.value = data;
+  syncedFirebaseUid = firebaseUid;
+  return data;
+}
+
+/**
+ * Ensures the Laravel user row exists for the signed-in Firebase user (cached per UID).
+ * Used by the router before protected routes and after cold start.
+ */
+export async function ensureLaravelUserSynced(user: User): Promise<LaravelUser> {
+  if (syncedFirebaseUid === user.uid && laravelUser.value) {
+    return laravelUser.value;
+  }
+
+  const idToken = await user.getIdToken();
+  if (!idToken) {
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('No ID token'));
+  }
+
+  return syncUserWithBackend(idToken, user.uid);
+}
+
+async function getIdToken(user?: User | null): Promise<string | null> {
+  const currentUser = user ?? auth.currentUser;
+  if (!currentUser) return null;
+  return currentUser.getIdToken();
+}
+
+async function finalizeFirebaseLogin(credential: UserCredential): Promise<UserCredential> {
+  try {
+    const idToken = await getIdToken(credential.user);
+    if (!idToken) {
+      throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('No ID token'));
+    }
+    await syncUserWithBackend(idToken, credential.user.uid);
+    return credential;
+  } catch (err) {
+    await abortFirebaseSessionAfterFailedSync();
+    throw err;
+  }
+}
+
+async function loginWithGoogle(): Promise<UserCredential> {
+  let credential: UserCredential;
+
+  if (Capacitor.isNativePlatform()) {
+    const googleUser = await GoogleAuth.signIn();
+    const idToken = googleUser.authentication?.idToken;
+
+    if (!idToken) {
+      throw new Error(
+        'Google Sign-In succeeded but did not return an ID token. ' +
+          'Verify that VITE_GOOGLE_WEB_CLIENT_ID is set to the correct Web Client ID.',
+      );
+    }
+
+    const googleCredential = GoogleAuthProvider.credential(idToken);
+    credential = await signInWithCredential(auth, googleCredential);
+  } else {
+    const provider = new GoogleAuthProvider();
+    credential = await signInWithPopup(auth, provider);
+  }
+
+  return finalizeFirebaseLogin(credential);
+}
+
+async function loginWithEmail(email: string, password: string): Promise<UserCredential> {
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  return finalizeFirebaseLogin(credential);
+}
+
+async function signUpWithEmail(
+  email: string,
+  password: string,
+  displayName?: string,
+): Promise<UserCredential> {
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+
+  if (displayName?.trim()) {
+    await updateProfile(credential.user, { displayName: displayName.trim() });
+  }
+  await credential.user.getIdToken(true);
+
+  return finalizeFirebaseLogin(credential);
+}
+
+async function logout(): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await GoogleAuth.signOut();
+    } catch {
+      // Ignore — GoogleAuth may not be initialised if user never signed in with Google.
+    }
+  }
+
+  clearBackendSession();
+
+  try {
+    await Preferences.remove({ key: FIREBASE_TOKEN_PREFS_KEY });
+  } catch {
+    /* Preferences unavailable — non-fatal */
+  }
+
   return signOut(auth);
 }
 
@@ -144,8 +234,6 @@ async function requestPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email);
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
 export const authService = {
   loginWithGoogle,
   loginWithEmail,
@@ -154,4 +242,5 @@ export const authService = {
   getCurrentUser,
   getIdToken,
   requestPasswordReset,
+  ensureLaravelUserSynced,
 };

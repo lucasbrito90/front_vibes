@@ -101,13 +101,12 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { chevronBackOutline, eyeOffOutline, logoApple } from 'ionicons/icons';
-import { updateProfile } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
 
-const { signUpWithEmail, loginWithGoogle, loading, error, currentUser } = useAuth();
+const { signUpWithEmail, loginWithGoogle, loading, error } = useAuth();
 
 const name = ref('');
 const email = ref('');
@@ -125,11 +124,7 @@ async function handleGoogleLogin() {
 
 async function handleEmailSignUp() {
   try {
-    await signUpWithEmail(email.value, password.value);
-
-    if (currentUser.value && name.value) {
-      updateProfile(currentUser.value, { displayName: name.value }).catch(() => {});
-    }
+    await signUpWithEmail(email.value, password.value, name.value || undefined);
 
     window.location.replace('/home');
   } catch {
