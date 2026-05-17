@@ -12,7 +12,7 @@
         <img
           v-if="currentVibeArtworkUrl"
           :src="currentVibeArtworkUrl"
-          class="mini-player-artwork-img"
+          class="mini-player-artwork-img app-artwork-fade-in"
           alt=""
           aria-hidden="true"
         />
@@ -21,7 +21,9 @@
           class="mini-player-artwork-placeholder"
           :style="artworkGradient"
           aria-hidden="true"
-        />
+        >
+          <ion-icon :icon="musicalNotesOutline" class="mini-player-artwork-fallback-icon" />
+        </div>
       </div>
 
       <!-- Vibe info -->
@@ -38,10 +40,13 @@
         <button
           type="button"
           class="mini-player-btn"
+          :class="{ 'mini-player-btn--disabled': playbackState === 'preparing' }"
+          :disabled="playbackState === 'preparing'"
           :aria-label="playPauseLabel"
           @click.stop="handlePlayPause"
         >
-          <ion-icon :icon="playPauseIcon" />
+          <ion-spinner v-if="showPlayPauseSpinner" name="crescent" class="mini-player-spinner" />
+          <ion-icon v-else :icon="playPauseIcon" />
         </button>
 
         <button
@@ -58,11 +63,12 @@
 </template>
 
 <script setup lang="ts">
-import { IonIcon } from '@ionic/vue';
+import { IonIcon, IonSpinner } from '@ionic/vue';
 import {
   pauseOutline,
   playOutline,
   stopCircleOutline,
+  musicalNotesOutline,
 } from 'ionicons/icons';
 import { computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
@@ -70,6 +76,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { usePlayerStore } from '@/stores/player.store';
 import { createLogger } from '@/utils/player-debug';
+import { getVibeFallbackGradient } from '@/utils/artwork';
 
 const log = createLogger('MiniPlayer');
 
@@ -91,7 +98,9 @@ const isVisible = computed(
   () =>
     !route.meta.hideMiniPlayer
     && currentVibeId.value !== null
-    && (playbackState.value === 'playing' || playbackState.value === 'paused'),
+    && (playbackState.value === 'playing'
+      || playbackState.value === 'paused'
+      || playbackState.value === 'preparing'),
 );
 
 watch(isVisible, (next, prev) => {
@@ -107,23 +116,16 @@ watch(isVisible, (next, prev) => {
 // When no artwork URL is available, derive a gradient from the vibe ID so each
 // vibe always gets a consistent colour rather than a generic grey box.
 
-const _gradients = [
-  'linear-gradient(135deg, #3a1c71 0%, #4a1890 100%)',
-  'linear-gradient(135deg, #b0298a 0%, #8b2fc9 100%)',
-  'linear-gradient(135deg, #1dac92 0%, #0f3f5c 100%)',
-  'linear-gradient(135deg, #d97706 0%, #7c2d12 100%)',
-  'linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)',
-];
-
 const artworkGradient = computed(() => ({
-  background: _gradients[(currentVibeId.value ?? 0) % _gradients.length],
+  background: getVibeFallbackGradient(currentVibeId.value ?? 0),
 }));
 
 // ── Display text ──────────────────────────────────────────────────────────────
 
-const stateLabel = computed(() =>
-  playbackState.value === 'playing' ? 'Playing' : 'Paused',
-);
+const stateLabel = computed(() => {
+  if (playbackState.value === 'preparing') return 'Starting…';
+  return playbackState.value === 'playing' ? 'Playing' : 'Paused';
+});
 
 const metaText = computed(() => {
   const base = currentSoundSummary.value;
@@ -135,6 +137,7 @@ const metaText = computed(() => {
 const dotClass = computed(() => ({
   'mini-player-dot--playing': playbackState.value === 'playing',
   'mini-player-dot--paused':  playbackState.value === 'paused',
+  'mini-player-dot--preparing': playbackState.value === 'preparing',
 }));
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -143,11 +146,15 @@ const playPauseIcon = computed(() =>
   playbackState.value === 'playing' ? pauseOutline : playOutline,
 );
 
-const playPauseLabel = computed(() =>
-  playbackState.value === 'playing' ? 'Pause' : 'Resume',
-);
+const showPlayPauseSpinner = computed(() => playbackState.value === 'preparing');
+
+const playPauseLabel = computed(() => {
+  if (playbackState.value === 'preparing') return 'Starting playback';
+  return playbackState.value === 'playing' ? 'Pause' : 'Resume';
+});
 
 function handlePlayPause(): void {
+  if (playbackState.value === 'preparing') return;
   if (playbackState.value === 'playing') {
     log.debug('pause tapped');
     store.pausePlayback();
@@ -225,6 +232,16 @@ function navigateToPlayer(): void {
 .mini-player-artwork-placeholder {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+.mini-player-artwork-fallback-icon {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.38);
+  pointer-events: none;
 }
 
 /* ── Info area ───────────────────────────────────────────── */
@@ -279,6 +296,11 @@ function navigateToPlayer(): void {
   box-shadow: 0 0 5px rgba(251, 191, 36, 0.50);
 }
 
+.mini-player-dot--preparing {
+  background: #38bdf8;
+  box-shadow: 0 0 5px rgba(56, 189, 248, 0.55);
+}
+
 /* ── Controls ────────────────────────────────────────────── */
 .mini-player-controls {
   display: flex;
@@ -298,7 +320,10 @@ function navigateToPlayer(): void {
   font-size: 18px;
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    opacity var(--app-motion-fast) var(--app-ease-standard);
   -webkit-tap-highlight-color: transparent;
 
   background: rgba(255, 255, 255, 0.12);
@@ -306,8 +331,19 @@ function navigateToPlayer(): void {
 }
 
 .mini-player-btn:active {
-  transform: scale(0.88);
+  transform: scale(0.92);
   background: rgba(255, 255, 255, 0.20);
+}
+
+.mini-player-btn--disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.mini-player-spinner {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Stop button — subtle danger surface */
@@ -318,14 +354,15 @@ function navigateToPlayer(): void {
 
 .mini-player-btn--stop:active {
   background: rgba(247, 85, 85, 0.24);
-  transform: scale(0.88);
+  transform: scale(0.92);
 }
 
 /* ── Slide-up / slide-down transition ───────────────────── */
 .mini-player-slide-enter-active,
 .mini-player-slide-leave-active {
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity   0.22s ease;
+  transition:
+    transform var(--app-motion-slow) var(--app-ease-emphasized),
+    opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
 .mini-player-slide-enter-from,

@@ -71,6 +71,7 @@
           <span class="modal-section-label">Repeat every</span>
           <span class="modal-section-value">{{ localRepeatInterval ?? '—' }}s</span>
         </div>
+        <p class="modal-section-hint">Wait time between each playback.</p>
         <input
           v-model.number="localRepeatInterval"
           type="number"
@@ -108,7 +109,7 @@
         </div>
 
         <div class="modal-timing-field">
-          <label class="modal-timing-label">Play for</label>
+          <label class="modal-timing-label">{{ localPlayMode === 'interval' ? 'Active for' : 'Play for' }}</label>
           <input
             v-model.number="localPlayDurationMin"
             type="number"
@@ -118,31 +119,13 @@
             class="modal-timing-input"
           />
         </div>
-
-        <div class="modal-timing-field">
-          <label class="modal-timing-label">Fade in</label>
-          <input
-            v-model.number="localFadeInMin"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            class="modal-timing-input"
-          />
-        </div>
-
-        <div class="modal-timing-field">
-          <label class="modal-timing-label">Fade out</label>
-          <input
-            v-model.number="localFadeOutMin"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="0"
-            class="modal-timing-input"
-          />
-        </div>
       </div>
+
+      <!-- Interval semantics hint -->
+      <p v-if="localPlayMode === 'interval'" class="modal-interval-hint">
+        <strong>Active for</strong> is the total time this sound stays active in the vibe.
+        Leave blank to repeat indefinitely until you stop the vibe.
+      </p>
 
       <!-- Error (shown above buttons) -->
       <p v-if="saveError" class="modal-error">{{ saveError }}</p>
@@ -226,8 +209,6 @@ const toMin = (sec: number | null): number | null =>
 
 const localStartOffsetMin = ref<number | null>(toMin(props.vibeSound.start_offset_seconds));
 const localPlayDurationMin = ref<number | null>(toMin(props.vibeSound.play_duration_seconds));
-const localFadeInMin = ref<number | null>(toMin(props.vibeSound.fade_in_seconds));
-const localFadeOutMin = ref<number | null>(toMin(props.vibeSound.fade_out_seconds));
 
 const toSec = (min: number | null | undefined): number | null =>
   min != null && min !== undefined ? min * 60 : null;
@@ -250,8 +231,6 @@ async function handleSave(): Promise<void> {
       repeat_interval_seconds:  localPlayMode.value === 'interval' ? localRepeatInterval.value : null,
       start_offset_seconds:     toSec(localStartOffsetMin.value),
       play_duration_seconds:    toSec(localPlayDurationMin.value),
-      fade_in_seconds:          toSec(localFadeInMin.value),
-      fade_out_seconds:         toSec(localFadeOutMin.value),
     });
 
     await dismiss({ updated });
@@ -480,6 +459,13 @@ async function handleSave(): Promise<void> {
 .modal-interval-input {
   width: 100%;
   margin-top: 8px;
+}
+
+.modal-interval-hint {
+  font-size: 12px;
+  color: var(--app-color-text-muted, #94a3b8);
+  margin: 10px 20px 0;
+  line-height: 1.5;
 }
 
 /* ── Timing ──────────────────────────────────────── */

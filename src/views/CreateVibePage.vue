@@ -1,7 +1,7 @@
 <template>
-  <ion-page>
-    <ion-header class="auth-header">
-      <ion-toolbar class="auth-toolbar">
+  <ion-page class="tab-page">
+    <ion-header class="auth-header ion-no-border">
+      <ion-toolbar class="auth-toolbar tab-toolbar">
         <ion-buttons slot="start">
           <ion-button fill="clear" @click="router.back()">
             <ion-icon :icon="chevronBackOutline" class="auth-back-icon" />

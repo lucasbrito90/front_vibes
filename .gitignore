@@ -1,6 +1,8 @@
 # Specifies intentionally untracked files to ignore when using Git
 # http://git-scm.com/docs/gitignore
 
+.env
+.env.*
 *~
 *.env
 *.sw[mnpcod]
@@ -31,3 +33,6 @@ npm-debug.log*
 /platforms
 /plugins
 /www
+
+# Backup files created by ionic capacitor run --live-reload
+*.orig

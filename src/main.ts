@@ -24,20 +24,19 @@ import '@ionic/vue/css/flex-utils.css';
 import '@ionic/vue/css/display.css';
 
 /**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
+ * Dark mode: `ion-palette-dark` on `documentElement` + tokens in `variables.css`
+ * (imports `@ionic/vue/css/palettes/dark.class.css`). See useThemeMode.
  * https://ionicframework.com/docs/theming/dark-mode
  */
-
-/* @import '@ionic/vue/css/palettes/dark.always.css'; */
-/* @import '@ionic/vue/css/palettes/dark.class.css'; */
-/* @import '@ionic/vue/css/palettes/dark.system.css'; */
 
 /* Theme variables */
 import './theme/variables.css';
 import './theme/theme.css';
 import './theme/auth.css';
+import './theme/motion.css';
+import './theme/layout.css';
+
+import { initThemeMode } from '@/composables/useThemeMode';
 
 // ── Google Auth initialisation ────────────────────────────────────────────────
 // Initialize the plugin once at startup so it is ready before the first sign-in
@@ -74,6 +73,7 @@ const app = createApp(App)
   .use(createPinia())
   .use(router);
 
-router.isReady().then(() => {
+router.isReady().then(async () => {
+  await initThemeMode();
   app.mount('#app');
 });

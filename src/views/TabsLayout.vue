@@ -74,7 +74,9 @@ const TAB_BAR_HEIGHT     = 56; // px
  */
 const miniPlayerCssVar = computed(() => {
   const isHidden =
-    playbackState.value === 'idle' || !!route.meta.hideMiniPlayer;
+    playbackState.value === 'idle'
+    || playbackState.value === 'error'
+    || !!route.meta.hideMiniPlayer;
   const h = isHidden ? 0 : MINI_PLAYER_HEIGHT;
   return {
     '--app-tab-bar-height':    `${TAB_BAR_HEIGHT}px`,

@@ -1,48 +1,76 @@
 <template>
-  <ion-page>
+  <ion-page class="tab-page">
     <ion-header class="ion-no-border">
-      <ion-toolbar class="vibes-toolbar">
-        <ion-title class="vibes-toolbar-title">My Vibes</ion-title>
+      <ion-toolbar class="tab-toolbar">
+        <ion-title>My Vibes</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content :fullscreen="true">
-      <div class="vibes-content">
+      <div class="vibes-content page-shell">
 
-        <div v-if="loading && !vibes.length" class="vibes-state">
-          <ion-spinner name="crescent" color="primary" />
-        </div>
+        <AppLoadingState
+          v-if="loading && !vibes.length"
+          class="vibes-state-slot"
+          compact
+          title="Loading your vibes…"
+        />
 
-        <div v-else-if="error && !vibes.length" class="vibes-state">
-          <p class="vibes-state-msg error">{{ error }}</p>
-          <ion-button fill="outline" size="small" @click="fetchVibes">Retry</ion-button>
-        </div>
+        <AppErrorState
+          v-else-if="error && !vibes.length"
+          class="vibes-state-slot"
+          compact
+          title="Couldn’t load vibes"
+          :description="error ?? ''"
+          retry-label="Retry"
+          @retry="fetchVibes"
+        />
 
-        <div v-else-if="!vibes.length" class="vibes-state">
-          <p class="vibes-state-title">No vibes yet</p>
-          <p class="vibes-state-sub">Create your first vibe</p>
-          <ion-button router-link="/vibes/create" expand="block" class="vibes-create-btn">
-            Create Vibe
-          </ion-button>
-        </div>
+        <AppEmptyState
+          v-else-if="!vibes.length"
+          class="vibes-state-slot"
+          variant="card"
+          :icon="musicalNotesOutline"
+          title="No vibes yet"
+          description="Create your first ambient mix — layers of sound you can play anytime."
+          action-label="Create vibe"
+          @action="goCreate"
+        />
 
         <div v-else class="vibes-list">
           <div
             v-for="(vibe, i) in vibes"
             :key="vibe.id"
-            class="vibe-card"
-            :style="(vibe.card_image_url || vibe.thumbnail_url)
-              ? { backgroundImage: `url('${vibe.card_image_url ?? vibe.thumbnail_url}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
-              : { background: gradients[i % gradients.length] }"
+            class="vibe-card app-card-enter app-pressable"
+            :class="{
+              'vibe-card--has-image': !!getVibeCardImageUrl(vibe),
+              'vibe-card--fallback': !getVibeCardImageUrl(vibe),
+            }"
+            :style="getVibeCardBackgroundStyle(vibe, i)"
             @click="router.push(`/vibes/${vibe.id}/player`)"
           >
+            <div v-if="getVibeCardImageUrl(vibe)" class="vibe-card-scrim" aria-hidden="true" />
+            <div v-else class="vibe-card-fallback-decor" aria-hidden="true">
+              <span class="vibe-card-monogram">{{ vibeNameMonogram(vibe.name) }}</span>
+              <ion-icon :icon="musicalNotesOutline" class="vibe-card-fallback-icon" />
+            </div>
             <div class="vibe-card-overlay" />
 
-            <div
-              class="vibe-card-badge"
-              :class="vibe.is_active ? 'badge-active' : 'badge-inactive'"
-            >
-              {{ vibe.is_active ? 'Active' : 'Inactive' }}
+            <div class="vibe-card-top-row">
+              <div
+                class="vibe-card-badge"
+                :class="vibe.is_active ? 'badge-active' : 'badge-inactive'"
+              >
+                {{ vibe.is_active ? 'Active' : 'Inactive' }}
+              </div>
+              <div
+                v-if="offlineVibeIds.includes(vibe.id)"
+                class="vibe-card-badge vibe-card-badge--offline"
+                aria-label="Available offline"
+              >
+                <ion-icon :icon="cloudOfflineOutline" />
+                <span>Offline</span>
+              </div>
             </div>
 
             <div class="vibe-card-bottom">
@@ -80,35 +108,54 @@
 
 <script setup lang="ts">
 import {
-  IonButton,
   IonContent,
   IonFab,
   IonFabButton,
   IonHeader,
   IonIcon,
   IonPage,
-  IonSpinner,
   IonTitle,
   IonToolbar,
   alertController,
+  onIonViewWillEnter,
 } from '@ionic/vue';
-import { addOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
-import { onMounted } from 'vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
+import { addOutline, cloudOfflineOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
+import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
+import { getVibeCardBackgroundStyle, getVibeCardImageUrl } from '@/utils/artwork';
 
 const router = useRouter();
 const { vibes, loading, error, fetchVibes, deleteVibe } = useVibes();
 
-const gradients = [
-  'linear-gradient(160deg, #3a1c71 0%, #4a1890 55%, #1a1a6e 100%)',
-  'linear-gradient(160deg, #b0298a 0%, #8b2fc9 100%)',
-  'linear-gradient(160deg, #1dac92 0%, #0e7490 55%, #0f3f5c 100%)',
-  'linear-gradient(160deg, #d97706 0%, #b45309 55%, #7c2d12 100%)',
-  'linear-gradient(160deg, #4338ca 0%, #6d28d9 100%)',
-];
+const offlineVibeIds = ref<number[]>([]);
 
-onMounted(fetchVibes);
+async function refreshOfflineBadges(): Promise<void> {
+  offlineVibeIds.value = await getDownloadedVibeIds();
+}
+
+onMounted(() => {
+  void fetchVibes();
+  void refreshOfflineBadges();
+});
+
+onIonViewWillEnter(() => {
+  void refreshOfflineBadges();
+});
+
+function vibeNameMonogram(name: string): string {
+  const t = name.trim();
+  if (!t) return '?';
+  return t.charAt(0).toUpperCase();
+}
+
+function goCreate(): void {
+  router.push('/vibes/create');
+}
 
 function goEdit(id: number) {
   router.push(`/vibes/${id}/edit`);
@@ -128,62 +175,16 @@ async function handleDelete(id: number) {
 </script>
 
 <style scoped>
-.vibes-toolbar {
-  --background: var(--app-color-bg);
-  --border-style: none;
-  padding-top: 4px;
-}
-
-.vibes-toolbar-title {
-  font-size: var(--app-font-size-h6);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-color-text-primary);
-}
-
 /* ── Page content ─────────────────────────────── */
 
 .vibes-content {
-  /* Extra bottom padding clears the FAB (72px) above the tab bar */
-  padding: 8px 20px 100px;
+  /* Extra bottom padding clears the FAB (72px) above the tab bar + safe area */
+  padding-top: var(--app-space-2);
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
-/* ── Empty / loading states ───────────────────── */
-
-.vibes-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 64px 24px;
-  text-align: center;
-}
-
-.vibes-state-title {
-  font-size: var(--app-font-size-h6);
-  font-weight: var(--app-font-weight-semibold);
-  color: var(--app-color-text-primary);
-  margin: 0;
-}
-
-.vibes-state-sub {
-  font-size: var(--app-font-size-body-md);
-  color: var(--app-color-text-secondary);
-  margin: 0;
-}
-
-.vibes-state-msg {
-  font-size: var(--app-font-size-body-md);
-  margin: 0;
-}
-
-.vibes-state-msg.error {
-  color: var(--ion-color-danger);
-}
-
-.vibes-create-btn {
-  margin-top: 8px;
-  width: 200px;
+.vibes-state-slot {
+  margin-top: var(--app-space-6);
 }
 
 /* ── Card list ────────────────────────────────── */
@@ -202,6 +203,56 @@ async function handleDelete(id: number) {
   height: 192px;
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+}
+
+.vibe-card-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(0, 0, 0, 0.05) 42%,
+    rgba(0, 0, 0, 0.02) 58%,
+    rgba(0, 0, 0, 0.68) 100%
+  );
+}
+
+.vibe-card-fallback-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.vibe-card-monogram {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.vibe-card-fallback-icon {
+  position: absolute;
+  bottom: 96px;
+  right: 14px;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.14);
 }
 
 /* Bottom dark blur strip */
@@ -210,18 +261,32 @@ async function handleDelete(id: number) {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 68px;
-  background: rgba(15, 23, 42, 0.25);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  height: 72px;
+  z-index: 1;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 0 0 12px 12px;
 }
 
-/* Badge — top left */
-.vibe-card-badge {
+.vibe-card--has-image .vibe-card-overlay {
+  background: rgba(15, 23, 42, 0.42);
+}
+
+/* Top badges — Active (left) · Offline (right) */
+.vibe-card-top-row {
   position: absolute;
   top: 14px;
   left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+}
+
+.vibe-card-badge {
   height: 24px;
   padding: 0 10px;
   display: flex;
@@ -233,7 +298,19 @@ async function handleDelete(id: number) {
   font-weight: 600;
   letter-spacing: 0.4px;
   white-space: nowrap;
-  z-index: 1;
+}
+
+.vibe-card-badge--offline {
+  gap: 4px;
+  padding: 0 8px 0 6px;
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.vibe-card-badge--offline ion-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .badge-active {
@@ -258,7 +335,7 @@ async function handleDelete(id: number) {
   align-items: flex-end;
   justify-content: space-between;
   gap: 8px;
-  z-index: 1;
+  z-index: 2;
 }
 
 .vibe-card-text {
@@ -278,12 +355,14 @@ async function handleDelete(id: number) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
 }
 
 .vibe-card-desc {
   font-size: 10px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
   letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;
@@ -311,12 +390,15 @@ async function handleDelete(id: number) {
   color: #fff;
   font-size: 18px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
   padding: 0;
 }
 
 .vibe-action-btn:active {
   background: rgba(255, 255, 255, 0.28);
+  transform: scale(0.94);
 }
 
 .vibe-action-btn.danger {
