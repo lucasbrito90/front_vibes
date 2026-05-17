@@ -41,12 +41,19 @@
           <div
             v-for="(vibe, i) in vibes"
             :key="vibe.id"
-            class="vibe-card"
-            :style="(vibe.card_image_url || vibe.thumbnail_url)
-              ? { backgroundImage: `url('${vibe.card_image_url ?? vibe.thumbnail_url}')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
-              : { background: gradients[i % gradients.length] }"
+            class="vibe-card app-artwork-card-enter"
+            :class="{
+              'vibe-card--has-image': !!getVibeCardImageUrl(vibe),
+              'vibe-card--fallback': !getVibeCardImageUrl(vibe),
+            }"
+            :style="getVibeCardBackgroundStyle(vibe, i)"
             @click="router.push(`/vibes/${vibe.id}/player`)"
           >
+            <div v-if="getVibeCardImageUrl(vibe)" class="vibe-card-scrim" aria-hidden="true" />
+            <div v-else class="vibe-card-fallback-decor" aria-hidden="true">
+              <span class="vibe-card-monogram">{{ vibeNameMonogram(vibe.name) }}</span>
+              <ion-icon :icon="musicalNotesOutline" class="vibe-card-fallback-icon" />
+            </div>
             <div class="vibe-card-overlay" />
 
             <div class="vibe-card-top-row">
@@ -120,6 +127,7 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
 import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
+import { getVibeCardBackgroundStyle, getVibeCardImageUrl } from '@/utils/artwork';
 
 const router = useRouter();
 const { vibes, loading, error, fetchVibes, deleteVibe } = useVibes();
@@ -139,13 +147,11 @@ onIonViewWillEnter(() => {
   void refreshOfflineBadges();
 });
 
-const gradients = [
-  'linear-gradient(160deg, #3a1c71 0%, #4a1890 55%, #1a1a6e 100%)',
-  'linear-gradient(160deg, #b0298a 0%, #8b2fc9 100%)',
-  'linear-gradient(160deg, #1dac92 0%, #0e7490 55%, #0f3f5c 100%)',
-  'linear-gradient(160deg, #d97706 0%, #b45309 55%, #7c2d12 100%)',
-  'linear-gradient(160deg, #4338ca 0%, #6d28d9 100%)',
-];
+function vibeNameMonogram(name: string): string {
+  const t = name.trim();
+  if (!t) return '?';
+  return t.charAt(0).toUpperCase();
+}
 
 function goCreate(): void {
   router.push('/vibes/create');
@@ -197,6 +203,56 @@ async function handleDelete(id: number) {
   height: 192px;
   border-radius: 12px;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+}
+
+.vibe-card-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.45) 0%,
+    rgba(0, 0, 0, 0.05) 42%,
+    rgba(0, 0, 0, 0.02) 58%,
+    rgba(0, 0, 0, 0.68) 100%
+  );
+}
+
+.vibe-card-fallback-decor {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.vibe-card-monogram {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.vibe-card-fallback-icon {
+  position: absolute;
+  bottom: 96px;
+  right: 14px;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.14);
 }
 
 /* Bottom dark blur strip */
@@ -205,11 +261,16 @@ async function handleDelete(id: number) {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 68px;
-  background: rgba(15, 23, 42, 0.25);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  height: 72px;
+  z-index: 1;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 0 0 12px 12px;
+}
+
+.vibe-card--has-image .vibe-card-overlay {
+  background: rgba(15, 23, 42, 0.42);
 }
 
 /* Top badges — Active (left) · Offline (right) */
@@ -222,7 +283,7 @@ async function handleDelete(id: number) {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  z-index: 1;
+  z-index: 2;
 }
 
 .vibe-card-badge {
@@ -274,7 +335,7 @@ async function handleDelete(id: number) {
   align-items: flex-end;
   justify-content: space-between;
   gap: 8px;
-  z-index: 1;
+  z-index: 2;
 }
 
 .vibe-card-text {
@@ -294,12 +355,14 @@ async function handleDelete(id: number) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
 }
 
 .vibe-card-desc {
   font-size: 10px;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.75);
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
   letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;

@@ -12,7 +12,7 @@
         <img
           v-if="currentVibeArtworkUrl"
           :src="currentVibeArtworkUrl"
-          class="mini-player-artwork-img"
+          class="mini-player-artwork-img app-artwork-fade-in"
           alt=""
           aria-hidden="true"
         />
@@ -21,7 +21,9 @@
           class="mini-player-artwork-placeholder"
           :style="artworkGradient"
           aria-hidden="true"
-        />
+        >
+          <ion-icon :icon="musicalNotesOutline" class="mini-player-artwork-fallback-icon" />
+        </div>
       </div>
 
       <!-- Vibe info -->
@@ -66,6 +68,7 @@ import {
   pauseOutline,
   playOutline,
   stopCircleOutline,
+  musicalNotesOutline,
 } from 'ionicons/icons';
 import { computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
@@ -73,6 +76,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { usePlayerStore } from '@/stores/player.store';
 import { createLogger } from '@/utils/player-debug';
+import { getVibeFallbackGradient } from '@/utils/artwork';
 
 const log = createLogger('MiniPlayer');
 
@@ -112,16 +116,8 @@ watch(isVisible, (next, prev) => {
 // When no artwork URL is available, derive a gradient from the vibe ID so each
 // vibe always gets a consistent colour rather than a generic grey box.
 
-const _gradients = [
-  'linear-gradient(135deg, #3a1c71 0%, #4a1890 100%)',
-  'linear-gradient(135deg, #b0298a 0%, #8b2fc9 100%)',
-  'linear-gradient(135deg, #1dac92 0%, #0f3f5c 100%)',
-  'linear-gradient(135deg, #d97706 0%, #7c2d12 100%)',
-  'linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)',
-];
-
 const artworkGradient = computed(() => ({
-  background: _gradients[(currentVibeId.value ?? 0) % _gradients.length],
+  background: getVibeFallbackGradient(currentVibeId.value ?? 0),
 }));
 
 // ── Display text ──────────────────────────────────────────────────────────────
@@ -236,6 +232,16 @@ function navigateToPlayer(): void {
 .mini-player-artwork-placeholder {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+.mini-player-artwork-fallback-icon {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.38);
+  pointer-events: none;
 }
 
 /* ── Info area ───────────────────────────────────────────── */
