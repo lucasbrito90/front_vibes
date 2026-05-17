@@ -1,7 +1,7 @@
 <template>
   <ion-page class="auth-page">
     <ion-content class="auth-content">
-      <div class="auth-screen auth-entry-screen">
+      <div class="auth-screen auth-entry-screen app-fade-in">
         <section class="auth-entry-hero">
           <img
             class="auth-entry-hero-image"

@@ -12,7 +12,7 @@
     </ion-header>
 
     <ion-content class="auth-content">
-      <div class="auth-screen auth-flow-body auth-screen-signup">
+      <div class="auth-screen auth-flow-body auth-screen-signup app-slide-up">
         <p class="auth-subtitle auth-flow-lead">
           Create your Ixora account to save and layer vibes.
         </p>

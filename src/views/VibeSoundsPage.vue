@@ -74,7 +74,7 @@
       />
 
       <!-- Categories -->
-      <div v-else class="sounds-categories">
+      <div v-else class="sounds-categories app-fade-in">
         <div
           v-for="(group, category) in filteredByCategory"
           :key="category"
@@ -97,7 +97,7 @@
                     v-if="sound.thumbnail_url"
                     :src="sound.thumbnail_url"
                     :alt="sound.name"
-                    class="sound-card-img"
+                    class="sound-card-img app-artwork-fade-in"
                   />
                   <div v-else class="sound-card-placeholder" />
 
@@ -565,7 +565,13 @@ async function handleSave(): Promise<void> {
   border-radius: 14px;
   overflow: hidden;
   border: 2px solid transparent;
-  transition: border-color 0.2s;
+  transition:
+    border-color var(--app-motion-base) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.sound-card:active .sound-card-thumb {
+  transform: scale(0.97);
 }
 
 .sound-card.selected .sound-card-thumb {

@@ -139,7 +139,7 @@
 
           <div
             v-if="!loading && badgeItems.length > 0"
-            class="player-badge-row"
+            class="player-badge-row app-fade-in"
             role="status"
             aria-label="Session indicators"
           >
@@ -172,7 +172,7 @@
               <li
                 v-for="layer in executionPlan"
                 :key="layer.soundId"
-                class="player-layer-card"
+                class="player-layer-card app-slide-up"
                 :class="{ 'player-layer-card--muted': !isExecutionLayerPlayable(layer) }"
               >
                 <div class="player-layer-card-top">
@@ -1070,10 +1070,10 @@ onUnmounted(() => {
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
     0 8px 28px rgba(0, 0, 0, 0.35);
   transition:
-    transform 0.18s ease,
-    background 0.22s ease,
-    border-color 0.22s ease,
-    box-shadow 0.22s ease;
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    background var(--app-motion-base) var(--app-ease-standard),
+    border-color var(--app-motion-base) var(--app-ease-standard),
+    box-shadow var(--app-motion-base) var(--app-ease-standard);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1106,7 +1106,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
 .player-spinner-wrap--preparing {
@@ -1154,11 +1154,11 @@ onUnmounted(() => {
     0 12px 40px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(0, 0, 0, 0.25);
   transition:
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.28s ease,
-    border-color 0.28s ease,
-    opacity 0.22s ease,
-    filter 0.28s ease;
+    transform var(--app-motion-fast) var(--app-ease-emphasized),
+    box-shadow var(--app-motion-base) var(--app-ease-standard),
+    border-color var(--app-motion-base) var(--app-ease-standard),
+    opacity var(--app-motion-fast) var(--app-ease-standard),
+    filter var(--app-motion-base) var(--app-ease-standard);
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1300,7 +1300,9 @@ onUnmounted(() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
-  transition: transform 0.18s ease, box-shadow 0.22s ease;
+  transition:
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    box-shadow var(--app-motion-base) var(--app-ease-standard);
 }
 
 .player-badge:active {
@@ -1440,9 +1442,9 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35);
   transition:
-    transform 0.2s ease,
-    border-color 0.22s ease,
-    box-shadow 0.22s ease;
+    transform var(--app-motion-base) var(--app-ease-standard),
+    border-color var(--app-motion-base) var(--app-ease-standard),
+    box-shadow var(--app-motion-base) var(--app-ease-standard);
 }
 
 .player-layer-card:active {

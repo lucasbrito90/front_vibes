@@ -1,6 +1,6 @@
 /**
  * Global layout shells — safe-area, max-width, and tab/auth consistency.
- * Imported after variables.css / theme.css in main.ts.
+ * Motion tokens live in motion.css (loaded before this file in main.ts).
  */
 
 :root {
@@ -60,30 +60,12 @@
 
 /* ── Artwork / photo reveal (see docs/artwork-background-strategy.md) ── */
 
-@keyframes app-artwork-reveal {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
+/* Shares keyframes / durations from motion.css (import order in main.ts). */
 
 .app-artwork-fade-in {
-  animation: app-artwork-reveal 0.48s ease forwards;
-}
-
-@keyframes app-artwork-card-in {
-  from {
-    opacity: 0.88;
-    transform: scale(0.994);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  animation: app-fade-in-kf var(--app-motion-base) var(--app-ease-standard) forwards;
 }
 
 .app-artwork-card-enter {
-  animation: app-artwork-card-in 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: app-card-enter-kf var(--app-motion-base) var(--app-ease-emphasized) both;
 }
