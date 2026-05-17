@@ -9,22 +9,33 @@
     <ion-content :fullscreen="true">
       <div class="vibes-content page-shell">
 
-        <div v-if="loading && !vibes.length" class="vibes-state">
-          <ion-spinner name="crescent" color="primary" />
-        </div>
+        <AppLoadingState
+          v-if="loading && !vibes.length"
+          class="vibes-state-slot"
+          compact
+          title="Loading your vibes…"
+        />
 
-        <div v-else-if="error && !vibes.length" class="vibes-state">
-          <p class="vibes-state-msg error">{{ error }}</p>
-          <ion-button fill="outline" size="small" @click="fetchVibes">Retry</ion-button>
-        </div>
+        <AppErrorState
+          v-else-if="error && !vibes.length"
+          class="vibes-state-slot"
+          compact
+          title="Couldn’t load vibes"
+          :description="error ?? ''"
+          retry-label="Retry"
+          @retry="fetchVibes"
+        />
 
-        <div v-else-if="!vibes.length" class="vibes-state">
-          <p class="vibes-state-title">No vibes yet</p>
-          <p class="vibes-state-sub">Create your first vibe</p>
-          <ion-button router-link="/vibes/create" expand="block" class="vibes-create-btn">
-            Create Vibe
-          </ion-button>
-        </div>
+        <AppEmptyState
+          v-else-if="!vibes.length"
+          class="vibes-state-slot"
+          variant="card"
+          :icon="musicalNotesOutline"
+          title="No vibes yet"
+          description="Create your first ambient mix — layers of sound you can play anytime."
+          action-label="Create vibe"
+          @action="goCreate"
+        />
 
         <div v-else class="vibes-list">
           <div
@@ -90,19 +101,20 @@
 
 <script setup lang="ts">
 import {
-  IonButton,
   IonContent,
   IonFab,
   IonFabButton,
   IonHeader,
   IonIcon,
   IonPage,
-  IonSpinner,
   IonTitle,
   IonToolbar,
   alertController,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { addOutline, cloudOfflineOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -135,6 +147,10 @@ const gradients = [
   'linear-gradient(160deg, #4338ca 0%, #6d28d9 100%)',
 ];
 
+function goCreate(): void {
+  router.push('/vibes/create');
+}
+
 function goEdit(id: number) {
   router.push(`/vibes/${id}/edit`);
 }
@@ -161,43 +177,8 @@ async function handleDelete(id: number) {
   padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
 }
 
-/* ── Empty / loading states ───────────────────── */
-
-.vibes-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 64px 24px;
-  text-align: center;
-}
-
-.vibes-state-title {
-  font-size: var(--app-font-size-h6);
-  font-weight: var(--app-font-weight-bold);
-  color: var(--app-color-text-primary);
-  margin: 0;
-}
-
-.vibes-state-sub {
-  font-size: var(--app-font-size-body-md);
-  color: var(--app-color-text-secondary);
-  margin: 0;
-}
-
-.vibes-state-msg {
-  font-size: var(--app-font-size-body-md);
-  margin: 0;
-}
-
-.vibes-state-msg.error {
-  color: var(--ion-color-danger);
-}
-
-.vibes-create-btn {
-  margin-top: 8px;
-  width: 200px;
+.vibes-state-slot {
+  margin-top: var(--app-space-6);
 }
 
 /* ── Card list ────────────────────────────────── */

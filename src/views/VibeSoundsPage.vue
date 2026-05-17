@@ -33,21 +33,45 @@
         </div>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loadingSounds && !sounds.length" class="sounds-state">
-        <ion-spinner name="crescent" color="primary" />
+      <!-- Attach hint -->
+      <div v-if="showAttachHint" class="sounds-hint-wrap page-shell">
+        <AppEmptyState
+          variant="compact"
+          class="sounds-hint-inner app-surface-card"
+          :icon="musicalNotesOutline"
+          title="No sounds attached yet"
+          description="Tap the cards below to add them to this vibe. Tap Save when you’re done."
+        />
       </div>
+
+      <!-- Loading -->
+      <AppLoadingState
+        v-if="loadingSounds && !sounds.length"
+        class="sounds-state-slot page-shell"
+        compact
+        title="Loading sounds…"
+      />
 
       <!-- Error -->
-      <div v-else-if="soundsError && !sounds.length" class="sounds-state">
-        <p class="sounds-state-msg error">{{ soundsError }}</p>
-        <ion-button fill="outline" size="small" @click="fetchSounds">Retry</ion-button>
-      </div>
+      <AppErrorState
+        v-else-if="soundsError && !sounds.length"
+        class="sounds-state-slot page-shell"
+        compact
+        title="Couldn’t load sounds"
+        :description="soundsError"
+        retry-label="Retry"
+        @retry="fetchSounds"
+      />
 
       <!-- Empty catalog -->
-      <div v-else-if="isCatalogEmpty" class="sounds-state">
-        <p class="sounds-state-msg">No sounds found.</p>
-      </div>
+      <AppEmptyState
+        v-else-if="isCatalogEmpty"
+        class="sounds-state-slot page-shell"
+        variant="compact"
+        :icon="searchOutline"
+        title="No sounds found"
+        :description="emptyCatalogDescription"
+      />
 
       <!-- Categories -->
       <div v-else class="sounds-categories">
@@ -151,7 +175,6 @@ import {
   IonHeader,
   IonIcon,
   IonPage,
-  IonSpinner,
   IonToolbar,
   modalController,
   toastController,
@@ -160,6 +183,7 @@ import {
   checkmarkCircle,
   checkmarkOutline,
   chevronBackOutline,
+  musicalNotesOutline,
   searchOutline,
   settingsOutline,
 } from 'ionicons/icons';
@@ -171,6 +195,9 @@ import { useVibes } from '@/composables/useVibes';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { vibeSoundService } from '@/services/vibe-sound.service';
 import VibeSoundEditModal from '@/views/VibeSoundEditModal.vue';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -241,6 +268,21 @@ const filteredByCategory = computed(() => {
 
 // Object has no .length — check keys instead
 const isCatalogEmpty = computed(() => Object.keys(filteredByCategory.value).length === 0);
+
+const emptyCatalogDescription = computed(() =>
+  searchQuery.value.trim()
+    ? 'Try a different search or clear the box to see all sounds.'
+    : 'There are no sounds in the catalog right now.',
+);
+
+const showAttachHint = computed(
+  () =>
+    !loadingSounds.value
+    && !soundsError.value
+    && sounds.value.length > 0
+    && !isCatalogEmpty.value
+    && selectedIds.value.size === 0,
+);
 
 function isSelected(soundId: number): boolean {
   return selectedIds.value.has(soundId);
@@ -444,23 +486,19 @@ async function handleSave(): Promise<void> {
   color: var(--app-color-text-muted, #94a3b8);
 }
 
-/* ── States ──────────────────────────────────────── */
-.sounds-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 48px 24px;
+/* ── Empty / loading / hint ─────────────────────── */
+.sounds-hint-wrap {
+  padding: 12px 0 4px;
 }
 
-.sounds-state-msg {
-  font-size: var(--app-font-size-body-md, 15px);
-  color: var(--app-color-text-secondary, #475569);
-  margin: 0;
+.sounds-hint-inner {
+  padding: var(--app-space-4) var(--app-space-5) !important;
+  border-radius: var(--app-radius-lg);
 }
 
-.sounds-state-msg.error {
-  color: var(--ion-color-danger);
+.sounds-state-slot {
+  padding-top: var(--app-space-6);
+  padding-bottom: var(--app-space-4);
 }
 
 /* ── Categories ──────────────────────────────────── */

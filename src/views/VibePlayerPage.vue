@@ -59,7 +59,11 @@
         <!-- ── Center: Play / Pause ──────────────────── -->
         <div class="player-center">
           <div v-if="loading || isThisVibePreparing" class="player-spinner-wrap">
-            <ion-spinner name="crescent" class="player-spinner" />
+            <AppLoadingState
+              compact
+              tone="inverse"
+              :title="loading ? 'Loading vibe…' : 'Preparing playback…'"
+            />
           </div>
 
           <button
@@ -80,7 +84,28 @@
         <!-- ── Bottom info panel ─────────────────────── -->
         <div class="player-bottom">
           <!-- Warning (no sounds / nothing playable) -->
-          <p v-if="!loading && warningText" class="player-warning">
+          <AppErrorState
+            v-if="!loading && playbackErroredThisVibe"
+            tone="inverse"
+            compact
+            class="player-inline-state"
+            title="Playback couldn’t start"
+            description="Something went wrong while preparing audio."
+            retry-label="Try again"
+            @retry="handleRestartVibe"
+          />
+
+          <AppEmptyState
+            v-else-if="!loading && offlineUnavailableAfterLoad"
+            tone="inverse"
+            variant="compact"
+            class="player-inline-state"
+            :icon="cloudOfflineOutline"
+            title="This vibe is not available offline"
+            description="Connect to the internet or use Download for offline from the menu when you’re online."
+          />
+
+          <p v-if="!loading && warningText && !playbackErroredThisVibe && !offlineUnavailableAfterLoad" class="player-warning">
             {{ warningText }}
           </p>
 
@@ -226,7 +251,6 @@ import {
   IonList,
   IonPage,
   IonPopover,
-  IonSpinner,
   toastController,
 } from '@ionic/vue';
 import {
@@ -234,6 +258,7 @@ import {
   checkmarkCircleOutline,
   cloudDoneOutline,
   cloudDownloadOutline,
+  cloudOfflineOutline,
   ellipsisVertical,
   pauseOutline,
   playOutline,
@@ -259,6 +284,9 @@ import {
 import { isVibeDownloaded, removeDownloadedVibe } from '@/services/offline-downloads.service';
 import { isExecutionLayerPlayable } from '@/services/player-engine.service';
 import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 
 // ── Route / Router ────────────────────────────────────────────────────────────
 
@@ -286,6 +314,8 @@ const loading                   = ref(false);
 const isDownloading             = ref(false);
 /** Full-file download + snapshot saved — distinct from “playing from snapshot this session”. */
 const vibeOfflineReady          = ref(false);
+/** Offline visit without snapshot — show inline guidance (not only toast). */
+const offlineUnavailableAfterLoad = ref(false);
 /** True when sounds + vibe detail were restored from `offline_vibe_manifest_v1` (API had no usable sounds). */
 const loadedFromOfflineSnapshot = ref(false);
 
@@ -333,6 +363,7 @@ async function refreshOfflineDownloadState(): Promise<void> {
 watch(
   vibeId,
   () => {
+    offlineUnavailableAfterLoad.value = false;
     void refreshOfflineDownloadState();
   },
   { immediate: true },
@@ -380,8 +411,15 @@ const canUsePlaybackControls = computed(
     ),
 );
 
+/** Same-route vibe playback ended in error — surfaced inline with retry. */
+const playbackErroredThisVibe = computed(
+  () => currentVibeId.value === vibeId.value && playbackState.value === 'error',
+);
+
 const warningText = computed((): string | null => {
   if (loading.value) return null;
+  if (playbackErroredThisVibe.value) return null;
+  if (offlineUnavailableAfterLoad.value) return null;
   if (isThisVibePreparing.value) return null;
   if (!vibeSounds.value.length) return 'No sounds configured';
   if (isAnotherVibePlaying.value) return 'Another vibe is playing — tap Play to switch';
@@ -717,6 +755,7 @@ onMounted(async () => {
   log.debug('mounted', { vibeId: vibeId.value });
   loading.value = true;
   loadedFromOfflineSnapshot.value = false;
+  offlineUnavailableAfterLoad.value = false;
 
   await Promise.all([
     fetchVibe(vibeId.value),
@@ -743,7 +782,10 @@ onMounted(async () => {
         console.log('[OfflineMode] vibe UI hydrated from offline snapshot', { vibeId: id });
       }
     } else {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const offline =
+        typeof navigator !== 'undefined' && !navigator.onLine;
+      offlineUnavailableAfterLoad.value = offline;
+      if (offline) {
         await showPlaybackToast('This vibe is not available offline');
       }
       buildPlan(vibeSounds.value);
