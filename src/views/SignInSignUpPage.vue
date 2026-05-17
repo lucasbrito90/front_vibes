@@ -45,22 +45,28 @@
           Not a member?
           <router-link to="/sign-up">Sign up</router-link>
         </p>
+
+        <ion-text v-if="error" class="auth-error">{{ error }}</ion-text>
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonContent, IonIcon, IonPage } from '@ionic/vue';
+import { IonButton, IonContent, IonIcon, IonPage, IonText } from '@ionic/vue';
 import { logoApple, mailOutline } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
-const { loginWithGoogle } = useAuth();
+const { loginWithGoogle, error } = useAuth();
 
 async function handleGoogleLogin() {
-  await loginWithGoogle();
-  await router.replace('/home');
+  try {
+    await loginWithGoogle();
+    await router.replace('/home');
+  } catch {
+    /* error surfaced via useAuth */
+  }
 }
 </script>

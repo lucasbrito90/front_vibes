@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
+import { toastController } from '@ionic/vue';
 import { RouteRecordRaw } from 'vue-router';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/services/firebase';
+import { authService, LARAVEL_SYNC_FAILURE_MESSAGE } from '@/services/auth.service';
 import { createLogger } from '@/utils/player-debug';
 import { syncStatusBarWithRoute } from '@/composables/useStatusBarStyle';
 
@@ -141,6 +143,26 @@ function waitForAuthState(): Promise<User | null> {
 
 router.beforeEach(async (to) => {
   const user = await waitForAuthState();
+
+  if (to.meta.requiresAuth && user) {
+    try {
+      await authService.ensureLaravelUserSynced(user);
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('[Router] Laravel user sync failed:', err);
+      }
+      await authService.logout();
+
+      const toast = await toastController.create({
+        message: LARAVEL_SYNC_FAILURE_MESSAGE,
+        duration: 4500,
+        color: 'danger',
+      });
+      await toast.present();
+
+      return '/sign-in';
+    }
+  }
 
   if (to.meta.requiresAuth && !user) {
     return '/sign-in';
