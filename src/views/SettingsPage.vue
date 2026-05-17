@@ -56,6 +56,36 @@
           </div>
         </section>
 
+        <!-- Appearance -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Appearance</h2>
+          <div class="app-surface-card settings-card settings-card--static settings-appearance-card">
+            <ion-radio-group :value="themeMode" @ionChange="handleThemeChange">
+              <ion-item lines="full" class="settings-appearance-item">
+                <ion-label class="settings-appearance-label">
+                  <div class="settings-tile-title">System</div>
+                  <div class="settings-tile-sub">Match device light or dark mode</div>
+                </ion-label>
+                <ion-radio slot="end" value="system" />
+              </ion-item>
+              <ion-item lines="full" class="settings-appearance-item">
+                <ion-label class="settings-appearance-label">
+                  <div class="settings-tile-title">Light</div>
+                  <div class="settings-tile-sub">Always light appearance</div>
+                </ion-label>
+                <ion-radio slot="end" value="light" />
+              </ion-item>
+              <ion-item lines="none" class="settings-appearance-item">
+                <ion-label class="settings-appearance-label">
+                  <div class="settings-tile-title">Dark</div>
+                  <div class="settings-tile-sub">Always dark appearance</div>
+                </ion-label>
+                <ion-radio slot="end" value="dark" />
+              </ion-item>
+            </ion-radio-group>
+          </div>
+        </section>
+
         <!-- Account -->
         <section class="settings-block">
           <h2 class="settings-heading">Account</h2>
@@ -120,7 +150,11 @@ import {
   IonContent,
   IonHeader,
   IonIcon,
+  IonItem,
+  IonLabel,
   IonPage,
+  IonRadio,
+  IonRadioGroup,
   IonSpinner,
   IonTitle,
   IonToast,
@@ -135,6 +169,7 @@ import {
 import { usePlayerStore } from '@/stores/player.store';
 import { audioEngine } from '@/services/audio-engine';
 import { useAuth } from '@/composables/useAuth';
+import { themeMode, setThemeMode, type ThemeMode } from '@/composables/useThemeMode';
 
 const playerStore = usePlayerStore();
 const { logout } = useAuth();
@@ -188,6 +223,11 @@ async function doClearCache(): Promise<void> {
 function showToastMessage(msg: string): void {
   toastMessage.value = msg;
   showToast.value    = true;
+}
+
+async function handleThemeChange(ev: CustomEvent<{ value: string }>): Promise<void> {
+  const v = ev.detail?.value;
+  if (v === 'system' || v === 'light' || v === 'dark') await setThemeMode(v as ThemeMode);
 }
 
 async function handleSignOut(): Promise<void> {
@@ -339,5 +379,21 @@ async function handleSignOut(): Promise<void> {
   font-size: var(--app-font-size-body-sm);
   color: var(--app-color-text-muted);
   line-height: 1.5;
+}
+
+.settings-appearance-card ion-radio-group {
+  width: 100%;
+}
+
+.settings-appearance-item {
+  --background: transparent;
+  --padding-start: var(--app-space-5);
+  --padding-end: var(--app-space-5);
+  --inner-padding-end: 0;
+  --min-height: 72px;
+}
+
+.settings-appearance-label {
+  margin: 12px 0;
 }
 </style>
