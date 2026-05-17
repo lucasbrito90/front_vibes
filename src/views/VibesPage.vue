@@ -38,11 +38,21 @@
           >
             <div class="vibe-card-overlay" />
 
-            <div
-              class="vibe-card-badge"
-              :class="vibe.is_active ? 'badge-active' : 'badge-inactive'"
-            >
-              {{ vibe.is_active ? 'Active' : 'Inactive' }}
+            <div class="vibe-card-top-row">
+              <div
+                class="vibe-card-badge"
+                :class="vibe.is_active ? 'badge-active' : 'badge-inactive'"
+              >
+                {{ vibe.is_active ? 'Active' : 'Inactive' }}
+              </div>
+              <div
+                v-if="offlineVibeIds.includes(vibe.id)"
+                class="vibe-card-badge vibe-card-badge--offline"
+                aria-label="Available offline"
+              >
+                <ion-icon :icon="cloudOfflineOutline" />
+                <span>Offline</span>
+              </div>
             </div>
 
             <div class="vibe-card-bottom">
@@ -91,14 +101,31 @@ import {
   IonTitle,
   IonToolbar,
   alertController,
+  onIonViewWillEnter,
 } from '@ionic/vue';
-import { addOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
-import { onMounted } from 'vue';
+import { addOutline, cloudOfflineOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
+import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
 
 const router = useRouter();
 const { vibes, loading, error, fetchVibes, deleteVibe } = useVibes();
+
+const offlineVibeIds = ref<number[]>([]);
+
+async function refreshOfflineBadges(): Promise<void> {
+  offlineVibeIds.value = await getDownloadedVibeIds();
+}
+
+onMounted(() => {
+  void fetchVibes();
+  void refreshOfflineBadges();
+});
+
+onIonViewWillEnter(() => {
+  void refreshOfflineBadges();
+});
 
 const gradients = [
   'linear-gradient(160deg, #3a1c71 0%, #4a1890 55%, #1a1a6e 100%)',
@@ -107,8 +134,6 @@ const gradients = [
   'linear-gradient(160deg, #d97706 0%, #b45309 55%, #7c2d12 100%)',
   'linear-gradient(160deg, #4338ca 0%, #6d28d9 100%)',
 ];
-
-onMounted(fetchVibes);
 
 function goEdit(id: number) {
   router.push(`/vibes/${id}/edit`);
@@ -206,11 +231,20 @@ async function handleDelete(id: number) {
   border-radius: 0 0 12px 12px;
 }
 
-/* Badge — top left */
-.vibe-card-badge {
+/* Top badges — Active (left) · Offline (right) */
+.vibe-card-top-row {
   position: absolute;
   top: 14px;
   left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 1;
+}
+
+.vibe-card-badge {
   height: 24px;
   padding: 0 10px;
   display: flex;
@@ -222,7 +256,19 @@ async function handleDelete(id: number) {
   font-weight: 600;
   letter-spacing: 0.4px;
   white-space: nowrap;
-  z-index: 1;
+}
+
+.vibe-card-badge--offline {
+  gap: 4px;
+  padding: 0 8px 0 6px;
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.38);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.vibe-card-badge--offline ion-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .badge-active {

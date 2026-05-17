@@ -56,6 +56,42 @@
           </div>
         </section>
 
+        <!-- Downloads -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Downloads</h2>
+          <p class="settings-hint settings-hint--tight">
+            Downloaded vibes are available without internet.
+          </p>
+          <p v-if="!offlineDownloadList.length" class="settings-download-empty">
+            No vibes saved for offline yet. Use <strong>Download for offline</strong> in the player menu (⋮).
+          </p>
+          <div v-else class="app-surface-card settings-card settings-card--static settings-downloads-card">
+            <div
+              v-for="snap in offlineDownloadList"
+              :key="snap.vibeId"
+              class="settings-download-row"
+            >
+              <div class="settings-download-info">
+                <ion-icon :icon="cloudOfflineOutline" class="settings-download-leading-icon" />
+                <div class="settings-download-text">
+                  <span class="settings-tile-title">{{ snap.vibe.name }}</span>
+                  <span class="settings-tile-sub">{{ formatOfflineSavedAt(snap.downloadedAt) }}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="settings-download-remove"
+                :disabled="removingVibeId === snap.vibeId"
+                :aria-label="`Remove offline download for ${snap.vibe.name}`"
+                @click="confirmRemoveOfflineDownload(snap.vibeId, snap.vibe.name)"
+              >
+                <ion-spinner v-if="removingVibeId === snap.vibeId" name="crescent" class="settings-download-spinner" />
+                <ion-icon v-else :icon="trashOutline" />
+              </button>
+            </div>
+          </div>
+        </section>
+
         <!-- Appearance -->
         <section class="settings-block">
           <h2 class="settings-heading">Appearance</h2>
@@ -159,17 +195,23 @@ import {
   IonTitle,
   IonToast,
   IonToolbar,
+  alertController,
+  onIonViewWillEnter,
 } from '@ionic/vue';
 import {
   chevronForwardOutline,
   cloudDownloadOutline,
+  cloudOfflineOutline,
   logOutOutline,
   musicalNotesOutline,
+  trashOutline,
 } from 'ionicons/icons';
 import { usePlayerStore } from '@/stores/player.store';
 import { audioEngine } from '@/services/audio-engine';
 import { useAuth } from '@/composables/useAuth';
 import { themeMode, setThemeMode, type ThemeMode } from '@/composables/useThemeMode';
+import type { OfflineVibeSnapshot } from '@/services/offline-vibe-cache.service';
+import { getOfflineVibeSnapshots, removeDownloadedVibe } from '@/services/offline-downloads.service';
 
 const playerStore = usePlayerStore();
 const { logout } = useAuth();
@@ -188,6 +230,55 @@ const cacheSubtitle = computed(() => {
 });
 
 const isPlaybackActive = computed(() => playerStore.playbackState !== 'idle');
+
+const offlineDownloadList = ref<OfflineVibeSnapshot[]>([]);
+const removingVibeId = ref<number | null>(null);
+
+async function loadOfflineDownloadsList(): Promise<void> {
+  offlineDownloadList.value = await getOfflineVibeSnapshots();
+}
+
+onIonViewWillEnter(() => {
+  void loadOfflineDownloadsList();
+});
+
+function formatOfflineSavedAt(ts: number): string {
+  try {
+    return new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return '';
+  }
+}
+
+async function confirmRemoveOfflineDownload(id: number, name: string): Promise<void> {
+  const alert = await alertController.create({
+    header: 'Remove offline download?',
+    message: `Delete saved audio for “${name}” from this device? You can download again when online.`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Remove',
+        role: 'destructive',
+        handler: () => { void removeOfflineRow(id); },
+      },
+    ],
+  });
+  await alert.present();
+}
+
+async function removeOfflineRow(vibeId: number): Promise<void> {
+  removingVibeId.value = vibeId;
+  try {
+    await removeDownloadedVibe(vibeId);
+    await loadOfflineDownloadsList();
+    showToastMessage('Offline download removed.');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Could not remove download.';
+    showToastMessage(msg);
+  } finally {
+    removingVibeId.value = null;
+  }
+}
 
 const confirmButtons = [
   { text: 'Cancel', role: 'cancel' },
@@ -379,6 +470,87 @@ async function handleSignOut(): Promise<void> {
   font-size: var(--app-font-size-body-sm);
   color: var(--app-color-text-muted);
   line-height: 1.5;
+}
+
+.settings-hint--tight {
+  margin-top: 0;
+}
+
+.settings-download-empty {
+  margin: var(--app-space-3) 0 0;
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-secondary);
+  line-height: 1.5;
+}
+
+.settings-downloads-card {
+  margin-top: var(--app-space-3);
+}
+
+.settings-download-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-4);
+  padding: var(--app-space-4) var(--app-space-5);
+  border-bottom: 1px solid var(--app-color-border);
+}
+
+.settings-download-row:last-child {
+  border-bottom: none;
+}
+
+.settings-download-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-3);
+  min-width: 0;
+}
+
+.settings-download-leading-icon {
+  flex-shrink: 0;
+  font-size: 22px;
+  color: var(--app-color-primary-500);
+  margin-top: 2px;
+}
+
+.settings-download-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-download-remove {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-color-border);
+  background: var(--app-color-surface-subtle);
+  color: var(--app-color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.settings-download-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-download-remove:active:not(:disabled) {
+  background: rgba(247, 85, 85, 0.12);
+  color: var(--ion-color-danger);
+  border-color: rgba(247, 85, 85, 0.35);
+}
+
+.settings-download-spinner {
+  width: 20px;
+  height: 20px;
+  color: var(--app-color-primary-500);
 }
 
 .settings-appearance-card ion-radio-group {
