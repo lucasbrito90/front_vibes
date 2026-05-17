@@ -33,6 +33,7 @@ import '@ionic/vue/css/display.css';
 import './theme/variables.css';
 import './theme/theme.css';
 import './theme/auth.css';
+import './theme/motion.css';
 import './theme/layout.css';
 
 import { initThemeMode } from '@/composables/useThemeMode';

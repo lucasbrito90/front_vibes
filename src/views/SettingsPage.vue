@@ -7,7 +7,7 @@
     </ion-header>
 
     <ion-content :fullscreen="true" class="settings-ion-content">
-      <div class="page-shell page-content settings-wrap">
+      <div class="page-shell page-content settings-wrap app-fade-in">
         <!-- Audio -->
         <section class="settings-block">
           <h2 class="settings-heading">Audio</h2>
@@ -377,7 +377,9 @@ async function handleSignOut(): Promise<void> {
   background: transparent;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
 }
 
 .settings-tile:disabled {
@@ -387,6 +389,7 @@ async function handleSignOut(): Promise<void> {
 
 .settings-tile:not(:disabled):active {
   background: rgba(29, 172, 146, 0.06);
+  transform: scale(0.995);
 }
 
 .settings-tile--static {
@@ -399,6 +402,7 @@ async function handleSignOut(): Promise<void> {
 
 .settings-tile--danger:not(:disabled):active {
   background: rgba(247, 85, 85, 0.08);
+  transform: scale(0.995);
 }
 
 .settings-tile-left {
@@ -528,6 +532,9 @@ async function handleSignOut(): Promise<void> {
 }
 
 .settings-download-remove {
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
   flex-shrink: 0;
   width: 40px;
   height: 40px;
@@ -551,6 +558,7 @@ async function handleSignOut(): Promise<void> {
   background: rgba(247, 85, 85, 0.12);
   color: var(--ion-color-danger);
   border-color: rgba(247, 85, 85, 0.35);
+  transform: scale(0.94);
 }
 
 .settings-download-spinner {

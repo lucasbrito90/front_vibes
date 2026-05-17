@@ -12,7 +12,7 @@
     </ion-header>
 
     <ion-content class="auth-content">
-      <div class="auth-screen auth-flow-body auth-screen-forgot">
+      <div class="auth-screen auth-flow-body auth-screen-forgot app-slide-up">
         <p class="auth-subtitle auth-flow-lead">
           Enter your email and we’ll send a link to reset your password.
         </p>

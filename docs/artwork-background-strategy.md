@@ -44,10 +44,10 @@ Gradients are **dark-by-design** so white text and badges stay readable regardle
 
 ## Image loading polish
 
-Global utilities in [`src/theme/layout.css`](../src/theme/layout.css):
+Global utilities in [`src/theme/layout.css`](../src/theme/layout.css) and durations/easing from [`src/theme/motion.css`](../src/theme/motion.css) (`--app-motion-*`, `--app-ease-*`):
 
 - **`app-artwork-fade-in`** — `<img>` artwork fade-in.
-- **`app-artwork-card-enter`** — short scale/opacity entrance for media-backed surfaces.
+- **`app-artwork-card-enter`** — short scale/opacity entrance for media-backed surfaces (same keyframes as `.app-card-enter` in motion.css).
 
 Exported constants: `CLS_ARTWORK_IMG_FADE`, `CLS_ARTWORK_CARD_ENTER` in `artwork.ts`.
 

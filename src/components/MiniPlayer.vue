@@ -320,7 +320,10 @@ function navigateToPlayer(): void {
   font-size: 18px;
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    opacity var(--app-motion-fast) var(--app-ease-standard);
   -webkit-tap-highlight-color: transparent;
 
   background: rgba(255, 255, 255, 0.12);
@@ -328,7 +331,7 @@ function navigateToPlayer(): void {
 }
 
 .mini-player-btn:active {
-  transform: scale(0.88);
+  transform: scale(0.92);
   background: rgba(255, 255, 255, 0.20);
 }
 
@@ -351,14 +354,15 @@ function navigateToPlayer(): void {
 
 .mini-player-btn--stop:active {
   background: rgba(247, 85, 85, 0.24);
-  transform: scale(0.88);
+  transform: scale(0.92);
 }
 
 /* ── Slide-up / slide-down transition ───────────────────── */
 .mini-player-slide-enter-active,
 .mini-player-slide-leave-active {
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity   0.22s ease;
+  transition:
+    transform var(--app-motion-slow) var(--app-ease-emphasized),
+    opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
 .mini-player-slide-enter-from,

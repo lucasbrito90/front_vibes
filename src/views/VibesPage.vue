@@ -41,7 +41,7 @@
           <div
             v-for="(vibe, i) in vibes"
             :key="vibe.id"
-            class="vibe-card app-artwork-card-enter"
+            class="vibe-card app-card-enter app-pressable"
             :class="{
               'vibe-card--has-image': !!getVibeCardImageUrl(vibe),
               'vibe-card--fallback': !getVibeCardImageUrl(vibe),
@@ -390,12 +390,15 @@ async function handleDelete(id: number) {
   color: #fff;
   font-size: 18px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
   padding: 0;
 }
 
 .vibe-action-btn:active {
   background: rgba(255, 255, 255, 0.28);
+  transform: scale(0.94);
 }
 
 .vibe-action-btn.danger {

@@ -12,7 +12,7 @@
     </ion-header>
 
     <ion-content class="auth-content">
-      <div class="auth-screen auth-flow-body">
+      <div class="auth-screen auth-flow-body app-slide-up">
         <p class="auth-subtitle auth-flow-lead">
           Use the same method you signed up with.
         </p>

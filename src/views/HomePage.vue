@@ -25,6 +25,7 @@
         />
 
         <template v-else>
+          <div class="home-main app-slide-up">
           <p class="home-greeting">{{ greeting }}</p>
           <p v-if="displayName" class="home-name">{{ displayName }}</p>
           <p v-if="emailHint" class="home-email">{{ emailHint }}</p>
@@ -32,7 +33,7 @@
           <AppEmptyState
             v-if="!vibes.length"
             variant="card"
-            class="home-onboarding"
+            class="home-onboarding app-scale-in"
             :icon="sparklesOutline"
             title="Create your first vibe"
             description="Layer ambient sounds into a mix you can play anywhere — online or offline after download."
@@ -43,7 +44,7 @@
           <template v-else>
             <router-link
               v-if="continueVibe"
-              class="home-continue-card app-artwork-card-enter"
+              class="home-continue-card app-card-enter app-pressable"
               :style="continueCardStyle"
               to="/vibes"
             >
@@ -59,12 +60,13 @@
           </template>
 
           <div class="home-actions">
-            <ion-button expand="block" class="home-btn-primary" router-link="/vibes">
+            <ion-button expand="block" class="home-btn-primary app-pressable" router-link="/vibes">
               My Vibes
             </ion-button>
-            <ion-button expand="block" fill="outline" class="home-btn-outline" router-link="/settings">
+            <ion-button expand="block" fill="outline" class="home-btn-outline app-pressable" router-link="/settings">
               Settings
             </ion-button>
+          </div>
           </div>
         </template>
       </div>
@@ -143,6 +145,10 @@ const emailHint = computed(() => {
 
 .home-inner {
   padding-top: var(--app-space-4);
+}
+
+.home-main {
+  display: block;
 }
 
 .home-greeting {
