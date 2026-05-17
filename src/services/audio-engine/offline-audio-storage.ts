@@ -206,3 +206,31 @@ export async function getOfflinePlaybackUriIfValid(
   console.log(`${LOG} local URI resolved`, { vibeId, soundId, uri: uri.slice(0, 64) });
   return uri;
 }
+
+/**
+ * Deletes every cached full-file layer for this vibe and strips manifest rows (`vibeId:soundId`).
+ * Safe if no entries exist. Native-only (manifest matches Directory.Data writes).
+ */
+export async function removeAllOfflineAudioForVibe(vibeId: number): Promise<void> {
+  if (!Capacitor.isNativePlatform() || vibeId <= 0) return;
+
+  const manifest = await readManifest();
+  const prefix   = `${vibeId}:`;
+  const keys     = Object.keys(manifest).filter((k) => k.startsWith(prefix));
+
+  for (const key of keys) {
+    const entry = manifest[key];
+    try {
+      await Filesystem.deleteFile({
+        path:      entry.relativePath,
+        directory: Directory.Data,
+      });
+    } catch {
+      /* missing file — continue */
+    }
+    delete manifest[key];
+  }
+
+  await writeManifest(manifest);
+  console.log(`${LOG} removed all layers for vibe`, { vibeId, entriesRemoved: keys.length });
+}

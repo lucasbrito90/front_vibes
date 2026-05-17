@@ -121,3 +121,12 @@ export async function removeOfflineVibeSnapshot(vibeId: number): Promise<void> {
   await writeManifest(manifest);
   console.log(`${LOG} snapshot removed`, { vibeId });
 }
+
+/** All snapshots currently stored (may include entries with empty layers — callers may filter). */
+export async function getAllOfflineVibeSnapshots(): Promise<OfflineVibeSnapshot[]> {
+  const manifest = await readManifest();
+  return Object.values(manifest.vibes).filter(
+    (s): s is OfflineVibeSnapshot =>
+      !!s && typeof s.vibeId === 'number',
+  );
+}

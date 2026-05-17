@@ -26,10 +26,26 @@
                   <ion-icon :icon="refreshOutline" slot="start" class="player-menu-icon" />
                   Restart vibe
                 </ion-item>
-                <ion-item button :detail="false" lines="full" @click="handleDownloadForOffline"
-                  :disabled="isDownloading || !hasPlayableLayers">
+                <ion-item
+                  v-if="_isNativePlatform && !vibeOfflineReady"
+                  button
+                  :detail="false"
+                  lines="full"
+                  @click="handleDownloadForOffline"
+                  :disabled="isDownloading || !hasPlayableLayers"
+                >
                   <ion-icon :icon="isDownloading ? cloudDoneOutline : cloudDownloadOutline" slot="start" class="player-menu-icon" />
                   {{ isDownloading ? 'Downloading…' : 'Download for offline' }}
+                </ion-item>
+                <ion-item
+                  v-if="_isNativePlatform && vibeOfflineReady"
+                  button
+                  :detail="false"
+                  lines="full"
+                  @click="handleRemoveOfflineDownload"
+                >
+                  <ion-icon :icon="trashOutline" slot="start" class="player-menu-icon" />
+                  Remove offline download
                 </ion-item>
                 <ion-item button :detail="false" lines="none" @click="handleStopVibe">
                   <ion-icon :icon="stopCircleOutline" slot="start" class="player-menu-icon" />
@@ -79,6 +95,11 @@
             />
             <span class="player-status-text">{{ statusText }}</span>
           </div>
+
+          <p v-if="vibeOfflineReady" class="player-offline-available">
+            <ion-icon :icon="checkmarkCircleOutline" />
+            Available offline
+          </p>
 
           <p v-if="!loading && loadedFromOfflineSnapshot" class="player-offline-hint">
             Offline mode
@@ -210,6 +231,7 @@ import {
 } from '@ionic/vue';
 import {
   chevronBackOutline,
+  checkmarkCircleOutline,
   cloudDoneOutline,
   cloudDownloadOutline,
   ellipsisVertical,
@@ -217,8 +239,9 @@ import {
   playOutline,
   refreshOutline,
   stopCircleOutline,
+  trashOutline,
 } from 'ionicons/icons';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
 
@@ -233,6 +256,7 @@ import {
   offlineMetaToVibe,
   saveOfflineVibeSnapshot,
 } from '@/services/offline-vibe-cache.service';
+import { isVibeDownloaded, removeDownloadedVibe } from '@/services/offline-downloads.service';
 import { isExecutionLayerPlayable } from '@/services/player-engine.service';
 import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
 
@@ -260,6 +284,8 @@ const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
 const loading                   = ref(false);
 const isDownloading             = ref(false);
+/** Full-file download + snapshot saved — distinct from “playing from snapshot this session”. */
+const vibeOfflineReady          = ref(false);
 /** True when sounds + vibe detail were restored from `offline_vibe_manifest_v1` (API had no usable sounds). */
 const loadedFromOfflineSnapshot = ref(false);
 
@@ -299,6 +325,18 @@ const vibe = computed(() =>
 const playableLayers = computed(() => executionPlan.value.filter(isExecutionLayerPlayable));
 
 const hasPlayableLayers = computed(() => playableLayers.value.length > 0);
+
+async function refreshOfflineDownloadState(): Promise<void> {
+  vibeOfflineReady.value = await isVibeDownloaded(vibeId.value);
+}
+
+watch(
+  vibeId,
+  () => {
+    void refreshOfflineDownloadState();
+  },
+  { immediate: true },
+);
 
 // ── Per-route playback state ──────────────────────────────────────────────────
 // These compare the route's vibeId with the store's currentVibeId so the player
@@ -548,6 +586,18 @@ function handleStopVibe(): void {
   store.stopPlayback();
 }
 
+async function handleRemoveOfflineDownload(): Promise<void> {
+  const id = vibeId.value;
+  try {
+    await removeDownloadedVibe(id);
+    vibeOfflineReady.value = false;
+    await showPlaybackToast('Offline download removed');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Could not remove offline files.';
+    await showPlaybackToast(msg);
+  }
+}
+
 async function handleDownloadForOffline(): Promise<void> {
   if (isDownloading.value) return;
 
@@ -611,6 +661,7 @@ async function handleDownloadForOffline(): Promise<void> {
           log.warn('[OfflineVibe] snapshot save failed', { vibeId: id, error: msg });
         }
       }
+      await refreshOfflineDownloadState();
       await showPlaybackToast('Downloaded for offline');
     }
   } catch (err) {
@@ -924,6 +975,22 @@ onUnmounted(() => {
   font-weight: 500;
   color: rgba(255, 255, 255, 0.75);
   letter-spacing: 0.1px;
+}
+
+.player-offline-available {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(167, 243, 208, 0.96);
+  letter-spacing: 0.04em;
+}
+
+.player-offline-available ion-icon {
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 .player-offline-hint {
