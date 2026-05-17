@@ -165,8 +165,15 @@ function setPlaybackVibeContext(vibeId: number | null): void {
 }
 
 async function _resolvedAssetPath(layer: VibeExecutionLayer): Promise<string> {
-  const id = _playbackVibeId ?? 0;
-  return audioEngine.resolvePlaybackAssetUrl(layer, id);
+  const id  = _playbackVibeId ?? 0;
+  const url = await audioEngine.resolvePlaybackAssetUrl(layer, id);
+  if (import.meta.env.DEV && typeof url === 'string' && url.trim().toLowerCase().startsWith('file:')) {
+    console.log('[AudioCache] playback using local file URI', {
+      soundId: layer.soundId,
+      preview: url.length > 72 ? `${url.slice(0, 72)}…` : url,
+    });
+  }
+  return url;
 }
 
 // ── Remote media control callbacks ───────────────────────────────────────────
@@ -357,6 +364,122 @@ function _notifySessionEndedIfEmpty(): void {
       explicit:   _stopAllExplicit,
     });
     _sessionEndedCallback?.();
+  }
+}
+
+// ── Playback prepare handshake (Pinia shows "preparing" until first audible start) ────────────────
+
+type PrepareVoidCb = () => void;
+
+let _onPlaybackPreparePrepared: PrepareVoidCb | null = null;
+let _onPlaybackPrepareFailed: PrepareVoidCb | null = null;
+
+interface PlaybackPrepareCtx {
+  generation: number;
+  expected: Set<number>;
+  failed: Set<number>;
+  settled: boolean;
+  timeoutId: ReturnType<typeof setTimeout> | null;
+}
+
+let _prepareCtx: PlaybackPrepareCtx | null = null;
+let _prepareGeneration = 0;
+
+const _PREPARE_TIMEOUT_MS = 25_000;
+
+/** Registers callbacks so the store can transition preparing → playing (or fail). */
+export function setPlaybackPrepareCallbacks(opts: { onPrepared: PrepareVoidCb; onFailed: PrepareVoidCb } | null): void {
+  _onPlaybackPreparePrepared = opts?.onPrepared ?? null;
+  _onPlaybackPrepareFailed = opts?.onFailed ?? null;
+}
+
+function _eligibleImmediatePrepareSoundIds(layers: VibeExecutionLayer[]): number[] {
+  return layers
+    .filter((layer) => {
+      if (!hasValidExecutionFileUrl(layer.fileUrl)) return false;
+      if (layer.playMode === 'interval') {
+        const ri = layer.repeatIntervalSeconds;
+        if (ri == null || ri < 1) return false;
+      }
+      return (layer.startsAtSeconds ?? 0) <= 0;
+    })
+    .map((l) => l.soundId);
+}
+
+function _cancelPlaybackPrepare(): void {
+  if (_prepareCtx?.timeoutId != null) clearTimeout(_prepareCtx.timeoutId);
+  _prepareCtx = null;
+}
+
+function _beginPlaybackPrepareHandshake(layers: VibeExecutionLayer[]): void {
+  _cancelPlaybackPrepare();
+
+  const immediateIds = _eligibleImmediatePrepareSoundIds(layers);
+  _prepareGeneration++;
+  const gen = _prepareGeneration;
+
+  if (immediateIds.length === 0) {
+    queueMicrotask(() => _signalPrepareSuccess(gen));
+    return;
+  }
+
+  const timeoutId = setTimeout(() => {
+    const ctx = _prepareCtx;
+    if (ctx && ctx.generation === gen && !ctx.settled) {
+      if (import.meta.env.DEV) {
+        console.warn('[PlaybackState] prepare timeout — expected audible start from:', [...ctx.expected]);
+      }
+      _signalPrepareFailed(gen);
+    }
+  }, _PREPARE_TIMEOUT_MS);
+
+  _prepareCtx = {
+    generation: gen,
+    expected: new Set(immediateIds),
+    failed: new Set(),
+    settled: false,
+    timeoutId,
+  };
+
+  if (import.meta.env.DEV) {
+    console.log('[PlaybackState] prepare handshake started', { immediateSoundIds: immediateIds });
+  }
+}
+
+function _signalPrepareSuccess(gen: number): void {
+  const ctx = _prepareCtx;
+  if (!ctx || ctx.generation !== gen || ctx.settled) return;
+  ctx.settled = true;
+  if (ctx.timeoutId != null) clearTimeout(ctx.timeoutId);
+  _prepareCtx = null;
+  if (import.meta.env.DEV) console.log('[PlaybackState] prepare succeeded (audible layer)');
+  _onPlaybackPreparePrepared?.();
+}
+
+function _signalPrepareFailed(gen: number): void {
+  const ctx = _prepareCtx;
+  if (!ctx || ctx.generation !== gen || ctx.settled) return;
+  ctx.settled = true;
+  if (ctx.timeoutId != null) clearTimeout(ctx.timeoutId);
+  _prepareCtx = null;
+  if (import.meta.env.DEV) console.warn('[PlaybackState] prepare failed (no audible layer)');
+  _onPlaybackPrepareFailed?.();
+}
+
+function _playbackPrepareNotifySuccess(soundId: number): void {
+  const ctx = _prepareCtx;
+  if (!ctx || ctx.settled) return;
+  if (!ctx.expected.has(soundId)) return;
+  _signalPrepareSuccess(ctx.generation);
+}
+
+function _playbackPrepareNotifyFailure(soundId: number): void {
+  const ctx = _prepareCtx;
+  if (!ctx || ctx.settled) return;
+  if (!ctx.expected.has(soundId)) return;
+  ctx.failed.add(soundId);
+  if (ctx.failed.size >= ctx.expected.size) {
+    _signalPrepareFailed(ctx.generation);
   }
 }
 
@@ -582,6 +705,8 @@ async function _startLoopAudioNative(
 
     log.debug('native loop — bridge resolved', { assetId, sessionPaused: _sessionPaused });
 
+    _playbackPrepareNotifySuccess(layer.soundId);
+
     // Race-condition guard: if the session was paused while we were awaiting
     // loop(), immediately pause the native player so state stays consistent.
     if (_sessionPaused && _nativeLayers.has(assetId)) {
@@ -698,7 +823,13 @@ async function _startLoopAudioHtml(
   audio.loop  = true;
   audio.volume = _clampVolume(layer.volume);
   managed.audio = audio;
-  audio.play().catch((error) => _logPlayFailure(layer, error));
+  audio
+    .play()
+    .then(() => _playbackPrepareNotifySuccess(layer.soundId))
+    .catch((error) => {
+      _logPlayFailure(layer, error);
+      _playbackPrepareNotifyFailure(layer.soundId);
+    });
 }
 
 /**
@@ -756,7 +887,13 @@ async function _startOnceAudioHtml(layer: VibeExecutionLayer, managed: ManagedLa
   audio.addEventListener('ended', handler);
 
   audio.volume = target;
-  audio.play().catch((error) => _logPlayFailure(layer, error));
+  audio
+    .play()
+    .then(() => _playbackPrepareNotifySuccess(layer.soundId))
+    .catch((error) => {
+      _logPlayFailure(layer, error);
+      _playbackPrepareNotifyFailure(layer.soundId);
+    });
 }
 
 /**
@@ -861,6 +998,8 @@ async function _startOnceAudioNative(
       log.debug('[NativeAudio][Once] session paused during preload, pausing immediately', { assetId });
       void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (race once)', assetId, e));
     }
+
+    _playbackPrepareNotifySuccess(layer.soundId);
   } catch (err) {
     _logNativeFailure('play (once)', assetId, err);
     log.warn('[NativeAudio][Once] play — FAILED, falling back to HTML', { assetId, err: String(err) });
@@ -1057,10 +1196,13 @@ async function _intervalPlayTickHtml(layer: VibeExecutionLayer, managed: Managed
 
   managed.audio = audio;
   audio.volume  = target;
-  audio.play().catch((error) => {
-    _logPlayFailure(layer, error);
-    onError();
-  });
+  audio
+    .play()
+    .then(() => _playbackPrepareNotifySuccess(layer.soundId))
+    .catch((error) => {
+      _logPlayFailure(layer, error);
+      onError();
+    });
 }
 
 /** Tear down a single HTML interval tick element. */
@@ -1126,6 +1268,9 @@ async function _intervalPlayTickNative(
       soundId:      layer.soundId,
       sessionPaused: _sessionPaused,
     });
+
+    _playbackPrepareNotifySuccess(layer.soundId);
+
     // Race guard: session paused while we were awaiting play()
     if (_sessionPaused && _nativeLayers.has(assetId)) {
       log.debug('[NativeAudio][Interval] session paused during tick start, pausing immediately', { assetId });
@@ -1331,6 +1476,10 @@ function playPlan(layers: VibeExecutionLayer[]): void {
     });
     // Fire now if every layer was skipped due to validation errors.
     _notifySessionEndedIfEmpty();
+
+    if (_layers.size > 0) {
+      _beginPlaybackPrepareHandshake(layers);
+    }
   }
 }
 
@@ -1510,6 +1659,7 @@ function resumeAll(): void {
 }
 
 function stopAll(): void {
+  _cancelPlaybackPrepare();
   log.debug('stopAll', { layers: _layers.size, nativeLayers: _nativeLayers.size });
   _stopAllExplicit = true;
   try {
@@ -1533,9 +1683,8 @@ function isSessionPaused(): boolean {
 
 /**
  * Returns the number of layers that would pass playLayer() validation.
- * Used by the store for optimistic state updates: if countValidLayers() > 0
- * the store can set playbackState = 'playing' before the async native operations
- * complete, ensuring the Mini Player appears on the first reactive flush.
+ * Used by the store before entering `preparing`; actual playback begins after
+ * the audio service handshake confirms an audible layer (`NativeAudio` / HTML).
  */
 function countValidLayers(layers: VibeExecutionLayer[]): number {
   return layers.filter((layer) => {
