@@ -15,23 +15,62 @@
       <div class="sounds-hero">
         <div class="sounds-hero-overlay" />
         <div class="sounds-hero-text">
-          <h1 class="sounds-hero-title">Select Sounds</h1>
-          <p class="sounds-hero-subtitle">for "{{ vibeName }}"</p>
+          <p class="sounds-hero-eyebrow">Build your ambient mix</p>
+          <h1 class="sounds-hero-title">Add sounds to this vibe</h1>
+          <p class="sounds-hero-lead">Choose sounds that match the mood you want.</p>
+          <p class="sounds-hero-vibe">{{ vibeName }}</p>
         </div>
       </div>
 
-      <!-- Search -->
-      <div class="sounds-search-wrap">
-        <div class="sounds-search-box">
-          <ion-icon :icon="searchOutline" class="sounds-search-icon" />
-          <input
-            v-model="searchQuery"
-            type="search"
-            placeholder="What sound are you looking for?"
-            class="sounds-search-input"
-          />
+      <!-- Selected layers (attached selection, before library) -->
+      <section v-if="selectedLayers.length > 0" class="sounds-selected-section">
+        <div class="sounds-section-head page-shell">
+          <h2 class="sounds-section-title">Selected layers</h2>
+          <p class="sounds-section-sub">
+            {{ selectedLayers.length }} sound{{ selectedLayers.length !== 1 ? 's' : '' }} in this mix — tap a chip to remove it from the selection.
+          </p>
         </div>
-      </div>
+        <div class="sounds-selected-scroll-outer">
+          <div class="sounds-selected-row">
+            <article
+              v-for="row in selectedLayers"
+              :key="row.sound.id"
+              class="sound-selected-chip app-pressable"
+              @click="toggleSound(row.sound.id)"
+            >
+              <div class="sound-selected-thumb-wrap">
+                <img
+                  v-if="row.sound.thumbnail_url"
+                  :src="row.sound.thumbnail_url"
+                  :alt="row.sound.name"
+                  class="sound-selected-img app-artwork-fade-in"
+                />
+                <div
+                  v-else
+                  class="sound-selected-fallback"
+                  :style="{ background: getSoundFallbackGradient(row.sound, row.sound.id % 6) }"
+                >
+                  <ion-icon :icon="getSoundIcon(row.sound)" class="sound-selected-fallback-icon" />
+                </div>
+              </div>
+              <div class="sound-selected-body">
+                <span class="sound-selected-chip-name">{{ row.sound.name }}</span>
+                <span class="sound-selected-chip-line">
+                  <span class="sound-selected-chip-cat">{{ getSoundCategoryLabel(row.sound) }}</span>
+                  <template v-if="formatSoundDuration(row.sound.duration)">
+                    <span class="sound-selected-chip-dot" aria-hidden="true">·</span>
+                    <span>{{ formatSoundDuration(row.sound.duration) }}</span>
+                  </template>
+                  <template v-if="row.vibeSound">
+                    <span class="sound-selected-chip-dot" aria-hidden="true">·</span>
+                    <span>{{ getPlayModeLabel(row.vibeSound.play_mode) }}</span>
+                  </template>
+                </span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
 
       <!-- Attach hint -->
       <div v-if="showAttachHint" class="sounds-hint-wrap page-shell">
@@ -39,8 +78,8 @@
           variant="compact"
           class="sounds-hint-inner app-surface-card"
           :icon="musicalNotesOutline"
-          title="No sounds attached yet"
-          description="Tap the cards below to add them to this vibe. Tap Save when you’re done."
+          title="Start your mix"
+          description="Browse the library below and tap sound cards to add layers. Save when you’re ready — then open settings on a card to fine‑tune playback."
         />
       </div>
 
@@ -68,50 +107,79 @@
         v-else-if="isCatalogEmpty"
         class="sounds-state-slot page-shell"
         variant="compact"
-        :icon="searchOutline"
-        title="No sounds found"
+        :icon="musicalNotesOutline"
+        title="Nothing to show here"
         :description="emptyCatalogDescription"
       />
 
       <!-- Categories -->
-      <div v-else class="sounds-categories app-fade-in">
+      <template v-else>
+        <div class="sounds-library-head page-shell">
+          <h2 class="sounds-library-title">Browse sounds</h2>
+          <p class="sounds-library-sub">Tap a card to add or remove it from your mix.</p>
+        </div>
+        <div class="sounds-categories app-fade-in">
         <div
-          v-for="(group, category) in filteredByCategory"
+          v-for="(group, category) in soundsByCategory"
           :key="category"
           class="sounds-category"
         >
-          <h2 class="sounds-category-title">{{ category }}</h2>
+          <h3 class="sounds-category-title">{{ getSoundCategoryLabel({ category: String(category) }) }}</h3>
 
           <div class="sounds-row-wrap">
             <div class="sounds-row">
               <div
-                v-for="sound in group"
+                v-for="(sound, si) in group"
                 :key="sound.id"
                 class="sound-card"
                 :class="{ selected: isSelected(sound.id) }"
                 @click="toggleSound(sound.id)"
               >
                 <!-- Thumbnail -->
-                <div class="sound-card-thumb">
+                <div
+                  class="sound-card-thumb"
+                  :class="{ 'sound-card-thumb--photo': !!sound.thumbnail_url }"
+                >
                   <img
                     v-if="sound.thumbnail_url"
                     :src="sound.thumbnail_url"
                     :alt="sound.name"
                     class="sound-card-img app-artwork-fade-in"
                   />
-                  <div v-else class="sound-card-placeholder" />
-
-                  <!-- Selected overlay -->
+                  <div
+                    v-else
+                    class="sound-card-placeholder"
+                    :style="{ background: getSoundFallbackGradient(sound, si) }"
+                  >
+                    <ion-icon :icon="getSoundIcon(sound)" class="sound-card-placeholder-icon" />
+                  </div>
+                  <div class="sound-card-thumb-scrim" aria-hidden="true" />
+                  <span class="sound-card-cat-pill">{{ getSoundCategoryLabel(sound) }}</span>
+                  <span
+                    v-if="formatSoundDuration(sound.duration)"
+                    class="sound-card-duration-pill"
+                  >
+                    {{ formatSoundDuration(sound.duration) }}
+                  </span>
                   <div v-if="isSelected(sound.id)" class="sound-card-selected-overlay">
                     <ion-icon :icon="checkmarkCircle" class="sound-card-check" />
                   </div>
                 </div>
 
-                <!-- Edit row: name + settings icon (only for attached sounds) -->
+                <!-- Footer -->
                 <div class="sound-card-footer">
-                  <span class="sound-card-name">{{ sound.name }}</span>
+                  <div class="sound-card-text-block">
+                    <span class="sound-card-name">{{ sound.name }}</span>
+                    <div v-if="getSoundMoodTags(sound).length" class="sound-card-tags">
+                      <span
+                        v-for="tag in getSoundMoodTags(sound)"
+                        :key="tag"
+                        class="sound-card-tag"
+                      >{{ tag }}</span>
+                    </div>
+                  </div>
                   <button
-                    v-if="isSelected(sound.id)"
+                    v-if="isSelected(sound.id) && hasPersistedVibeSound(sound.id)"
                     class="sound-card-edit-btn"
                     aria-label="Edit sound settings"
                     @click.stop="openEditModal(sound.id)"
@@ -123,7 +191,8 @@
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </template>
 
       <!-- ── DEV: Execution Plan debug panel ─────────────────────────── -->
       <div v-if="vibeSounds.length" class="dev-panel">
@@ -184,7 +253,6 @@ import {
   checkmarkOutline,
   chevronBackOutline,
   musicalNotesOutline,
-  searchOutline,
   settingsOutline,
 } from 'ionicons/icons';
 import { computed, onMounted, ref, watch } from 'vue';
@@ -198,6 +266,16 @@ import VibeSoundEditModal from '@/views/VibeSoundEditModal.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
+import type { Sound } from '@/services/sound.service';
+import type { VibeSound } from '@/services/vibe-sound.service';
+import {
+  formatSoundDuration,
+  getPlayModeLabel,
+  getSoundCategoryLabel,
+  getSoundFallbackGradient,
+  getSoundIcon,
+  getSoundMoodTags,
+} from '@/utils/soundPresentation';
 
 const route = useRoute();
 const router = useRouter();
@@ -217,12 +295,11 @@ const {
 
 const { vibeSounds, fetchVibeSounds } = useVibeSounds();
 
-const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
+const { executionPlan, buildPlan } = usePlayerEngine();
 
 // Rebuild the execution plan whenever the attached sounds change
 watch(vibeSounds, (sounds) => buildPlan(sounds), { immediate: false });
 
-const searchQuery = ref('');
 const saving = ref(false);
 const saveError = ref<string | null>(null);
 
@@ -233,10 +310,6 @@ const selectedIds = ref<Set<number>>(new Set());
 
 onMounted(async () => {
   await Promise.all([fetchSounds(), fetchVibeSounds(vibeId.value)]);
-
-  console.log('[VibeSoundsPage] sounds loaded:', sounds.value.length, sounds.value);
-  console.log('[VibeSoundsPage] vibe sounds loaded:', vibeSounds.value);
-
   syncFromBackend();
   buildPlan(vibeSounds.value);
 });
@@ -248,32 +321,68 @@ function syncFromBackend(): void {
   selectedIds.value = new Set(ids);
 }
 
-// Filtered sounds grouped by category
-const filteredByCategory = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim();
-  const filtered = q
-    ? sounds.value.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q),
-      )
-    : sounds.value;
-
-  return filtered.reduce<Record<string, typeof sounds.value>>((acc, sound) => {
-    const cat = sound.category || 'Other';
+/** Catalog grouped by category (no search UI in this sprint). */
+const soundsByCategory = computed(() =>
+  sounds.value.reduce<Record<string, Sound[]>>((acc, sound) => {
+    const cat = sound.category?.trim() || 'Other';
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(sound);
     return acc;
-  }, {});
+  }, {}),
+);
+
+const isCatalogEmpty = computed(() => Object.keys(soundsByCategory.value).length === 0);
+
+const emptyCatalogDescription =
+  'There are no sounds in the catalog right now. Check back soon or try another account.';
+
+/** Rows for the horizontal “Selected layers” strip */
+interface SelectedLayerRow {
+  sound: Sound;
+  vibeSound?: VibeSound;
+}
+
+function vibeSoundAsSound(vs: VibeSound): Sound {
+  return {
+    id: vs.id,
+    name: vs.name,
+    file_url: vs.file_url,
+    thumbnail_url: vs.thumbnail_url,
+    category: vs.category,
+    duration: vs.duration,
+    created_at: '',
+  };
+}
+
+const selectedLayers = computed((): SelectedLayerRow[] => {
+  const soundMap = new Map(sounds.value.map((s) => [s.id, s]));
+  const vibeMap = new Map(vibeSounds.value.map((vs) => [vs.id, vs]));
+  const ids = [...selectedIds.value];
+
+  const sortRank = (id: number): number => {
+    const vs = vibeMap.get(id);
+    if (vs != null) return vs.sort_order ?? 0;
+    return 1_000_000 + id;
+  };
+
+  ids.sort((a, b) => {
+    const d = sortRank(a) - sortRank(b);
+    return d !== 0 ? d : a - b;
+  });
+
+  const rows: SelectedLayerRow[] = [];
+  for (const id of ids) {
+    const vibeSound = vibeMap.get(id);
+    const fromCatalog = soundMap.get(id);
+    if (fromCatalog) rows.push({ sound: fromCatalog, vibeSound });
+    else if (vibeSound) rows.push({ sound: vibeSoundAsSound(vibeSound), vibeSound });
+  }
+  return rows;
 });
 
-// Object has no .length — check keys instead
-const isCatalogEmpty = computed(() => Object.keys(filteredByCategory.value).length === 0);
-
-const emptyCatalogDescription = computed(() =>
-  searchQuery.value.trim()
-    ? 'Try a different search or clear the box to see all sounds.'
-    : 'There are no sounds in the catalog right now.',
-);
+function hasPersistedVibeSound(soundId: number): boolean {
+  return vibeSounds.value.some((vs) => vs.id === soundId);
+}
 
 const showAttachHint = computed(
   () =>
@@ -442,6 +551,31 @@ async function handleSave(): Promise<void> {
   line-height: 1.2;
 }
 
+.sounds-hero-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0;
+}
+
+.sounds-hero-lead {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+  line-height: 1.45;
+  max-width: 34rem;
+}
+
+.sounds-hero-vibe {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 6px 0 0;
+}
+
 .sounds-hero-subtitle {
   font-size: 14px;
   font-weight: 400;
@@ -450,40 +584,165 @@ async function handleSave(): Promise<void> {
   letter-spacing: 0.1px;
 }
 
-/* ── Search ──────────────────────────────────────── */
-.sounds-search-wrap {
-  padding: 16px 20px 8px;
+/* ── Selected layers strip ─────────────────────── */
+.sounds-selected-section {
+  padding: 8px 0 4px;
   background: var(--app-color-bg, #fff);
+  border-bottom: 1px solid var(--app-color-border, #e2e8f0);
 }
 
-.sounds-search-box {
+.sounds-section-head {
+  padding-bottom: 10px;
+}
+
+.sounds-section-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--app-color-text-primary, #0f172a);
+  margin: 0;
+}
+
+.sounds-section-sub {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--app-color-text-muted, #64748b);
+  margin: 6px 0 0;
+}
+
+.sounds-selected-scroll-outer {
+  position: relative;
+}
+
+.sounds-selected-scroll-outer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 4px;
+  width: 40px;
+  background: linear-gradient(to right, transparent, var(--app-color-bg, #fff));
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sounds-selected-row {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 20px 12px;
+  scrollbar-width: none;
+}
+
+.sounds-selected-row::-webkit-scrollbar {
+  display: none;
+}
+
+.sound-selected-chip {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--app-color-surface, #f1f5f9);
+  min-width: 200px;
+  max-width: 280px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 14px;
   border: 1px solid var(--app-color-border, #e2e8f0);
-  border-radius: 12px;
-  padding: 0 14px;
-  height: 48px;
+  background: var(--app-color-surface, #f8fafc);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  transition:
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    border-color var(--app-motion-base) var(--app-ease-standard),
+    box-shadow var(--app-motion-base) var(--app-ease-standard);
 }
 
-.sounds-search-icon {
-  color: var(--app-color-text-muted, #94a3b8);
-  font-size: 20px;
+.sound-selected-chip:active {
+  transform: scale(0.98);
+}
+
+.sound-selected-thumb-wrap {
   flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.sounds-search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 15px;
+.sound-selected-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sound-selected-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sound-selected-fallback-icon {
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+}
+
+.sound-selected-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sound-selected-chip-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--app-color-text-primary, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sound-selected-chip-line {
+  font-size: 12px;
+  color: var(--app-color-text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sound-selected-chip-cat {
+  font-weight: 600;
+  color: var(--ion-color-primary, #1dac92);
+}
+
+.sound-selected-chip-dot {
+  margin: 0 4px;
+  opacity: 0.55;
+}
+
+/* ── Browse header ─────────────────────────────── */
+.sounds-library-head {
+  padding-top: 20px;
+  padding-bottom: 4px;
+}
+
+.sounds-library-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
   color: var(--app-color-text-primary, #0f172a);
 }
 
-.sounds-search-input::placeholder {
-  color: var(--app-color-text-muted, #94a3b8);
+.sounds-library-sub {
+  font-size: 13px;
+  color: var(--app-color-text-muted, #64748b);
+  margin: 6px 0 0;
+  line-height: 1.45;
 }
 
 /* ── Empty / loading / hint ─────────────────────── */
@@ -554,7 +813,7 @@ async function handleSave(): Promise<void> {
   flex-shrink: 0;
   /* ~2.2 cards visible: (viewport - 20px left - 48px peek) / 2.2 */
   width: calc((100vw - 20px - 48px) / 2.2);
-  max-width: 148px;
+  max-width: 156px;
   cursor: pointer;
 }
 
@@ -565,9 +824,15 @@ async function handleSave(): Promise<void> {
   border-radius: 14px;
   overflow: hidden;
   border: 2px solid transparent;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   transition:
     border-color var(--app-motion-base) var(--app-ease-standard),
-    transform var(--app-motion-fast) var(--app-ease-standard);
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    box-shadow var(--app-motion-base) var(--app-ease-standard);
+}
+
+.sound-card-thumb--photo .sound-card-img {
+  transform: scale(1.02);
 }
 
 .sound-card:active .sound-card-thumb {
@@ -576,6 +841,85 @@ async function handleSave(): Promise<void> {
 
 .sound-card.selected .sound-card-thumb {
   border-color: var(--ion-color-primary, #1dac92);
+  box-shadow:
+    0 0 0 1px rgba(29, 172, 146, 0.35),
+    0 12px 28px rgba(29, 172, 146, 0.18);
+}
+
+.sound-card-thumb-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.05) 0%,
+    rgba(15, 23, 42, 0.55) 100%
+  );
+  pointer-events: none;
+}
+
+.sound-card-cat-pill,
+.sound-card-duration-pill {
+  position: absolute;
+  z-index: 2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 8px;
+  line-height: 1;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.sound-card-cat-pill {
+  left: 8px;
+  bottom: 8px;
+  max-width: calc(100% - 16px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.sound-card-duration-pill {
+  right: 8px;
+  top: 8px;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.sound-card-placeholder-icon {
+  font-size: 36px;
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.28));
+}
+
+.sound-card-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sound-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sound-card-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--app-color-surface, #f1f5f9);
+  color: var(--app-color-text-muted, #64748b);
+  border: 1px solid var(--app-color-border, #e2e8f0);
 }
 
 .sound-card-img {
@@ -588,6 +932,9 @@ async function handleSave(): Promise<void> {
 .sound-card-placeholder {
   width: 100%;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #1dac92 0%, #0e7490 100%);
 }
 
@@ -595,7 +942,8 @@ async function handleSave(): Promise<void> {
 .sound-card-selected-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(29, 172, 146, 0.35);
+  z-index: 3;
+  background: rgba(29, 172, 146, 0.28);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
@@ -618,7 +966,8 @@ async function handleSave(): Promise<void> {
 
 .sound-card-name {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--app-color-text-primary, #0f172a);
   white-space: nowrap;
   overflow: hidden;
