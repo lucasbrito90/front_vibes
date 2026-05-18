@@ -107,6 +107,16 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, hideMiniPlayer: true },
       },
       {
+        path: 'presets',
+        component: () => import('@/views/PresetVibesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'presets/:id',
+        component: () => import('@/views/PresetVibeDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'settings',
         component: () => import('@/views/SettingsPage.vue'),
         meta: { requiresAuth: true },
