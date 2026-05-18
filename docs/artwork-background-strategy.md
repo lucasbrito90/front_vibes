@@ -11,6 +11,14 @@ This document describes how vibe imagery is chosen across the app. **Implementat
 | `player_background_url` | Full-screen player hero (`player_background_url ?? thumbnail_url` on the API). |
 | `artwork_url` | Square / notification artwork (`artwork_url ?? thumbnail_url` on the API). |
 
+### Cover bundles → vibes
+
+**Cover bundles** (`GET /api/cover-bundles`) are catalog entries with `thumbnail_url`, `artwork_url`, and `player_background_url` (visual-only packages). **Sounds** stay audio-only.
+
+On **create/edit vibe**, the app can open **Choose cover** and apply a bundle: each bundle URL **overwrites the vibe field only when that URL is non-empty**; missing bundle URLs leave the vibe’s current value untouched.
+
+**Persistence:** the vibe PATCH/POST body includes those three keys. Laravel must whitelist them on **`StoreVibeRequest`** / **`UpdateVibeRequest`** (nullable strings, e.g. `max:2048`) so `validated()` passes them into `Vibe::create` / `update`. If they are omitted from validation rules, they are ignored server-side even though the app sends them.
+
 The backend may already collapse fallbacks into these resolved fields. Front-end helpers **still apply the same priority** so offline snapshots, cached vibes, and future API changes stay consistent.
 
 ## Priority rules (front-end)
