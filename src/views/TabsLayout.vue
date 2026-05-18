@@ -28,6 +28,11 @@
           <ion-label>My Vibes</ion-label>
         </ion-tab-button>
 
+        <ion-tab-button tab="presets" href="/presets" class="app-tab-btn">
+          <ion-icon :icon="albumsOutline" class="app-tab-icon" />
+          <ion-label>Presets</ion-label>
+        </ion-tab-button>
+
         <ion-tab-button tab="settings" href="/settings" class="app-tab-btn">
           <ion-icon :icon="settingsOutline" class="app-tab-icon" />
           <ion-label>Settings</ion-label>
@@ -47,7 +52,7 @@ import {
   IonPage,
   IonRouterOutlet,
 } from '@ionic/vue';
-import { homeOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icons';
+import { homeOutline, albumsOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
