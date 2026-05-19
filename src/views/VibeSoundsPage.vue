@@ -471,7 +471,9 @@ const categoryChipOptions = computed(() => {
     const raw = normalizedCategoryKey(s);
     map.set(raw, getSoundCategoryLabel({ category: raw }));
   }
-  const sorted = [...map.entries()].sort(([_, la], [__, lb]) => {
+  const sorted = [...map.entries()].sort((a, b) => {
+    const la = a[1];
+    const lb = b[1];
     const ra = presetRankForCategoryLabel(la);
     const rb = presetRankForCategoryLabel(lb);
     if (ra !== rb) return ra - rb;

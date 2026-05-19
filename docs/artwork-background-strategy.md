@@ -2,6 +2,8 @@
 
 This document describes how vibe imagery is chosen across the app. **Implementation** lives in [`src/utils/artwork.ts`](../src/utils/artwork.ts). **Backend/API fields are unchanged** — the app only consumes what the API already exposes.
 
+**CDN:** Image URLs are opaque **HTTPS** strings (DigitalOcean Spaces CDN, legacy Firebase, etc.). There is no host whitelist in the app; `<img :src>` and CSS `background-image: url(...)` work the same for `*.digitaloceanspaces.com` as for any other TLS origin.
+
 ## API fields (reference)
 
 | Field | Typical use |

@@ -208,7 +208,7 @@ export class NativeAudioEngine implements AudioEngine {
         '“Download for offline” uses CapacitorHttp (native GET) + Directory.Data (Filesystem).',
         'clearAudioCache() only clears ExoPlayer cache/media — offline downloads are kept.',
         'HLS (.m3u8) URLs use StreamAudioAsset which bypasses SimpleCache.',
-        'Rotating signed Firebase Storage URLs invalidate offline manifest entries.',
+        'Rotating signed URLs (e.g. legacy Firebase Storage tokens) invalidate offline manifest entries when `layer.fileUrl` changes.',
         'OS may evict ExoPlayer cache when device storage is low.',
       ],
     };
