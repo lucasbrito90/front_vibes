@@ -3,8 +3,10 @@
  * ExoPlayer's SimpleCache (see RemoteAudioAsset) only buffers progressively — preload/prepare
  * does not download the entire file.
  *
- * Downloads use CapacitorHttp (native stack), not WebView fetch(), so Firebase Storage
- * CORS (Origin https://localhost) does not apply.
+ * Downloads use CapacitorHttp (native stack), not WebView fetch(), so browser CORS
+ * against origins such as `https://localhost` does not apply. Works for Firebase
+ * Storage, DigitalOcean Spaces CDN (`https://…digitaloceanspaces.com`), and any
+ * other HTTPS URL returned by the API.
  */
 
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
@@ -13,6 +15,7 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
+import { logCdnAssetDev } from '@/utils/cdn-assets-dev-log';
 
 const MANIFEST_KEY = 'ixora_offline_audio_manifest_v1';
 const LOG = '[AudioCache]';
@@ -84,6 +87,7 @@ export function guessAudioExtension(remoteUrl: string, contentType: string | nul
  * On Android/iOS, responseType `blob` / `arraybuffer` maps to base64 string (see Capacitor HttpRequestHandler).
  */
 async function downloadBinaryViaNativeHttp(remoteUrl: string): Promise<{ base64: string; contentType: string | null }> {
+  logCdnAssetDev('offline-download', remoteUrl);
   const urlPreview = remoteUrl.length > 96 ? `${remoteUrl.slice(0, 96)}…` : remoteUrl;
   console.log(`${LOG} native download started`, { url: urlPreview });
 

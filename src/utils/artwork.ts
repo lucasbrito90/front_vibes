@@ -3,6 +3,9 @@
  *
  * Keeps URL priority and gradient fallbacks consistent across Player, cards,
  * MiniPlayer, and Home. See docs/artwork-background-strategy.md.
+ *
+ * Image URLs are plain HTTPS strings from the API (Spaces CDN, Firebase legacy,
+ * etc.). `<img>` and CSS `url(...)` accept them as-is; no host whitelist.
  */
 
 import type { Vibe } from '@/services/vibe.service';
