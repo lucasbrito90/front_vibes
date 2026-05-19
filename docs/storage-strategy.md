@@ -95,6 +95,13 @@ Database columns store **full public CDN URLs** (or nullable when unset).
 | **Nuxt Admin** | CDN URLs | Via Laravel only | Via Laravel only (future) |
 | **Mobile** | CDN URLs | No direct Spaces | No direct Spaces |
 
+### Mobile (Ionic — this repo)
+
+- **No DigitalOcean / Spaces credentials** in the app; only **public HTTPS** URLs from the API.
+- **Sound audio:** canonical field is **`file_url`**. If the API ever emits **`audio_url`** without **`file_url`**, the client normalizes it into `file_url` for playback and offline manifest matching (legacy alias only).
+- **Images:** `thumbnail_url`, `artwork_url`, `player_background_url` on vibes and cover bundles are passed through to `<img>` / CSS `url(...)` — CDN hosts such as `ixora-buckets.tor1.cdn.digitaloceanspaces.com` behave like any stable HTTPS origin (no mixed-content issues vs `https://localhost` WebView).
+- **Manual checklist:** [`mobile-cdn-validation.md`](mobile-cdn-validation.md).
+
 ---
 
 ## Deletion rules
@@ -146,4 +153,6 @@ Operational guideline: implement **reference counting or orphan scans** before d
 
 - Backend API docs: `back_vibes/docs/` (e.g. cover bundles, preset vibes).
 - Admin uploads (current behaviour): `ixora-admin/docs/upload-validation.md`.
-- Mobile artwork fallbacks: `front_vibes/docs/artwork-background-strategy.md`.
+- Mobile CDN checklist: [`mobile-cdn-validation.md`](mobile-cdn-validation.md).
+- Mobile artwork fallbacks: [`artwork-background-strategy.md`](artwork-background-strategy.md).
+- Audio cache / offline: [`audio-cache.md`](audio-cache.md).

@@ -1,3 +1,5 @@
+import { normalizeSoundFileUrlFromApi } from '@/utils/sound-file-url';
+
 import { authService } from './auth.service';
 import type { Vibe } from './vibe.service';
 import type { PlayMode, VibeSound } from './vibe-sound.service';
@@ -99,7 +101,7 @@ function normalizeImportedSound(row: Record<string, unknown>): VibeSound {
   return {
     id: Number(row.id),
     name: String(row.name ?? ''),
-    file_url: String(row.file_url ?? ''),
+    file_url: normalizeSoundFileUrlFromApi(row),
     thumbnail_url: row.thumbnail_url != null ? String(row.thumbnail_url) : null,
     category: String(row.category ?? ''),
     duration: row.duration != null && row.duration !== '' ? Number(row.duration) : null,
