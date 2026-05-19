@@ -115,6 +115,8 @@ Object deletion in Spaces is **irreversible** and **must stay consistent** with 
 
 Operational guideline: implement **reference counting or orphan scans** before delete; default to **no delete** when uncertain.
 
+**Implementation (catalog sounds):** the Laravel API blocks delete when the sound is attached to user or preset vibes, then removes Spaces objects only when no row still stores the same URL. See `back_vibes/docs/safe-asset-deletion.md`.
+
 ---
 
 ## Migration notes
@@ -133,7 +135,7 @@ Operational guideline: implement **reference counting or orphan scans** before d
 2. **Laravel upload endpoints** — authenticated routes that accept uploads (multipart / signed strategy TBD), validate MIME/size, write keys under the layout above, return public CDN URLs.
 3. **Nuxt Admin** — replace direct-to-third-party uploads with **proxied uploads via Laravel**; display returned CDN URLs only.
 4. **Reset / cleanup command** — optional maintenance to reconcile DB URLs vs bucket inventory (dry-run first).
-5. **Safe asset deletion** — service + policies enforcing **Deletion rules**; possibly soft-delete flags before physical delete.
+5. **Safe asset deletion** — **partially shipped** for catalog sounds (Laravel `DELETE /api/sounds/{sound}`); see `back_vibes/docs/safe-asset-deletion.md`. Other entities / soft-delete TBD.
 6. **Mobile** — remain **read-only** against CDN; no Spaces credentials in the app binary or env shipped to devices.
 7. **Avatar upload** — future Laravel endpoint + mobile picker posting to API (still **no** client Spaces keys).
 
