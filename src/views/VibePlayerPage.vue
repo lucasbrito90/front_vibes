@@ -207,111 +207,7 @@
             </ul>
           </section>
 
-          <!-- DEV only: Player state, execution plan, and runtime logs panels -->
-          <template v-if="isDev">
-            <!-- Player state — visible on device without ADB -->
-            <div v-if="!loading" class="player-dev-panel player-dev-panel--state">
-              <div class="player-dev-panel-header">
-                <span class="player-dev-badge player-dev-badge--state">STATE</span>
-                <span class="player-dev-title">Player State</span>
-              </div>
-              <p class="player-dev-state-hint">Main player only — use the central ▶ button to test MiniPlayer.</p>
-              <div class="player-dev-state-grid">
-                <span class="player-dev-state-key">platform</span>
-                <strong class="player-dev-state-val">{{ _isNativePlatform ? '📱 native' : '🌐 web' }}</strong>
-
-                <span class="player-dev-state-key">routeVibeId</span>
-                <strong class="player-dev-state-val">{{ vibeId }}</strong>
-
-                <span class="player-dev-state-key">currentVibeId</span>
-                <strong class="player-dev-state-val">{{ currentVibeId ?? 'null' }}</strong>
-
-                <span class="player-dev-state-key">playbackState</span>
-                <strong class="player-dev-state-val" :class="`player-dev-state--${playbackState}`">{{ playbackState }}</strong>
-
-                <span class="player-dev-state-key">isRoutePlaying</span>
-                <strong class="player-dev-state-val" :class="isThisVibePlaying ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ isThisVibePlaying }}</strong>
-
-                <span class="player-dev-state-key">isRoutePaused</span>
-                <strong class="player-dev-state-val" :class="isThisVibePaused ? 'player-dev-state--paused' : 'player-dev-state--idle'">{{ isThisVibePaused }}</strong>
-
-                <span class="player-dev-state-key">isRoutePreparing</span>
-                <strong class="player-dev-state-val" :class="isThisVibePreparing ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ isThisVibePreparing }}</strong>
-
-                <span class="player-dev-state-key">store.hasActive</span>
-                <strong class="player-dev-state-val" :class="hasActiveLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ hasActiveLayers }}</strong>
-
-                <span class="player-dev-state-key">svc.hasActive</span>
-                <strong class="player-dev-state-val" :class="diagServiceLayers ? 'player-dev-state--playing' : 'player-dev-state--idle'">{{ diagServiceLayers }}</strong>
-
-                <span class="player-dev-state-key">hideMiniPlayer</span>
-                <strong class="player-dev-state-val">{{ !!route.meta.hideMiniPlayer }}</strong>
-
-                <span class="player-dev-state-key">lastPlayVibe</span>
-                <strong class="player-dev-state-val">{{ diagLastPlayResult === null ? '—' : diagLastPlayResult }}</strong>
-
-                <span class="player-dev-state-key">plan / playable</span>
-                <strong class="player-dev-state-val">{{ executionPlan.length }} / {{ playableLayers.length }}</strong>
-
-                <span class="player-dev-state-key">offlineSnapshot</span>
-                <strong class="player-dev-state-val">{{ loadedFromOfflineSnapshot }}</strong>
-              </div>
-            </div>
-
-            <!-- Execution Plan -->
-            <div v-if="!loading" class="player-dev-panel">
-              <div class="player-dev-panel-header">
-                <span class="player-dev-badge">DEV</span>
-                <span class="player-dev-title">DEV Execution Plan</span>
-                <span class="player-dev-count">{{ executionPlan.length }} layer{{ executionPlan.length !== 1 ? 's' : '' }}</span>
-              </div>
-              <div v-if="!executionPlan.length" class="player-dev-empty">No layers (build plan after load).</div>
-              <div v-for="layer in executionPlan" :key="layer.soundId" class="player-dev-layer">
-                <p class="player-dev-layer-summary">{{ layer.humanReadableSummary }}</p>
-                <div class="player-dev-layer-meta">
-                  <span>start: {{ layer.startsAtSeconds }}s</span>
-                  <span v-if="layer.endsAtSeconds != null">end: {{ layer.endsAtSeconds }}s</span>
-                  <span v-if="layer.repeatIntervalSeconds != null">interval: {{ layer.repeatIntervalSeconds }}s</span>
-                  <span v-if="layer.fadeInSeconds">fade↑ {{ layer.fadeInSeconds }}s</span>
-                  <span v-if="layer.fadeOutSeconds">fade↓ {{ layer.fadeOutSeconds }}s</span>
-                  <span :class="{ 'player-dev-unplayable': !isExecutionLayerPlayable(layer) }">
-                    {{ isExecutionLayerPlayable(layer) ? 'playable' : 'skipped (invalid URL or interval)' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Runtime Logs panel — in-app diagnostics without ADB -->
-            <div class="player-dev-panel player-dev-panel--logs">
-              <div class="player-dev-panel-header player-dev-logs-header" @click="devLogsExpanded = !devLogsExpanded">
-                <span class="player-dev-badge player-dev-badge--logs">LOGS</span>
-                <span class="player-dev-title">Runtime Logs</span>
-                <span class="player-dev-logs-count">{{ logBuffer.length }}</span>
-                <button
-                  type="button"
-                  class="player-dev-logs-clear"
-                  @click.stop="clearLogBuffer()"
-                  title="Clear logs"
-                >✕</button>
-                <span class="player-dev-logs-toggle">{{ devLogsExpanded ? '▲' : '▼' }}</span>
-              </div>
-
-              <div v-if="devLogsExpanded" class="player-dev-logs-list">
-                <div v-if="!logBuffer.length" class="player-dev-empty">No logs yet.</div>
-                <div
-                  v-for="(entry, i) in logBuffer"
-                  :key="i"
-                  class="player-dev-log-entry"
-                  :class="`player-dev-log-entry--${entry.level}`"
-                >
-                  <span class="player-dev-log-ts">{{ entry.ts }}</span>
-                  <span class="player-dev-log-prefix">[{{ entry.prefix }}]</span>
-                  <span class="player-dev-log-msg">{{ entry.message }}</span>
-                  <span v-if="entry.data" class="player-dev-log-data">{{ JSON.stringify(entry.data) }}</span>
-                </div>
-              </div>
-            </div>
-          </template>
+          <component :is="PlayerDebugPanel" v-if="isDev && PlayerDebugPanel && !loading" />
 
         </div>
 
@@ -345,7 +241,7 @@ import {
   stopCircleOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
 
@@ -366,7 +262,7 @@ import {
   isExecutionLayerPlayable,
   type VibeExecutionLayer,
 } from '@/services/player-engine.service';
-import { createLogger, logBuffer, clearLogBuffer } from '@/utils/player-debug';
+import { createLogger } from '@/utils/player-debug';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -392,7 +288,6 @@ const store = usePlayerStore();
 const {
   playbackState,
   elapsedSeconds,
-  hasActiveLayers,
   currentVibeId,
 } = storeToRefs(store);
 
@@ -416,21 +311,11 @@ const log = createLogger('VibePlayerPage');
 
 const isDev = import.meta.env.DEV;
 
-// ── DEV diagnostics ───────────────────────────────────────────────────────────
-// These refs are only used by the DEV panels (visible when isDev === true).
-// In production, no panels are rendered and no polling tick is started.
+const PlayerDebugPanel = isDev
+  ? defineAsyncComponent(() => import('@/components/debug/PlayerDebugPanel.vue'))
+  : null;
 
 const _isNativePlatform = Capacitor.isNativePlatform();
-
-/** Live value from audioPlayerService (polled at 1 Hz in DEV only). */
-const diagServiceLayers = ref(false);
-/** Last value returned by store.playVibe(). */
-const diagLastPlayResult = ref<boolean | null>(null);
-
-let _diagTickId: ReturnType<typeof setInterval> | null = null;
-
-/** Controls whether the in-app DEV Logs panel is expanded. */
-const devLogsExpanded = ref(true);
 
 // Prefer the already-loaded vibe from the list; fall back to selectedVibe
 const vibe = computed(() =>
@@ -716,11 +601,6 @@ async function togglePlayback(): Promise<void> {
     layers:       executionPlan.value,
   });
 
-  if (isDev) {
-    diagLastPlayResult.value = started;
-    diagServiceLayers.value  = audioPlayerService.hasActiveLayers();
-  }
-
   log.debug('MAIN PLAYER — playVibe result', {
     started,
     svcHasActive: audioPlayerService.hasActiveLayers(),
@@ -932,12 +812,6 @@ onMounted(async () => {
     offlineSnapshot:  loadedFromOfflineSnapshot.value,
   });
 
-  // Poll service state at 1 Hz for the DEV STATE panel (DEV mode only).
-  if (isDev) {
-    _diagTickId = setInterval(() => {
-      diagServiceLayers.value = audioPlayerService.hasActiveLayers();
-    }, 1_000);
-  }
 });
 
 onUnmounted(() => {
@@ -947,10 +821,6 @@ onUnmounted(() => {
   // will be rebuilt via buildPlan() if the user returns to this page.
   clearPlan();
 
-  if (_diagTickId !== null) {
-    clearInterval(_diagTickId);
-    _diagTickId = null;
-  }
 });
 </script>
 
@@ -1506,217 +1376,5 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.28);
   border: 1px solid rgba(255, 255, 255, 0.08);
   letter-spacing: 0.02em;
-}
-.player-dev-panel {
-  margin-top: 20px;
-  border: 1.5px dashed rgba(245, 158, 11, 0.55);
-  border-radius: 12px;
-  padding: 12px 14px 10px;
-  background: rgba(0, 0, 0, 0.38);
-  max-height: 220px;
-  overflow-y: auto;
-}
-
-.player-dev-panel-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.player-dev-badge {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1px;
-  color: #fff;
-  background: #f59e0b;
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
-.player-dev-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(253, 230, 138, 0.95);
-}
-
-.player-dev-count {
-  margin-left: auto;
-  font-size: 11px;
-  color: rgba(251, 191, 36, 0.85);
-}
-
-.player-dev-empty {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
-  margin: 0 0 6px;
-}
-
-.player-dev-layer {
-  border-top: 1px solid rgba(245, 158, 11, 0.22);
-  padding: 10px 0 8px;
-}
-
-.player-dev-layer-summary {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0 0 6px;
-  line-height: 1.4;
-}
-
-.player-dev-layer-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.player-dev-layer-meta span {
-  font-size: 11px;
-  font-family: monospace;
-  color: rgba(253, 230, 138, 0.92);
-  background: rgba(245, 158, 11, 0.14);
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
-.player-dev-unplayable {
-  color: rgba(248, 113, 113, 0.95) !important;
-  background: rgba(248, 113, 113, 0.12) !important;
-}
-
-/* ── DEV Composable State panel ───────────────────────── */
-.player-dev-panel--state {
-  border-color: rgba(99, 102, 241, 0.55);
-  max-height: none;
-}
-
-.player-dev-badge--state {
-  background: #6366f1;
-}
-
-.player-dev-state-hint {
-  margin: 0 0 10px;
-  font-size: 11px;
-  color: rgba(199, 210, 254, 0.7);
-  font-style: italic;
-}
-
-
-.player-dev-state-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 12px;
-  row-gap: 5px;
-  font-size: 12px;
-  font-family: monospace;
-}
-
-.player-dev-state-key {
-  color: rgba(199, 210, 254, 0.65);
-  white-space: nowrap;
-}
-
-.player-dev-state-val {
-  color: rgba(224, 231, 255, 0.9);
-}
-
-.player-dev-state--idle    { color: rgba(199, 210, 254, 0.5); }
-.player-dev-state--playing { color: #34d399; }
-.player-dev-state--paused  { color: #fbbf24; }
-.player-dev-state--preparing { color: #38bdf8; }
-.player-dev-state--error { color: #f87171; }
-
-/* ── DEV Logs panel ─────────────────────────────────── */
-
-.player-dev-panel--logs {
-  margin-top: 8px;
-}
-
-.player-dev-badge--logs {
-  background: #0ea5e9;
-}
-
-.player-dev-logs-header {
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.player-dev-logs-count {
-  margin-left: auto;
-  font-size: 11px;
-  color: rgba(186, 230, 253, 0.7);
-  font-family: monospace;
-}
-
-.player-dev-logs-clear {
-  margin-left: 8px;
-  background: rgba(255,255,255,0.12);
-  border: none;
-  border-radius: 4px;
-  color: rgba(186, 230, 253, 0.8);
-  font-size: 11px;
-  padding: 1px 5px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-
-.player-dev-logs-toggle {
-  margin-left: 6px;
-  font-size: 11px;
-  color: rgba(186, 230, 253, 0.5);
-}
-
-.player-dev-logs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  max-height: 320px;
-  overflow-y: auto;
-  margin-top: 8px;
-}
-
-.player-dev-log-entry {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  font-size: 10.5px;
-  font-family: monospace;
-  line-height: 1.4;
-  border-radius: 4px;
-  padding: 2px 4px;
-  background: rgba(255,255,255,0.04);
-}
-
-.player-dev-log-entry--warn  { background: rgba(251, 191, 36, 0.10); }
-.player-dev-log-entry--error { background: rgba(239, 68,  68, 0.14); }
-
-.player-dev-log-ts {
-  color: rgba(148, 163, 184, 0.65);
-  flex-shrink: 0;
-}
-
-.player-dev-log-prefix {
-  color: #7dd3fc;
-  flex-shrink: 0;
-  font-weight: 700;
-}
-
-.player-dev-log-msg {
-  color: rgba(224, 231, 255, 0.9);
-  flex: 1;
-  min-width: 0;
-  word-break: break-word;
-}
-
-.player-dev-log-entry--warn  .player-dev-log-msg { color: #fcd34d; }
-.player-dev-log-entry--error .player-dev-log-msg { color: #fca5a5; }
-
-.player-dev-log-data {
-  width: 100%;
-  font-size: 10px;
-  color: rgba(148, 163, 184, 0.6);
-  word-break: break-all;
 }
 </style>
