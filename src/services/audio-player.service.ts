@@ -1479,6 +1479,9 @@ function playPlan(layers: VibeExecutionLayer[]): void {
 
     if (_layers.size > 0) {
       _beginPlaybackPrepareHandshake(layers);
+    } else {
+      // Valid layers were counted but none registered — complete prepare→error path.
+      queueMicrotask(() => _onPlaybackPrepareFailed?.());
     }
   }
 }

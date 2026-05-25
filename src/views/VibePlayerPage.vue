@@ -1,5 +1,5 @@
 <template>
-  <ion-page class="player-page">
+  <ion-page class="player-page" data-testid="player-page">
     <ion-content :fullscreen="true" class="player-content">
       <div class="player-wrap">
         <!-- Background layer (keyed for subtle enter transition on vibe / artwork change) -->
@@ -67,15 +67,11 @@
 
         <!-- ── Center: Play / Pause ──────────────────── -->
         <div class="player-center">
-          <div
-            v-if="loading || isThisVibePreparing"
-            class="player-spinner-wrap"
-            :class="{ 'player-spinner-wrap--preparing': isThisVibePreparing && !loading }"
-          >
+          <div v-if="loading" class="player-spinner-wrap">
             <AppLoadingState
               compact
               tone="inverse"
-              :title="loading ? 'Loading vibe…' : 'Preparing playback…'"
+              title="Loading vibe…"
             />
           </div>
 
@@ -83,19 +79,26 @@
             v-else
             type="button"
             class="player-control-btn"
-            :class="{
-              'player-control-btn--disabled': !canUsePlaybackControls,
-              'player-control-btn--playing': isThisVibePlaying,
-              'player-control-btn--paused': isThisVibePaused,
-            }"
-            :disabled="!canUsePlaybackControls"
+            data-testid="player-play-button"
+            :class="centerButtonClass"
+            :disabled="!canUsePlaybackControls || isThisVibePreparing"
             :aria-label="centerAriaLabel"
             @click="togglePlayback"
           >
-            <ion-icon
-              :icon="centerIcon"
-              class="player-control-icon"
-            />
+            <Transition name="player-control-icon" mode="out-in">
+              <ion-spinner
+                v-if="isThisVibePreparing"
+                key="preparing"
+                name="crescent"
+                class="player-control-spinner"
+              />
+              <ion-icon
+                v-else
+                key="control"
+                :icon="centerIcon"
+                class="player-control-icon"
+              />
+            </Transition>
           </button>
         </div>
 
@@ -126,14 +129,19 @@
           <p
             v-if="!loading && warningText && !playbackErroredThisVibe && !offlineUnavailableAfterLoad"
             class="player-warning player-warning--banner"
+            data-testid="player-warning-banner"
           >
             {{ warningText }}
           </p>
 
-          <div class="player-identity">
+          <div
+            class="player-identity"
+            :class="{ 'player-identity--pending': loading }"
+            :key="`identity-${vibeId}`"
+          >
             <p class="player-label">Ambient mix</p>
-            <h1 class="player-title">{{ vibe?.name ?? '…' }}</h1>
-            <p v-if="vibe?.description" class="player-desc">{{ vibe.description }}</p>
+            <h1 class="player-title">{{ displayVibe?.name ?? '…' }}</h1>
+            <p v-if="displayVibe?.description" class="player-desc">{{ displayVibe.description }}</p>
             <p class="player-sounds-text">{{ soundsSummary }}</p>
           </div>
 
@@ -154,7 +162,7 @@
             </span>
           </div>
 
-          <div class="player-status-row">
+          <div v-if="!loading" class="player-status-row">
             <span
               class="player-status-dot"
               :class="statusDotClass"
@@ -164,8 +172,10 @@
 
           <section
             v-if="executionPlan.length > 0 && !loading"
-            class="player-layers"
+            :key="`layers-${vibeId}`"
+            class="player-layers app-fade-in"
             aria-label="Sound layers in this vibe"
+            data-testid="player-layers-section"
           >
             <h2 class="player-layers-heading">Sound layers</h2>
             <ul class="player-layer-list">
@@ -224,6 +234,7 @@ import {
   IonList,
   IonPage,
   IonPopover,
+  IonSpinner,
   toastController,
 } from '@ionic/vue';
 import {
@@ -241,7 +252,7 @@ import {
   stopCircleOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
 
@@ -294,7 +305,9 @@ const {
 const menuTriggerId = computed(() => `vibe-player-menu-${vibeId.value}`);
 
 const loading                   = ref(false);
+const controlPulse              = ref(false);
 const isDownloading             = ref(false);
+let loadGeneration              = 0;
 /** Full-file download + snapshot saved — distinct from “playing from snapshot this session”. */
 const vibeOfflineReady          = ref(false);
 /** Offline visit without snapshot — show inline guidance (not only toast). */
@@ -323,11 +336,18 @@ const vibe = computed(() =>
   ?? (selectedVibe.value?.id === vibeId.value ? selectedVibe.value : null),
 );
 
-const heroHasArtwork = computed(() => !!getVibePlayerBackgroundUrl(vibe.value));
+/** Route-scoped vibe metadata — never show a previous route's title/artwork. */
+const displayVibe = computed(() => {
+  const v = vibe.value;
+  if (!v || v.id !== vibeId.value) return null;
+  return v;
+});
+
+const heroHasArtwork = computed(() => !!getVibePlayerBackgroundUrl(displayVibe.value));
 
 /** Remount background layer for a short fade-in when vibe or artwork changes. */
 const heroBgKey = computed(() => {
-  const v = vibe.value;
+  const v = displayVibe.value;
   return `${vibeId.value}-${getVibePlayerBackgroundUrl(v) ?? 'gradient'}`;
 });
 
@@ -358,9 +378,15 @@ async function refreshOfflineDownloadState(): Promise<void> {
 
 watch(
   vibeId,
-  () => {
+  (id, prev) => {
+    if (prev != null && id !== prev) {
+      hydrateVibeSoundsFromOffline([]);
+      clearPlan();
+      isDownloading.value = false;
+    }
     offlineUnavailableAfterLoad.value = false;
     void refreshOfflineDownloadState();
+    void loadPlayerPage(id);
   },
   { immediate: true },
 );
@@ -384,9 +410,14 @@ const isThisVibePreparing = computed(
   () => currentVibeId.value === vibeId.value && playbackState.value === 'preparing',
 );
 
-/** True when a DIFFERENT vibe is currently playing or paused. */
+/** True when a DIFFERENT vibe is actively playing, paused, or preparing. */
 const isAnotherVibePlaying = computed(
-  () => currentVibeId.value !== null && currentVibeId.value !== vibeId.value,
+  () =>
+    currentVibeId.value !== null
+    && currentVibeId.value !== vibeId.value
+    && (playbackState.value === 'playing'
+      || playbackState.value === 'paused'
+      || playbackState.value === 'preparing'),
 );
 
 /**
@@ -403,6 +434,7 @@ const canUsePlaybackControls = computed(
       hasPlayableLayers.value
       || isThisVibePlaying.value
       || isThisVibePaused.value
+      || playbackErroredThisVibe.value
       || isAnotherVibePlaying.value
     ),
 );
@@ -426,6 +458,8 @@ const warningText = computed((): string | null => {
 // ── Sounds summary ────────────────────────────────────────────────────────────
 
 const soundsSummary = computed((): string => {
+  if (loading.value) return '…';
+
   const sounds = vibeSounds.value;
   const count  = sounds.length;
 
@@ -455,18 +489,20 @@ function formatElapsed(s: number): string {
 }
 
 const statusText = computed((): string => {
-  if (isThisVibePreparing.value) return 'Starting playback…';
+  if (isThisVibePreparing.value) return 'Preparing playback…';
+  if (playbackErroredThisVibe.value) return 'Playback couldn’t start';
   if (isThisVibePlaying.value) return `Playing • ${formatElapsed(elapsedSeconds.value)}`;
   if (isThisVibePaused.value)  return `Paused • ${formatElapsed(elapsedSeconds.value)}`;
   if (isAnotherVibePlaying.value) return 'Another vibe is playing';
   return 'Ready';
 });
 
-/** Dot reflects whether THIS vibe is playing, paused, or preparing. */
+/** Dot reflects whether THIS vibe is playing, paused, preparing, or errored. */
 const statusDotClass = computed((): Record<string, boolean> => ({
   'player-status-dot--active': isThisVibePlaying.value,
   'player-status-dot--paused': isThisVibePaused.value,
   'player-status-dot--preparing': isThisVibePreparing.value,
+  'player-status-dot--error': playbackErroredThisVibe.value,
 }));
 
 type PlayerBadgeTone = 'success' | 'info' | 'warn' | 'neutral';
@@ -501,7 +537,7 @@ const badgeItems = computed((): PlayerBadgeItem[] => {
   if (isThisVibePreparing.value) {
     items.push({
       key: 'preparing',
-      label: 'Preparing',
+      label: 'Preparing playback',
       icon:  pulseOutline,
       tone:  'neutral',
     });
@@ -514,6 +550,14 @@ const badgeItems = computed((): PlayerBadgeItem[] => {
       tone:  'warn',
     });
   }
+  if (playbackErroredThisVibe.value) {
+    items.push({
+      key: 'error',
+      label: 'Couldn’t start',
+      icon:  stopCircleOutline,
+      tone:  'warn',
+    });
+  }
   return items;
 });
 
@@ -521,8 +565,19 @@ const centerIcon = computed(() =>
   isThisVibePlaying.value ? pauseOutline : playOutline,
 );
 
+const centerButtonClass = computed(() => ({
+  'player-control-btn--disabled':
+    !canUsePlaybackControls.value && !isThisVibePreparing.value,
+  'player-control-btn--playing': isThisVibePlaying.value,
+  'player-control-btn--paused': isThisVibePaused.value,
+  'player-control-btn--preparing': isThisVibePreparing.value,
+  'player-control-btn--error': playbackErroredThisVibe.value,
+  'player-control-btn--pulse': controlPulse.value,
+}));
+
 const centerAriaLabel = computed((): string => {
   if (isThisVibePreparing.value) return 'Starting playback';
+  if (playbackErroredThisVibe.value) return 'Retry playback';
   if (!loading.value && !canUsePlaybackControls.value) return 'Playback unavailable';
   if (isThisVibePlaying.value) return 'Pause';
   if (isThisVibePaused.value)  return 'Resume';
@@ -595,9 +650,9 @@ async function togglePlayback(): Promise<void> {
   // artwork_url is already resolved by the API (fallback: thumbnail_url).
   const started = store.playVibe({
     vibeId:       vibeId.value,
-    vibeName:     vibe.value?.name ?? '',
+    vibeName:     displayVibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    artworkUrl: getVibeArtworkUrl(vibe.value),
+    artworkUrl: getVibeArtworkUrl(displayVibe.value),
     layers:       executionPlan.value,
   });
 
@@ -641,9 +696,9 @@ async function handleRestartVibe(): Promise<void> {
   // Use playVibe() for restart too — it resets vibe context, clock, and audio.
   const started = store.playVibe({
     vibeId:       vibeId.value,
-    vibeName:     vibe.value?.name ?? '',
+    vibeName:     displayVibe.value?.name ?? '',
     soundSummary: `${soundCount} sound${soundCount !== 1 ? 's' : ''}`,
-    artworkUrl: getVibeArtworkUrl(vibe.value),
+    artworkUrl: getVibeArtworkUrl(displayVibe.value),
     layers:       executionPlan.value,
   });
 
@@ -725,7 +780,7 @@ async function handleDownloadForOffline(): Promise<void> {
     } else if (result.succeeded === 0) {
       await showPlaybackToast('No sounds were downloaded.');
     } else {
-      const v = vibe.value;
+      const v = displayVibe.value;
       if (v?.id === id && vibeSounds.value.length > 0) {
         try {
           await saveOfflineVibeSnapshot(id, v, vibeSounds.value);
@@ -760,28 +815,57 @@ function handleBack(): void {
 
 // ── Hero background (shared helpers in @/utils/artwork) ───────────────────────
 
-const heroBackground = computed(() => getVibePlayerBackgroundStyle(vibe.value));
+const heroBackground = computed(() => getVibePlayerBackgroundStyle(displayVibe.value));
 
-// ── Lifecycle ─────────────────────────────────────────────────────────────────
+function pulseControlFeedback(): void {
+  controlPulse.value = false;
+  window.requestAnimationFrame(() => {
+    controlPulse.value = true;
+    window.setTimeout(() => {
+      controlPulse.value = false;
+    }, 480);
+  });
+}
 
-onMounted(async () => {
-  log.debug('mounted', { vibeId: vibeId.value });
+watch(
+  () => [isThisVibePlaying.value, isThisVibePaused.value] as const,
+  ([playing, paused], prev) => {
+    if (!prev) return;
+    const [wasPlaying, wasPaused] = prev;
+    const toggledPause =
+      (playing && wasPaused && !wasPlaying)
+      || (paused && wasPlaying && !wasPaused);
+    if (toggledPause) pulseControlFeedback();
+  },
+);
+
+async function loadPlayerPage(id: number): Promise<void> {
+  const generation = ++loadGeneration;
+  log.debug('loadPlayerPage', { vibeId: id, generation });
+
   loading.value = true;
   loadedFromOfflineSnapshot.value = false;
   offlineUnavailableAfterLoad.value = false;
+  clearPlan();
 
   await Promise.all([
-    fetchVibe(vibeId.value),
-    fetchVibeSounds(vibeId.value),
+    fetchVibe(id),
+    fetchVibeSounds(id),
   ]);
 
-  const id        = vibeId.value;
-  const soundsOk  = vibeSounds.value.length > 0;
+  if (generation !== loadGeneration) {
+    log.debug('loadPlayerPage — stale generation, aborting UI update', { id, generation });
+    return;
+  }
+
+  const soundsOk = vibeSounds.value.length > 0;
 
   if (soundsOk) {
     buildPlan(vibeSounds.value);
   } else {
     const snap = await getOfflineVibeSnapshot(id);
+    if (generation !== loadGeneration) return;
+
     if (snap && snap.vibeId === id && snap.vibeSounds.length > 0) {
       hydrateSelectedVibeFromOffline(offlineMetaToVibe(snap.vibe));
       hydrateVibeSoundsFromOffline(snap.vibeSounds);
@@ -805,14 +889,15 @@ onMounted(async () => {
     }
   }
 
+  if (generation !== loadGeneration) return;
+
   loading.value = false;
   log.debug('loaded', {
     sounds:           vibeSounds.value.length,
     planLayers:       executionPlan.value.length,
     offlineSnapshot:  loadedFromOfflineSnapshot.value,
   });
-
-});
+}
 
 onUnmounted(() => {
   log.debug('unmounted — audio preserved for MiniPlayer');
@@ -979,26 +1064,23 @@ onUnmounted(() => {
   transition: opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
-.player-spinner-wrap--preparing {
-  animation: player-preparing-halo 1.5s ease-in-out infinite;
+.player-control-spinner {
+  width: 40px;
+  height: 40px;
+  color: rgba(255, 255, 255, 0.92);
 }
 
-@keyframes player-preparing-halo {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 0 rgba(56, 189, 248, 0));
-    opacity: 1;
-  }
-  50% {
-    filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.35));
-    opacity: 0.96;
-  }
+.player-control-icon-enter-active,
+.player-control-icon-leave-active {
+  transition:
+    opacity var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-emphasized);
 }
 
-.player-spinner {
-  width: 48px;
-  height: 48px;
-  color: rgba(255, 255, 255, 0.8);
+.player-control-icon-enter-from,
+.player-control-icon-leave-to {
+  opacity: 0;
+  transform: scale(0.82);
 }
 
 .player-control-btn {
@@ -1060,6 +1142,57 @@ onUnmounted(() => {
     0 0 36px rgba(251, 191, 36, 0.22);
 }
 
+.player-control-btn--preparing {
+  border-color: rgba(56, 189, 248, 0.62);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12) inset,
+    0 12px 44px rgba(0, 0, 0, 0.48),
+    0 0 48px rgba(56, 189, 248, 0.32);
+  animation: player-preparing-ring 1.35s ease-in-out infinite;
+}
+
+.player-control-btn--error {
+  border-color: rgba(248, 113, 113, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 36px rgba(248, 113, 113, 0.24);
+}
+
+@keyframes player-preparing-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.12) inset,
+      0 12px 44px rgba(0, 0, 0, 0.48),
+      0 0 36px rgba(56, 189, 248, 0.22);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.14) inset,
+      0 14px 48px rgba(0, 0, 0, 0.5),
+      0 0 56px rgba(56, 189, 248, 0.42);
+  }
+}
+
+.player-control-btn--pulse {
+  animation: player-control-pulse 0.48s var(--app-ease-emphasized);
+}
+
+@keyframes player-control-pulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .player-control-btn--disabled {
   opacity: 0.38;
   cursor: not-allowed;
@@ -1107,6 +1240,12 @@ onUnmounted(() => {
 
 .player-identity {
   margin-bottom: 4px;
+  transition: opacity var(--app-motion-base) var(--app-ease-standard);
+}
+
+.player-identity--pending .player-title,
+.player-identity--pending .player-sounds-text {
+  color: rgba(255, 255, 255, 0.38);
 }
 
 .player-label {
@@ -1244,6 +1383,11 @@ onUnmounted(() => {
   background: #38bdf8;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.65);
   animation: player-dot-pulse 1.1s ease-in-out infinite;
+}
+
+.player-status-dot--error {
+  background: #f87171;
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.65);
 }
 
 @keyframes player-dot-pulse {
