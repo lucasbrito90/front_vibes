@@ -15,6 +15,10 @@ After Capacitor/plugin changes:
 npm run cap:sync:android
 ```
 
-**E2E (Cypress):** optional — not part of baseline (`npm run test:e2e`).
+**E2E (Playwright):** optional — not part of baseline (`npm run test:e2e`, `npm run test:e2e:ui`).
+
+**Android smoke (WebdriverIO/Appium):** local only — see [android-smoke-tests.md](android-smoke-tests.md) (`npm run test:smoke:android`).
+
+Legacy Cypress scaffold remains as `npm run test:e2e:cypress`.
 
 **Source of truth:** [ixora-infra/docs/quality-harness.md](../../ixora-infra/docs/quality-harness.md)
