@@ -1,8 +1,9 @@
 <template>
-  <div v-if="isDev" class="player-debug-harness">
+  <div v-if="isDev" class="player-debug-harness" data-testid="player-debug-harness">
     <button
       type="button"
       class="player-debug-harness-toggle"
+      data-testid="player-debug-harness-toggle"
       :aria-expanded="harnessExpanded"
       @click="harnessExpanded = !harnessExpanded"
     >
@@ -12,7 +13,7 @@
       <span class="player-debug-harness-chevron">{{ harnessExpanded ? '▲' : '▼' }}</span>
     </button>
 
-    <div v-if="harnessExpanded" class="player-debug-harness-body">
+    <div v-if="harnessExpanded" class="player-debug-harness-body" data-testid="player-debug-harness-body">
       <p class="player-debug-disclaimer">
         Read-only diagnostics. Does not start, stop, or mutate playback.
       </p>

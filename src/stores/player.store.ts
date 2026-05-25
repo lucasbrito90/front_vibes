@@ -48,8 +48,12 @@ export type PlaybackState = 'idle' | 'preparing' | 'playing' | 'paused' | 'error
 const log = createLogger('PlayerStore');
 const uxLog = createLogger('PlayerUX');
 
+/** Spec: inline error UX (~2.4s) before returning to idle. Cleared on retry/stop/new play. */
+const PLAYBACK_ERROR_IDLE_MS = 2_400;
+
 // Non-reactive timer ref — lives outside the store so Pinia never wraps it.
 let _timerRef: ReturnType<typeof setInterval> | null = null;
+let _playbackErrorResetTimer: number | null = null;
 
 /** Logs a state transition in [old → new] format. */
 function _logTransition(field: string, from: unknown, to: unknown): void {
@@ -102,6 +106,53 @@ export const usePlayerStore = defineStore('player', () => {
     elapsedSeconds.value = 0;
   }
 
+  function _clearPlaybackErrorResetTimer(): void {
+    if (_playbackErrorResetTimer != null) {
+      clearTimeout(_playbackErrorResetTimer);
+      _playbackErrorResetTimer = null;
+    }
+  }
+
+  /**
+   * After prepare failure, keep `error` + vibe context for inline player UX,
+   * then return to idle per playback-runtime spec (~2.4s).
+   */
+  function _schedulePlaybackErrorIdleReset(): void {
+    _clearPlaybackErrorResetTimer();
+    _playbackErrorResetTimer = window.setTimeout(() => {
+      _playbackErrorResetTimer = null;
+      if (playbackState.value !== 'error') return;
+      _logTransition('playbackState', 'error', 'idle');
+      playbackState.value = 'idle';
+      clearCurrentVibe();
+      setNotificationVibeName('');
+      setNotificationArtworkUrl(null);
+    }, PLAYBACK_ERROR_IDLE_MS);
+  }
+
+  function _enterPlaybackErrorState(): void {
+    const prev = playbackState.value;
+    playbackState.value   = 'error';
+    hasActiveLayers.value = false;
+    if (prev !== 'error') _logTransition('playbackState', prev, 'error');
+    resetElapsed();
+    // Keep currentVibe* until idle reset so VibePlayerPage can render inline retry.
+    setNotificationVibeName('');
+    setNotificationArtworkUrl(null);
+    void stopBackgroundAudio();
+    _schedulePlaybackErrorIdleReset();
+
+    void (async () => {
+      const toast = await toastController.create({
+        message:  'Unable to start playback. Check your connection and try again.',
+        duration: 3_000,
+        position: 'bottom',
+        color:    'danger',
+      });
+      await toast.present();
+    })();
+  }
+
   // ── Vibe context ───────────────────────────────────────────────────────────
 
   function setCurrentVibe(
@@ -137,6 +188,14 @@ export const usePlayerStore = defineStore('player', () => {
       currentVibeId: currentVibeId.value,
       svcHasActive:  audioPlayerService.hasActiveLayers(),
     });
+
+    // Prepare failure and inline error UX own the lifecycle — do not snap to idle early.
+    if (playbackState.value === 'preparing' || playbackState.value === 'error') {
+      log.debug('sessionEnded ignored — prepare/error lifecycle active');
+      hasActiveLayers.value = audioPlayerService.hasActiveLayers();
+      return;
+    }
+
     const prev = playbackState.value;
     playbackState.value   = 'idle';
     hasActiveLayers.value = false;
@@ -168,7 +227,7 @@ export const usePlayerStore = defineStore('player', () => {
       if (playbackState.value !== 'preparing') return;
 
       if (import.meta.env.DEV) {
-        console.warn('[PlaybackState] prepare failed — resetting session');
+        console.warn('[PlaybackState] prepare failed — entering error state');
         uxLog.warn('[PlayerUX] playback prepare failed', {
           vibeId: currentVibeId.value,
           svcLayers: audioPlayerService.hasActiveLayers(),
@@ -176,31 +235,7 @@ export const usePlayerStore = defineStore('player', () => {
       }
 
       audioPlayerService.stopAll();
-      const prev = playbackState.value;
-      playbackState.value   = 'error';
-      hasActiveLayers.value = false;
-      _logTransition('playbackState', prev, 'error');
-      resetElapsed();
-      clearCurrentVibe();
-      setNotificationVibeName('');
-      setNotificationArtworkUrl(null);
-      void stopBackgroundAudio();
-
-      void (async () => {
-        const toast = await toastController.create({
-          message:  'Unable to start playback. Check your connection and try again.',
-          duration: 3_000,
-          position: 'bottom',
-          color:    'danger',
-        });
-        await toast.present();
-      })();
-
-      window.setTimeout(() => {
-        if (playbackState.value !== 'error') return;
-        _logTransition('playbackState', 'error', 'idle');
-        playbackState.value = 'idle';
-      }, 2_400);
+      _enterPlaybackErrorState();
     },
   });
 
@@ -274,6 +309,7 @@ export const usePlayerStore = defineStore('player', () => {
       return false;
     }
 
+    _clearPlaybackErrorResetTimer();
     resetElapsed();
 
     // Set vibe context BEFORE audio engine starts so the Mini Player is
@@ -325,6 +361,7 @@ export const usePlayerStore = defineStore('player', () => {
       return false;
     }
 
+    _clearPlaybackErrorResetTimer();
     resetElapsed();
 
     const prevState = playbackState.value;
@@ -382,6 +419,7 @@ export const usePlayerStore = defineStore('player', () => {
       currentVibeId: currentVibeId.value,
       svcHasActive:  audioPlayerService.hasActiveLayers(),
     });
+    _clearPlaybackErrorResetTimer();
     audioPlayerService.stopAll();
     const prev = playbackState.value;
     playbackState.value   = 'idle';
@@ -412,6 +450,7 @@ export const usePlayerStore = defineStore('player', () => {
       return false;
     }
 
+    _clearPlaybackErrorResetTimer();
     resetElapsed();
 
     hasActiveLayers.value = true;

@@ -3,27 +3,36 @@
     <div
       v-if="isVisible"
       class="mini-player"
+      :class="{
+        'mini-player--preparing': playbackState === 'preparing',
+        'mini-player--playing': playbackState === 'playing',
+        'mini-player--paused': playbackState === 'paused',
+      }"
       role="region"
       aria-label="Mini Player"
       @click="navigateToPlayer"
     >
       <!-- Artwork thumbnail -->
       <div class="mini-player-artwork">
-        <img
-          v-if="currentVibeArtworkUrl"
-          :src="currentVibeArtworkUrl"
-          class="mini-player-artwork-img app-artwork-fade-in"
-          alt=""
-          aria-hidden="true"
-        />
-        <div
-          v-else
-          class="mini-player-artwork-placeholder"
-          :style="artworkGradient"
-          aria-hidden="true"
-        >
-          <ion-icon :icon="musicalNotesOutline" class="mini-player-artwork-fallback-icon" />
-        </div>
+        <Transition name="mini-player-artwork" mode="out-in">
+          <img
+            v-if="currentVibeArtworkUrl"
+            :key="artworkKey"
+            :src="currentVibeArtworkUrl"
+            class="mini-player-artwork-img app-artwork-fade-in"
+            alt=""
+            aria-hidden="true"
+          />
+          <div
+            v-else
+            :key="`placeholder-${artworkKey}`"
+            class="mini-player-artwork-placeholder"
+            :style="artworkGradient"
+            aria-hidden="true"
+          >
+            <ion-icon :icon="musicalNotesOutline" class="mini-player-artwork-fallback-icon" />
+          </div>
+        </Transition>
       </div>
 
       <!-- Vibe info -->
@@ -40,13 +49,23 @@
         <button
           type="button"
           class="mini-player-btn"
-          :class="{ 'mini-player-btn--disabled': playbackState === 'preparing' }"
+          :class="{
+            'mini-player-btn--disabled': playbackState === 'preparing',
+            'mini-player-btn--pulse': playPausePulse,
+          }"
           :disabled="playbackState === 'preparing'"
           :aria-label="playPauseLabel"
           @click.stop="handlePlayPause"
         >
-          <ion-spinner v-if="showPlayPauseSpinner" name="crescent" class="mini-player-spinner" />
-          <ion-icon v-else :icon="playPauseIcon" />
+          <Transition name="mini-player-control-icon" mode="out-in">
+            <ion-spinner
+              v-if="showPlayPauseSpinner"
+              key="spinner"
+              name="crescent"
+              class="mini-player-spinner"
+            />
+            <ion-icon v-else key="icon" :icon="playPauseIcon" />
+          </Transition>
         </button>
 
         <button
@@ -70,7 +89,7 @@ import {
   stopCircleOutline,
   musicalNotesOutline,
 } from 'ionicons/icons';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -91,6 +110,12 @@ const {
   currentSoundSummary,
   currentVibeArtworkUrl,
 } = storeToRefs(store);
+
+const playPausePulse = ref(false);
+
+const artworkKey = computed(
+  () => `${currentVibeId.value ?? 'none'}-${currentVibeArtworkUrl.value ?? 'none'}`,
+);
 
 // ── Visibility ────────────────────────────────────────────────────────────────
 
@@ -123,7 +148,7 @@ const artworkGradient = computed(() => ({
 // ── Display text ──────────────────────────────────────────────────────────────
 
 const stateLabel = computed(() => {
-  if (playbackState.value === 'preparing') return 'Starting…';
+  if (playbackState.value === 'preparing') return 'Preparing…';
   return playbackState.value === 'playing' ? 'Playing' : 'Paused';
 });
 
@@ -149,8 +174,22 @@ const playPauseIcon = computed(() =>
 const showPlayPauseSpinner = computed(() => playbackState.value === 'preparing');
 
 const playPauseLabel = computed(() => {
-  if (playbackState.value === 'preparing') return 'Starting playback';
+  if (playbackState.value === 'preparing') return 'Preparing playback';
   return playbackState.value === 'playing' ? 'Pause' : 'Resume';
+});
+
+watch(playbackState, (next, prev) => {
+  const toggled =
+    (next === 'playing' && prev === 'paused')
+    || (next === 'paused' && prev === 'playing');
+  if (!toggled) return;
+  playPausePulse.value = false;
+  window.requestAnimationFrame(() => {
+    playPausePulse.value = true;
+    window.setTimeout(() => {
+      playPausePulse.value = false;
+    }, 450);
+  });
 });
 
 function handlePlayPause(): void {
@@ -212,6 +251,27 @@ function navigateToPlayer(): void {
   -webkit-tap-highlight-color: transparent;
 }
 
+.mini-player--preparing {
+  box-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.38),
+    0 -1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(56, 189, 248, 0.12);
+}
+
+.mini-player--playing {
+  box-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.38),
+    0 -1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(74, 222, 128, 0.1);
+}
+
+.mini-player--paused {
+  box-shadow:
+    0 -4px 24px rgba(0, 0, 0, 0.38),
+    0 -1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(251, 191, 36, 0.1);
+}
+
 /* ── Artwork thumbnail ───────────────────────────────────── */
 .mini-player-artwork {
   flex-shrink: 0;
@@ -242,6 +302,32 @@ function navigateToPlayer(): void {
   font-size: 15px;
   color: rgba(255, 255, 255, 0.38);
   pointer-events: none;
+}
+
+.mini-player-artwork-enter-active,
+.mini-player-artwork-leave-active {
+  transition:
+    opacity var(--app-motion-base) var(--app-ease-standard),
+    transform var(--app-motion-base) var(--app-ease-emphasized);
+}
+
+.mini-player-artwork-enter-from,
+.mini-player-artwork-leave-to {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+.mini-player-control-icon-enter-active,
+.mini-player-control-icon-leave-active {
+  transition:
+    opacity var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-emphasized);
+}
+
+.mini-player-control-icon-enter-from,
+.mini-player-control-icon-leave-to {
+  opacity: 0;
+  transform: scale(0.82);
 }
 
 /* ── Info area ───────────────────────────────────────────── */
@@ -338,6 +424,22 @@ function navigateToPlayer(): void {
 .mini-player-btn--disabled {
   opacity: 0.55;
   pointer-events: none;
+}
+
+.mini-player-btn--pulse {
+  animation: mini-player-btn-pulse 0.45s var(--app-ease-emphasized);
+}
+
+@keyframes mini-player-btn-pulse {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .mini-player-spinner {

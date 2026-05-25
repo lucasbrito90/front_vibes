@@ -152,6 +152,11 @@ function waitForAuthState(): Promise<User | null> {
 }
 
 router.beforeEach(async (to) => {
+  // Playwright E2E only — skip Firebase/Laravel gate; API is mocked in tests.
+  if (import.meta.env.VITE_E2E_MOCK_AUTH === 'true' && to.meta.requiresAuth) {
+    return true;
+  }
+
   const user = await waitForAuthState();
 
   if (to.meta.requiresAuth && user) {
