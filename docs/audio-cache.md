@@ -75,6 +75,8 @@ The three-dot menu (⋮) on **VibePlayerPage** → **Download for offline** call
 
 If Firebase Storage returns a **new** signed URL for the same sound, the manifest entry no longer matches `layer.fileUrl` and playback falls back to HTTPS until the user downloads again.
 
+**DigitalOcean Spaces / CDN:** stable public URLs (e.g. `https://ixora-buckets.tor1.cdn.digitaloceanspaces.com/...`) behave the same as any other HTTPS audio URL for streaming, ExoPlayer cache, and **Download for offline** (manifest matches on exact string equality with `layer.fileUrl`).
+
 ---
 
 ## Audio file cache vs vibe metadata snapshot

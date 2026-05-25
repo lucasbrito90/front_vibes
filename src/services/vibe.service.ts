@@ -1,4 +1,5 @@
 import { authService } from './auth.service';
+import type { VibeSound } from './vibe-sound.service';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -36,6 +37,8 @@ export interface Vibe {
 
   is_active: boolean;
   sounds_count?: number;
+  /** Present when the API embeds layers (e.g. preset import response). */
+  sounds?: VibeSound[];
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +47,9 @@ export interface VibePayload {
   name: string;
   description?: string | null;
   is_active?: boolean;
+  thumbnail_url?: string | null;
+  artwork_url?: string | null;
+  player_background_url?: string | null;
 }
 
 async function authHeaders(): Promise<HeadersInit> {

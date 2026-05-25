@@ -12,7 +12,7 @@
         <img
           v-if="currentVibeArtworkUrl"
           :src="currentVibeArtworkUrl"
-          class="mini-player-artwork-img"
+          class="mini-player-artwork-img app-artwork-fade-in"
           alt=""
           aria-hidden="true"
         />
@@ -21,7 +21,9 @@
           class="mini-player-artwork-placeholder"
           :style="artworkGradient"
           aria-hidden="true"
-        />
+        >
+          <ion-icon :icon="musicalNotesOutline" class="mini-player-artwork-fallback-icon" />
+        </div>
       </div>
 
       <!-- Vibe info -->
@@ -66,6 +68,7 @@ import {
   pauseOutline,
   playOutline,
   stopCircleOutline,
+  musicalNotesOutline,
 } from 'ionicons/icons';
 import { computed, watch } from 'vue';
 import { storeToRefs } from 'pinia';
@@ -73,6 +76,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { usePlayerStore } from '@/stores/player.store';
 import { createLogger } from '@/utils/player-debug';
+import { getVibeFallbackGradient } from '@/utils/artwork';
 
 const log = createLogger('MiniPlayer');
 
@@ -112,16 +116,8 @@ watch(isVisible, (next, prev) => {
 // When no artwork URL is available, derive a gradient from the vibe ID so each
 // vibe always gets a consistent colour rather than a generic grey box.
 
-const _gradients = [
-  'linear-gradient(135deg, #3a1c71 0%, #4a1890 100%)',
-  'linear-gradient(135deg, #b0298a 0%, #8b2fc9 100%)',
-  'linear-gradient(135deg, #1dac92 0%, #0f3f5c 100%)',
-  'linear-gradient(135deg, #d97706 0%, #7c2d12 100%)',
-  'linear-gradient(135deg, #4338ca 0%, #6d28d9 100%)',
-];
-
 const artworkGradient = computed(() => ({
-  background: _gradients[(currentVibeId.value ?? 0) % _gradients.length],
+  background: getVibeFallbackGradient(currentVibeId.value ?? 0),
 }));
 
 // ── Display text ──────────────────────────────────────────────────────────────
@@ -236,6 +232,16 @@ function navigateToPlayer(): void {
 .mini-player-artwork-placeholder {
   width: 100%;
   height: 100%;
+  position: relative;
+}
+
+.mini-player-artwork-fallback-icon {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.38);
+  pointer-events: none;
 }
 
 /* ── Info area ───────────────────────────────────────────── */
@@ -314,7 +320,10 @@ function navigateToPlayer(): void {
   font-size: 18px;
   cursor: pointer;
   padding: 0;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    opacity var(--app-motion-fast) var(--app-ease-standard);
   -webkit-tap-highlight-color: transparent;
 
   background: rgba(255, 255, 255, 0.12);
@@ -322,7 +331,7 @@ function navigateToPlayer(): void {
 }
 
 .mini-player-btn:active {
-  transform: scale(0.88);
+  transform: scale(0.92);
   background: rgba(255, 255, 255, 0.20);
 }
 
@@ -345,14 +354,15 @@ function navigateToPlayer(): void {
 
 .mini-player-btn--stop:active {
   background: rgba(247, 85, 85, 0.24);
-  transform: scale(0.88);
+  transform: scale(0.92);
 }
 
 /* ── Slide-up / slide-down transition ───────────────────── */
 .mini-player-slide-enter-active,
 .mini-player-slide-leave-active {
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity   0.22s ease;
+  transition:
+    transform var(--app-motion-slow) var(--app-ease-emphasized),
+    opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
 .mini-player-slide-enter-from,

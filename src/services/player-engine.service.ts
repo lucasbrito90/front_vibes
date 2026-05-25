@@ -8,6 +8,8 @@
 
 import type { PlayMode, VibeSound } from './vibe-sound.service';
 
+import { logCdnAssetDev } from '@/utils/cdn-assets-dev-log';
+
 // ── Output types ──────────────────────────────────────────────────────────────
 
 export interface VibeExecutionLayer {
@@ -139,10 +141,10 @@ function buildSummary(layer: Omit<VibeExecutionLayer, 'humanReadableSummary'>): 
  *  - `repeatIntervalSeconds` is only preserved for interval mode; null otherwise.
  *  - `fadeInSeconds` / `fadeOutSeconds` default to 0 when absent.
  *
- * This function is pure and has no side effects.
+ * This function is pure aside from **DEV-only** `[CDNAssets]` hostname logs.
  */
 export function buildVibeExecutionPlan(vibeSounds: VibeSound[]): VibeExecutionLayer[] {
-  return [...vibeSounds]
+  const result = [...vibeSounds]
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((vs): VibeExecutionLayer => {
       const startsAt  = vs.start_offset_seconds ?? 0;
@@ -170,4 +172,17 @@ export function buildVibeExecutionPlan(vibeSounds: VibeSound[]): VibeExecutionLa
 
       return { ...layer, humanReadableSummary: buildSummary(layer) };
     });
+
+  if (import.meta.env.DEV) {
+    const seen = new Set<string>();
+    for (const layer of result) {
+      const u = layer.fileUrl.trim();
+      if (u !== '' && !seen.has(u)) {
+        seen.add(u);
+        logCdnAssetDev('sound', u);
+      }
+    }
+  }
+
+  return result;
 }

@@ -40,6 +40,7 @@ import {
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
 import { audioEngine } from '@/services/audio-engine';
 import type { CacheVibeResult } from '@/services/audio-engine';
+import { logCdnAssetDev } from '@/utils/cdn-assets-dev-log';
 import { createLogger } from '@/utils/player-debug';
 
 export type PlaybackState = 'idle' | 'preparing' | 'playing' | 'paused' | 'error';
@@ -258,6 +259,7 @@ export const usePlayerStore = defineStore('player', () => {
     layers: VibeExecutionLayer[];
   }): boolean {
     const { vibeId: id, vibeName, soundSummary, artworkUrl, layers } = params;
+    logCdnAssetDev('artwork', artworkUrl ?? null);
     const valid = audioPlayerService.countValidLayers(layers);
 
     log.debug('playVibe', {

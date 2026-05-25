@@ -1,11 +1,14 @@
-import { computed, ref } from 'vue';
+import { computed, readonly, ref } from 'vue';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { Preferences } from '@capacitor/preferences';
-import { authService } from '@/services/auth.service';
+import {
+  authService,
+  FIREBASE_TOKEN_PREFS_KEY,
+  LaravelSyncError,
+  laravelUser,
+} from '@/services/auth.service';
 import { auth } from '@/services/firebase';
-
-const TOKEN_KEY = 'firebase_id_token';
 
 const currentUser = ref<User | null>(authService.getCurrentUser());
 const loading = ref(false);
@@ -17,16 +20,18 @@ onAuthStateChanged(auth, (user) => {
 
 async function persistToken(token: string | null): Promise<void> {
   if (!token) {
-    await Preferences.remove({ key: TOKEN_KEY });
+    await Preferences.remove({ key: FIREBASE_TOKEN_PREFS_KEY });
     return;
   }
 
-  await Preferences.set({ key: TOKEN_KEY, value: token });
+  await Preferences.set({ key: FIREBASE_TOKEN_PREFS_KEY, value: token });
 }
 
 function toFriendlyAuthError(err: unknown): string {
-  // Native Google Sign-In cancellation — the plugin throws a plain Error whose
-  // message contains "SIGN_IN_CANCELLED" or "12501" (Android status code).
+  if (err instanceof LaravelSyncError) {
+    return err.message;
+  }
+
   if (err instanceof Error) {
     const msg = err.message ?? '';
     if (
@@ -41,7 +46,6 @@ function toFriendlyAuthError(err: unknown): string {
       return 'Network error. Check your connection and try again.';
     }
     if (msg.includes('ID token')) {
-      // Misconfigured Web Client ID (see VITE_GOOGLE_WEB_CLIENT_ID).
       return 'Google Sign-In configuration error. Please contact support.';
     }
   }
@@ -106,12 +110,16 @@ async function loginWithEmail(email: string, password: string): Promise<void> {
   }
 }
 
-async function signUpWithEmail(email: string, password: string): Promise<void> {
+async function signUpWithEmail(
+  email: string,
+  password: string,
+  displayName?: string,
+): Promise<void> {
   loading.value = true;
   error.value = null;
 
   try {
-    const credential = await authService.signUpWithEmail(email, password);
+    const credential = await authService.signUpWithEmail(email, password, displayName);
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
@@ -148,7 +156,6 @@ async function logout(): Promise<void> {
   try {
     await authService.logout();
     currentUser.value = null;
-    await persistToken(null);
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -166,6 +173,7 @@ const isAuthenticated = computed(() => Boolean(currentUser.value));
 export function useAuth() {
   return {
     currentUser,
+    laravelUser: readonly(laravelUser),
     isAuthenticated,
     loading,
     error,

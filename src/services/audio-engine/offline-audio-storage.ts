@@ -3,8 +3,10 @@
  * ExoPlayer's SimpleCache (see RemoteAudioAsset) only buffers progressively — preload/prepare
  * does not download the entire file.
  *
- * Downloads use CapacitorHttp (native stack), not WebView fetch(), so Firebase Storage
- * CORS (Origin https://localhost) does not apply.
+ * Downloads use CapacitorHttp (native stack), not WebView fetch(), so browser CORS
+ * against origins such as `https://localhost` does not apply. Works for Firebase
+ * Storage, DigitalOcean Spaces CDN (`https://…digitaloceanspaces.com`), and any
+ * other HTTPS URL returned by the API.
  */
 
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
@@ -13,6 +15,7 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 
 import type { VibeExecutionLayer } from '@/services/player-engine.service';
+import { logCdnAssetDev } from '@/utils/cdn-assets-dev-log';
 
 const MANIFEST_KEY = 'ixora_offline_audio_manifest_v1';
 const LOG = '[AudioCache]';
@@ -84,6 +87,7 @@ export function guessAudioExtension(remoteUrl: string, contentType: string | nul
  * On Android/iOS, responseType `blob` / `arraybuffer` maps to base64 string (see Capacitor HttpRequestHandler).
  */
 async function downloadBinaryViaNativeHttp(remoteUrl: string): Promise<{ base64: string; contentType: string | null }> {
+  logCdnAssetDev('offline-download', remoteUrl);
   const urlPreview = remoteUrl.length > 96 ? `${remoteUrl.slice(0, 96)}…` : remoteUrl;
   console.log(`${LOG} native download started`, { url: urlPreview });
 
@@ -205,4 +209,32 @@ export async function getOfflinePlaybackUriIfValid(
 
   console.log(`${LOG} local URI resolved`, { vibeId, soundId, uri: uri.slice(0, 64) });
   return uri;
+}
+
+/**
+ * Deletes every cached full-file layer for this vibe and strips manifest rows (`vibeId:soundId`).
+ * Safe if no entries exist. Native-only (manifest matches Directory.Data writes).
+ */
+export async function removeAllOfflineAudioForVibe(vibeId: number): Promise<void> {
+  if (!Capacitor.isNativePlatform() || vibeId <= 0) return;
+
+  const manifest = await readManifest();
+  const prefix   = `${vibeId}:`;
+  const keys     = Object.keys(manifest).filter((k) => k.startsWith(prefix));
+
+  for (const key of keys) {
+    const entry = manifest[key];
+    try {
+      await Filesystem.deleteFile({
+        path:      entry.relativePath,
+        directory: Directory.Data,
+      });
+    } catch {
+      /* missing file — continue */
+    }
+    delete manifest[key];
+  }
+
+  await writeManifest(manifest);
+  console.log(`${LOG} removed all layers for vibe`, { vibeId, entriesRemoved: keys.length });
 }
