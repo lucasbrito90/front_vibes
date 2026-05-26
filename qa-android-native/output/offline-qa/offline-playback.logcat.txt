@@ -1,0 +1,832 @@
+--------- beginning of main
+05-25 23:24:36.154 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.154 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.155 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.155 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.155 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.155 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.156  1179  1179 D AudioALSAStreamOut: +setParameters(): flag 8, MixerThreadSleep=
+05-25 23:24:36.156  1179  1179 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "MixerThreadSleep="
+05-25 23:24:36.162 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"assetId":"vibe-layer-4","state":"stopped","reason":"stop","isPlaying":false,"currentTime":0,"duration":425.953}
+05-25 23:24:36.163 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:36.164 10064 10064 W Capacitor/Console: File: https://localhost/assets/index-CJdeuO2B.js - Line 274 - Msg: [23:24:36 GMT][AudioService] [NativeAudio][AssetLifecycle] unload before preload [object Object]
+05-25 23:24:36.164  2382  2382 D NotificationMediaManager: Not dismissing 0|io.ionic.starter|1001|null|10465 because it was removed by the system
+05-25 23:24:36.164 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.172 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.173 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.176 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.176 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.176 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.189 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.193 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.200 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528589, pluginId: NativeAudio, methodName: unload
+05-25 23:24:36.200 10064 10064 V Capacitor: callback: 106528589, pluginId: NativeAudio, methodName: unload, methodData: {"assetId":"vibe-layer-4"}
+05-25 23:24:36.201  1179  1179 D AudioALSAStreamOut: +setParameters(): flag 8, MixerThreadSleep=
+05-25 23:24:36.201  1179  1179 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "MixerThreadSleep="
+05-25 23:24:36.202 10064 10270 V MediaPlayer: resetDrmState:  mDrmInfo=null mDrmProvisioningThread=null mPrepareDrmInProgress=false mActiveDrmScheme=false
+05-25 23:24:36.202 10064 10270 V MediaPlayer: cleanDrmObj: mDrmObj=null mDrmSessionId=null
+05-25 23:24:36.202  1601 14904 D AudioSink: setIsReset, 1
+05-25 23:24:36.202  1601 14904 D NuPlayerDriver: reset(0xee4c4070) at state 6
+05-25 23:24:36.205  1601 14904 D GenericSource: [0xee4033a0] disconnect +
+05-25 23:24:36.205  1601 14904 D GenericSource: [0xee4033a0] disconnect dataSource 0xea149cd0, httpSource 0x0
+05-25 23:24:36.205  1601 14904 D GenericSource: [0xee4033a0] disconnect -
+05-25 23:24:36.206  1601 10483 D NuPlayer: performDecoderFlush audio=2, video=2
+05-25 23:24:36.206  1601 10483 D NuPlayer: [audio] flushDecoder needShutdown=1
+05-25 23:24:36.206  1601 10486 D NuPlayerRenderer: flushing audio
+05-25 23:24:36.206  1601 10486 D AudioTrack: pause(2229): 0xee581bd0, prior state:STATE_FLUSHED
+05-25 23:24:36.206  1601 10486 D AudioTrack: flush(2229): 0xee581bd0, prior state:STATE_FLUSHED
+05-25 23:24:36.207 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.208  1601 10486 D AudioTrack: stop(2229): 0xee581bd0, prior state:STATE_FLUSHED
+05-25 23:24:36.208 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.208  1601 10483 D NuPlayer: renderer audio flush completed.
+05-25 23:24:36.208 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.208 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.209  1601 10488 I MediaCodec: (0xe9d87860) flush
+05-25 23:24:36.209  1601 10489 D MediaCodec: [0xe9d87860] setState: 7
+05-25 23:24:36.210  1601 10489 D CCodecBuffers: [c2.android.mp3.decoder#889:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 0
+05-25 23:24:36.210  1601 10489 D CCodecBuffers: [c2.android.mp3.decoder#889:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 1
+05-25 23:24:36.210  1601 10489 D CCodecBuffers: [c2.android.mp3.decoder#889:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 2
+05-25 23:24:36.210  1601 10489 D MediaCodec: [0xe9d87860] setState: 8
+05-25 23:24:36.210  1601 10483 D NuPlayer: decoder audio flush completed
+05-25 23:24:36.210  1601 10483 D NuPlayer: initiating audio decoder shutdown
+05-25 23:24:36.211  1601 10488 D MediaCodec: [0xe9d87860] [c2.android.mp3.decoder] release
+05-25 23:24:36.211  1601 10489 D MediaCodec: [0xe9d87860] setState: 10
+05-25 23:24:36.213  1623 29540 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+05-25 23:24:36.214  1623 29540 D BufferPoolAccessor2.0: bufferpool2 0xb4000075377abca8 : 0(0 size) total buffers - 0(0 size) used buffers - 0/0 (recycle/alloc) - 0/0 (fetch/transfer)
+05-25 23:24:36.214  1623 29540 D BufferPoolAccessor2.0: Destruction - bufferpool2 0xb4000075377abca8 cached: 0/0M, 0/0% in use; allocs: 0, 0% recycled; transfers: 0, 0% unfetched
+05-25 23:24:36.215  1601 10489 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+05-25 23:24:36.216  1601 10489 D MediaCodec: [0xe9d87860] [c2.android.mp3.decoder] kWhatReleaseCompleted
+05-25 23:24:36.216  1601 10489 D MediaCodec: [0xe9d87860] setState: 0
+05-25 23:24:36.217  1601 10483 D NuPlayer: audio shutdown completed
+05-25 23:24:36.220  1601 10483 D NuPlayerDriver: notifyResetComplete(0xee4c4070)
+05-25 23:24:36.220  1601 14904 W AMessage: failed to post message as target looper for handler 0 is gone.
+05-25 23:24:36.221  1601 14904 D AudioSink: setIsReset, 1
+05-25 23:24:36.221  1601 14904 D AudioTrack: ~AudioTrack(2229): 0xee581bd0
+05-25 23:24:36.221 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.222  5623 18843 E DynamicVolume: DynamicVolumeService:  onAudioAppListChanged arg is null 
+05-25 23:24:36.222  1601 14904 D AudioTrack: stop(2229): 0xee581bd0, prior state:STATE_FLUSHED
+05-25 23:24:36.226 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.228 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.228 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.239 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.239 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.239 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.244  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:29
+05-25 23:24:36.244  1179  1179 D AudioALSAStreamOut: +setParameters(): flag 8, MixerThreadSleep=
+05-25 23:24:36.244  1265  1314 I libPowerHal: [updateFPS] pid(10064) : 90 => 60
+05-25 23:24:36.244  1179  1179 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "MixerThreadSleep="
+05-25 23:24:36.244  1265  1334 I libPowerHal: [perfNotifyAppState] pack:io.ionic.starter, act:io.ionic.starter.MainActivity, state:5, pid:10064, uid:10465, fps:60
+05-25 23:24:36.245 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:36.245  1265  1334 I UxUtility: notifyForegroundApp pack:io.ionic.starter, uid:10465
+05-25 23:24:36.245  1265  1334 I TouchUtility: notifyAppState error = NULL
+05-25 23:24:36.246 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.247 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.256 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.260 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.260 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.260 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.266 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528590, pluginId: Preferences, methodName: get
+05-25 23:24:36.267 10064 10064 V Capacitor: callback: 106528590, pluginId: Preferences, methodName: get, methodData: {"key":"ixora_offline_audio_manifest_v1"}
+05-25 23:24:36.271 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.271 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.280 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.282 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.282 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.286  1303  1615 I AudioEffect: disable 0xb400007997cccaf0
+05-25 23:24:36.286  1303  1862 D audioserver: logFgsApiEnd: FGS Logger Transaction failed, -129
+05-25 23:24:36.286  1303  1862 D AudioFlinger: checkAudioTracks(flags=0x0) with audio track flags updated to 0x0 on audio output 21
+05-25 23:24:36.287  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 5
+05-25 23:24:36.287  1179  1179 D DlbDapEffectContext: setParam() received parameter EFFECT_PARAM_SET_AUDIO_FLAG
+05-25 23:24:36.287  1179  1179 D DlbDapEffectContext: setAudioFlags(flag=0x00000000)
+05-25 23:24:36.287  1179  1179 D DlbDapEffectContext: updateInputFormat() mIsDmsContentProcEnabled: 1, channels: 0x3, mCurrentDevice: 0x2, mAudioFlags: 0x0
+05-25 23:24:36.287  1179  1179 D DlbDap2Process: setHTParam: mIsBinauralInput: 0
+05-25 23:24:36.287  1179  1179 D DlbDap2Process: DAP input format is 0x22 with input channel mask 0x3
+05-25 23:24:36.288  2570  2590 I AudioEffect: commandExecuted(): 0xb4000077314ee410, cmdCode = 5
+05-25 23:24:36.288  1303  1615 I AudioEffect: Destructor 0xb400007997cccaf0
+05-25 23:24:36.288  1303  1615 I AudioFlinger_Threads: removeEffect_l(): 0xb400007a798677b0, effect = 0xb400007967cbfab0, name = Music Listener
+05-25 23:24:36.289  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4328eb0, cmdCode = 4
+05-25 23:24:36.289  1179 12430 V DlbVolumeListener: effectCommand
+05-25 23:24:36.289  1179 12430 V DlbVolumeListener: effectCommand :: Command EFFECT_CMD_DISABLE
+05-25 23:24:36.289  1179  1179 I EffectsFactory: EffectRelease(): 0xb4000076d4328eb0
+05-25 23:24:36.289  1179  1179 V DlbVolumeListener: release(handle=0xb4000075b42c84d0)
+05-25 23:24:36.290  1303  1615 I EffectChain: removeEffect_l() effect 0xb400007967cbfab0, removed from chain 0xb400007897cd5850 at rank 0
+05-25 23:24:36.290  1303  1615 I AudioFlinger_Threads: removeEffectChain_l() 0xb400007897cd5850 from thread 0xb400007a798677b0 for session 17585
+05-25 23:24:36.290  1303  1615 I EffectModule: Destructor 0xb400007967cbfab0
+05-25 23:24:36.290  1303  1615 W audioserver: Binder 0xb400007847cb8e60 destroyed after setInheritRt before being parceled.
+05-25 23:24:36.290  1303  1615 W audioserver: Binder 0xb400007847cb8e60 destroyed after setMinSchedulerPolicy before being parceled.
+05-25 23:24:36.290  1303  1615 D AudioPolicyManagerCustomImpl: hifiAudio_stopOutputSamplerate() -output = 21, porId = 2229, samplerate = 44100  HifiState = 1,  stream 3, session 17585
+05-25 23:24:36.290  1303  1615 D APM_AudioPolicyManager: stopOutput() output 21, stream 3, session 17585
+05-25 23:24:36.291  1303  1615 W AudioPolicyManagerCustomImpl: [MTK_APM_Route]setOutputDevices() mIoHandle 21 mId 5 device (0x2)(0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x100, 0x200, 0x4000, 0x4000000) delayMs 256 force 0 size 5
+05-25 23:24:36.292  1303  1862 D audioserver: logFgsApiEnd: FGS Logger Transaction failed, -129
+05-25 23:24:36.292  1303  1862 I EffectChain: ~EffectChain(): delete EffectChain = 0xb400007897cd5850
+05-25 23:24:36.293  1179  1179 D AudioALSAStreamOut: +setParameters(): flag 8, NoAudioTrack=1
+05-25 23:24:36.293  1179  1179 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "NoAudioTrack=1"
+05-25 23:24:36.294 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.294 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.294 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.299  1303  1615 I AudioFlinger_Threads: removeEffectChain_l() 0xb400007897cc7630 from thread 0xb400007a798677b0 for session 0
+05-25 23:24:36.299  1303  1615 I AudioFlinger_Threads: removeEffect_l(): 0xb400007a798677b0, effect = 0xb400007967cbd850, name = DAP
+05-25 23:24:36.299  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 4
+05-25 23:24:36.299  1179  1179 D DlbDlbEffect: handle_EFFECT_CMD_DISABLE()
+05-25 23:24:36.299  1179  1179 D DlbEffectDap: updateProcessEnabled(enabled=0, bypassed=0)
+05-25 23:24:36.299  1179  1179 D DlbCrossfadeProcess: setEnabled transitioning from PROCESS_ACTIVE state to FADE_TO_BYPASS
+05-25 23:24:36.299  1303  1615 I EffectChain: removeEffect_l() effect 0xb400007967cbd850, removed from chain 0xb400007897cc7630 at rank 0
+05-25 23:24:36.299  1303  1615 I AudioFlinger_Threads: removeEffectChain_l() 0xb400007897cc7630 from thread 0xb400007a798677b0 for session 0
+05-25 23:24:36.299  1303  1615 I EffectChain: EffectChain(): new EffectChain = 0xb400007897ccee90
+05-25 23:24:36.302  1303  1615 I AudioFlinger_Threads: addEffect_ll: 0xb400007a79c077b0 chain 0xb400007897ccee90 effect 0xb400007967cbd850,name = DAP
+05-25 23:24:36.302  1303  1615 I EffectChain: addEffect_l() effect 0xb400007967cbd850, added in chain 0xb400007897ccee90 at rank 0
+05-25 23:24:36.303  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 1
+05-25 23:24:36.303  1179  1179 D DlbDlbEffect: handle_EFFECT_CMD_SET_CONFIG()
+05-25 23:24:36.303  1179  1179 D DlbDapEffectContext: updateInputFormat() mIsDmsContentProcEnabled: 1, channels: 0x3, mCurrentDevice: 0x2, mAudioFlags: 0x0
+05-25 23:24:36.303  1179  1179 D DlbDap2Process: setHTParam: mIsBinauralInput: 0
+05-25 23:24:36.303  1179  1179 D DlbDap2Process: DAP input format is 0x22 with input channel mask 0x3
+05-25 23:24:36.303 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"value":"{\"5:4\":{\"relativePath\":\"offline_audio/vibe_5/sound_4.mp3\",\"remoteUrl\":\"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3\",\"savedAt\":1779776655261}}"}
+05-25 23:24:36.304  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 1
+05-25 23:24:36.304  1179  1179 D DlbDlbEffect: handle_EFFECT_CMD_SET_CONFIG()
+05-25 23:24:36.304  1179  1179 D DlbDapEffectContext: updateInputFormat() mIsDmsContentProcEnabled: 1, channels: 0x3, mCurrentDevice: 0x2, mAudioFlags: 0x0
+05-25 23:24:36.304  1179  1179 D DlbDap2Process: setHTParam: mIsBinauralInput: 0
+05-25 23:24:36.304  1179  1179 D DlbDap2Process: DAP input format is 0x22 with input channel mask 0x3
+05-25 23:24:36.305 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.305  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 9
+05-25 23:24:36.305  1179  1179 D DlbDlbEffect: handle_EFFECT_CMD_SET_DEVICE(device=0x00000002)
+05-25 23:24:36.305  1179  1179 D DlbDapEndpointParamCache: setDevice(device=0x00000002)
+05-25 23:24:36.305  1252  1252 D DolbyManagerService: setActiveDevice called with device = 0x2 (original 0x2)
+05-25 23:24:36.306  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 11
+05-25 23:24:36.306  1179  1179 D DlbEffectDap: setAudioMode(mode = 0)
+05-25 23:24:36.306  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 5
+05-25 23:24:36.306  1179  1179 D DlbEffectContext: addPregainObserver(): Pregain observer added for audio io 13 and Dolby effect type 0
+05-25 23:24:36.306  1179  1179 D DlbDapCrossfadeProcess: clear()
+05-25 23:24:36.307  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 3
+05-25 23:24:36.307  1179  1179 D DlbDlbEffect: handle_EFFECT_CMD_ENABLE()
+05-25 23:24:36.307  1179  1179 D DlbEffectDap: updateProcessEnabled(enabled=1, bypassed=0)
+05-25 23:24:36.307  1179  1179 D DlbCrossfadeProcess: setEnabled transitioning from PROCESS_BYPASSED state to PREROLL_ACTIVE
+05-25 23:24:36.307  2570  2590 I AudioEffect: commandExecuted(): 0xb4000077314ee410, cmdCode = 5
+05-25 23:24:36.307  1303  1615 D AudioFlinger: moveEffectChain_ll: successful move of session 0 from srcThread 0xb400007a798abfe8 to dstThread 0xb400007a79c4bfe8 (1 effects moved, 1 effects started)
+05-25 23:24:36.307  1303  1615 D APM_AudioPolicyManager: [MTK_APM_Output]releaseOutput() 21 portId 2229
+05-25 23:24:36.308 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.308 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.308 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.313 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528591, pluginId: Filesystem, methodName: stat
+05-25 23:24:36.313 10064 10064 V Capacitor: callback: 106528591, pluginId: Filesystem, methodName: stat, methodData: {"path":"offline_audio\/vibe_5\/sound_4.mp3","directory":"DATA"}
+05-25 23:24:36.326 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.326  1303  1862 I EffectChain: ~EffectChain(): delete EffectChain = 0xb400007897cc7630
+05-25 23:24:36.329 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.329 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.339  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationPosted hide: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|NO_CLEAR|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY color=0x00000000 groupKey=ranker_group vis=PRIVATE)
+05-25 23:24:36.344 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.344  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:36.344  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 2147483647
+05-25 23:24:36.346 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.346 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.367 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.367 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.380 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.381 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.389 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"name":"sound_4.mp3","type":"file","size":10222911,"mtime":1779776655220,"ctime":1779776655052,"uri":"file:///data/user/0/io.ionic.starter/files/offline_audio/vibe_5/sound_4.mp3"}
+05-25 23:24:36.391 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.392 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.393 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.403 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528592, pluginId: Filesystem, methodName: getUri
+05-25 23:24:36.403 10064 10064 V Capacitor: callback: 106528592, pluginId: Filesystem, methodName: getUri, methodData: {"directory":"DATA","path":"offline_audio\/vibe_5\/sound_4.mp3"}
+05-25 23:24:36.408 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.410 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.423 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.423 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.423 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.432  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+05-25 23:24:36.434  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+05-25 23:24:36.434  1894  2263 D InetDiagMessage: Destroyed live tcp sockets for uids={10209} in 3ms
+05-25 23:24:36.435  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+05-25 23:24:36.437  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+05-25 23:24:36.437  1894  2263 D InetDiagMessage: Destroyed live tcp sockets for uids={20209} in 2ms
+05-25 23:24:36.449 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.450 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.451 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.451 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.451 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.459 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"uri":"file:///data/user/0/io.ionic.starter/files/offline_audio/vibe_5/sound_4.mp3"}
+05-25 23:24:36.460 10064 10064 I Capacitor/Console: File: https://localhost/assets/index-CJdeuO2B.js - Line 274 - Msg: [AudioCache] local URI resolved [object Object]
+05-25 23:24:36.461 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.467 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.467 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.470 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.472 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.480 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528593, pluginId: NativeAudio, methodName: preload
+05-25 23:24:36.481 10064 10064 V Capacitor: callback: 106528593, pluginId: NativeAudio, methodName: preload, methodData: {"assetId":"vibe-layer-4","assetPath":"file:\/\/\/data\/user\/0\/io.ionic.starter\/files\/offline_audio\/vibe_5\/sound_4.mp3","isUrl":true,"isComplex":true,"volume":0.8,"audioChannelNum":1,"notificationMetadata":{"title":"__Ixora Native QA Offline Alternate","artist":"__Ixora Native QA Fixture Sound B"}}
+05-25 23:24:36.484 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.484 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.485 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.494 10064 10064 D NativeAudio: Preloading asset: vibe-layer-4, path: file:///data/user/0/io.ionic.starter/files/offline_audio/vibe_5/sound_4.mp3, isLocalUrl: true, isComplex: true
+05-25 23:24:36.501 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.501 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.501 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.507  1601 14904 D NuPlayerDriver: NuPlayerDriver(0xee4c4070) created, clientPid(10064)
+05-25 23:24:36.513 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.526  1601 10634 D GenericSource: FileSource remote
+05-25 23:24:36.539 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"STATUS":"OK"}
+05-25 23:24:36.542 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.544  2382  2382 D MotoMediaSessionUtils: addToActiveControllers: it is already added.
+05-25 23:24:36.547 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528594, pluginId: NativeAudio, methodName: loop
+05-25 23:24:36.547 10064 10064 V Capacitor: callback: 106528594, pluginId: NativeAudio, methodName: loop, methodData: {"assetId":"vibe-layer-4"}
+05-25 23:24:36.551 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.551 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.562 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.566 10064 10064 D NativeAudio: Playing asset: vibe-layer-4, action: loop, assets count: 1
+05-25 23:24:36.566 10064 10064 D NativeAudio: Found asset: vibe-layer-4, type: AudioAsset
+05-25 23:24:36.568  1601 10633 I GenericSource: start
+05-25 23:24:36.568  1601  1601 W /system/bin/mediaserver: type=1400 audit(0.0:1449852): avc:  denied  { read } for  comm=4E75506C6179657244726976657220 name="u:object_r:vendor_mtk_debug_sf_duration_prop:s0" dev="tmpfs" ino=608 scontext=u:r:mediaserver:s0 tcontext=u:object_r:vendor_mtk_debug_sf_duration_prop:s0 tclass=file permissive=0
+--------- beginning of system
+05-25 23:24:36.570  1894  5523 I MediaSessionStack: onPlaybackStateChanged - Pushing session to top | record: io.ionic.starter/NativeAudio/216 (userId=0)
+05-25 23:24:36.570  1601 10633 W libc    : Access denied finding property "vendor.debug.sf.dynamic_duration.sf.decouple"
+05-25 23:24:36.570  1894  5523 D MediaSessionService: onSessionPlaybackStateChanged: record=io.ionic.starter/NativeAudio/216 (userId=0) playbackState=PlaybackState {state=PLAYING(3), position=0, buffered position=0, speed=1.0, updated=554585044, actions=335, custom actions=[], active item id=-1, error=null}
+05-25 23:24:36.573 10064 10064 W MediaButtonReceiver: A unique media button receiver could not be found in the given context, so couldn't build a pending intent.
+05-25 23:24:36.574 10064 10064 W MediaButtonReceiver: A unique media button receiver could not be found in the given context, so couldn't build a pending intent.
+05-25 23:24:36.575 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.575 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.575  1601 10637 D MediaCodec: CreateByType: mime audio/mpeg, encoder 0 pid 10064
+05-25 23:24:36.575  1601 10637 D MediaCodecList: processName: /system/bin/mediaserver , mime: audio/mpeg
+05-25 23:24:36.575 10064 10064 W MediaButtonReceiver: A unique media button receiver could not be found in the given context, so couldn't build a pending intent.
+05-25 23:24:36.576  1601 10637 I MediaCodec: (0xe9d833a0) init name(c2.android.mp3.decoder)
+05-25 23:24:36.576  1601 10637 D CCodecBufferChannel: mBufferCountDebug=0 mIsUserLoad=1
+05-25 23:24:36.576  1601 10637 D MBrainDateManager: MBrainDataManager Constructor caller
+05-25 23:24:36.576  1601 10637 D MBrainManager: mMBrainSupport 0, return NULL
+05-25 23:24:36.576  1601 10637 D MBrainDateManager: mMBrainManager = nullptr
+05-25 23:24:36.576  1601 10637 D CCodecBufferChannel: new MBrainDataManager() fail
+05-25 23:24:36.576  1601 10637 D MBrainDateManager: MBrainDataManager Constructor clear
+05-25 23:24:36.576  1601 10637 D MediaCodec: [0xe9d833a0] init: CCodec 0xea384c90, CCodecBufferChannel 0xe8695550
+05-25 23:24:36.577  1601 10638 D MediaCodec: [0xe9d833a0] setState: 1
+05-25 23:24:36.577  1601 10638 D CCodec  : allocate(c2.android.mp3.decoder)
+05-25 23:24:36.580  1601 10638 I CCodec  : setting up 'default' as default (vendor) store
+05-25 23:24:36.585 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event playbackState
+05-25 23:24:36.586  1623 14725 D BufferPoolAccessor2.0: bufferpool2 0xb4000075377a6718 : 0(0 size) total buffers - 0(0 size) used buffers - 0/0 (recycle/alloc) - 0/0 (fetch/transfer)
+05-25 23:24:36.586  1623 14725 D BufferPoolAccessor2.0: bufferpool2 0xb40000753779cc28 : 0(0 size) total buffers - 0(0 size) used buffers - 67/70 (recycle/alloc) - 3/69 (fetch/transfer)
+05-25 23:24:36.588  1601 10638 I CCodec  : Created component [c2.android.mp3.decoder]
+05-25 23:24:36.588  1601 10638 D CCodecBufferChannel: [0xe8695550] setComponent: mName c2.android.mp3.decoder#260, mPipelineWatcher 0xe869572c
+05-25 23:24:36.588  1601 10638 D CCodecBufferChannel: PipelineWatcher debug info [c2.android.mp3.decoder#260] enable=0
+05-25 23:24:36.588  1601 10638 D CCodecConfig: read media type: audio/mpeg
+05-25 23:24:36.592  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.max-count.values
+05-25 23:24:36.592  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: output.subscribed-indices.values
+05-25 23:24:36.593  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: input.buffers.allocator-ids.values
+05-25 23:24:36.593  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.allocator-ids.values
+05-25 23:24:36.594  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.allocator-ids.values
+05-25 23:24:36.594 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"assetId":"vibe-layer-4","state":"playing","reason":"loop","isPlaying":true,"currentTime":0,"duration":425.953}
+05-25 23:24:36.594  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+05-25 23:24:36.594  1601 10638 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.pool-ids.values
+05-25 23:24:36.594 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:36.597  1601 10638 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+05-25 23:24:36.597  1601 10638 D CCodecConfig: c2 config diff is Dict {
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 coded.bitrate.value = 64000
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 8192
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 input.delay.value = 0
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   string input.media-type.value = "audio/mpeg"
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 output.large-frame.max-size = 0
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 output.large-frame.threshold-size = 0
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   string output.media-type.value = "audio/raw"
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 raw.channel-count.value = 2
+05-25 23:24:36.597  1601 10638 D CCodecConfig:   c2::u32 raw.sample-rate.value = 44100
+05-25 23:24:36.597  1601 10638 D CCodecConfig: }
+05-25 23:24:36.598  1601 10638 D MediaCodec: [0xe9d833a0] setState: 2
+05-25 23:24:36.598  1601 10638 I MediaCodec: (0xe9d833a0) Component Allocated (c2.android.mp3.decoder)
+05-25 23:24:36.600  1601 10637 I MediaCodec: [0xe9d833a0] configure surface(0x0) crypto(0x0) flags(0)
+05-25 23:24:36.600  1601 10637 D MediaCodec: [0xe9d833a0] configure format: AMessage(what = 0x00000000) = {
+05-25 23:24:36.600  1601 10637 D MediaCodec:       string mime = "audio/mpeg"
+05-25 23:24:36.600  1601 10637 D MediaCodec:       int64_t durationUs = 425952625
+05-25 23:24:36.600  1601 10637 D MediaCodec:       int32_t bitrate = 192000
+05-25 23:24:36.600  1601 10637 D MediaCodec:       int32_t channel-count = 2
+05-25 23:24:36.600  1601 10637 D MediaCodec:       int32_t sample-rate = 44100
+05-25 23:24:36.600  1601 10637 D MediaCodec:       int32_t priority = 0
+05-25 23:24:36.600  1601 10637 D MediaCodec:     }
+05-25 23:24:36.600 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.600  1601 10638 D MediaCodec: [0xe9d833a0] setState: 3
+05-25 23:24:36.600  1601 10638 D CCodec  : [c2.android.mp3.decoder] buffers are bound to CCodec for this session
+05-25 23:24:36.601  1601 10638 D CCodecConfig: no c2 equivalents for durationUs
+05-25 23:24:36.601  1601 10638 D CCodecConfig: no c2 equivalents for flags
+05-25 23:24:36.602  1601 10638 D CCodecConfig: c2 config diff is   c2::u32 coded.bitrate.value = 192000
+05-25 23:24:36.604  1601 10638 W Codec2Client: query -- param skipped: index = 1107298332.
+05-25 23:24:36.604  1601 10638 D CCodec  : encoding statistics level = 0
+05-25 23:24:36.604  1601 10638 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t bitrate = 192000
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t channel-count = 2
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t max-input-size = 8192
+05-25 23:24:36.604  1601 10638 D CCodec  :   string mime = "audio/mpeg"
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t sample-rate = 44100
+05-25 23:24:36.604  1601 10638 D CCodec  : }
+05-25 23:24:36.604  1601 10638 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t buffer-batch-max-output-size = 0
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t buffer-batch-threshold-output-size = 0
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t channel-count = 2
+05-25 23:24:36.604  1601 10638 D CCodec  :   string mime = "audio/raw"
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t sample-rate = 44100
+05-25 23:24:36.604  1601 10638 D CCodec  :   int32_t android._config-pcm-encoding = 2
+05-25 23:24:36.604  1601 10638 D CCodec  : }
+05-25 23:24:36.604  1601 10638 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+05-25 23:24:36.605  1601 10638 D MediaCodec: [0xe9d833a0] setState: 4
+05-25 23:24:36.605  1601 10638 I MediaCodec: MediaCodec will operate in async mode
+05-25 23:24:36.606  1601 10637 I MediaCodec: (0xe9d833a0) start
+05-25 23:24:36.606  1601 10637 D MediaCodec: keep callback message for reclaim
+05-25 23:24:36.607  1894  2336 D ActivityManager: freezing 564 com.google.android.dialer, reason=moto_freezer, adj=900, adjType=cch-empty
+05-25 23:24:36.608  1601 10638 D MediaCodec: [0xe9d833a0] setState: 5
+05-25 23:24:36.608 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.608 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.609  1601 10638 W Codec2Client: query -- param skipped: index = 1342179345.
+05-25 23:24:36.609  1601 10638 W Codec2Client: query -- param skipped: index = 2415921170.
+05-25 23:24:36.609 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.612  1601 10638 D BufferPoolAccessor2.0: bufferpool2 0xe9d43ce8 : 4(131072 size) total buffers - 4(131072 size) used buffers - 67/75 (recycle/alloc) - 8/144 (fetch/transfer)
+05-25 23:24:36.612  1601 10638 D CCodecBufferChannel: [c2.android.mp3.decoder#260] Created input block pool with allocatorID 16 => poolID 663 - OK (0)
+05-25 23:24:36.614  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+05-25 23:24:36.615 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.617  1601 10638 I CCodecBufferChannel: [c2.android.mp3.decoder#260] Created output block pool with allocatorID 16 => poolID 2531 - OK
+05-25 23:24:36.617  1601 10638 D CCodecBufferChannel: [c2.android.mp3.decoder#260] Configured output block pool ids 2531 => OK
+05-25 23:24:36.618  1601 10638 D CCodecBufferChannel: [0xe8695550] [c2.android.mp3.decoder#260] start: output->outputDelay 0, output->numSlots 4
+05-25 23:24:36.618  1623 29540 E Codec2-ComponentInterface: We have a failed config
+05-25 23:24:36.618  1601 10638 D CCodecBuffers: [c2.android.mp3.decoder#260:1D-Output.Impl[N]] converted 0 buffers to array mode of 4
+05-25 23:24:36.618  1197  2107 D C2MtkComponentStore: setDmaBufUsage: usage 5, flags 0, heapName mtk_mm for decoder.
+05-25 23:24:36.620 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528595, pluginId: ForegroundService, methodName: checkPermissions
+05-25 23:24:36.620 10064 10064 V Capacitor: callback: 106528595, pluginId: ForegroundService, methodName: checkPermissions, methodData: {}
+05-25 23:24:36.621  1623 10640 D SimpleC2Component: Using output block pool with poolID 2531 => got 2531 - 0
+05-25 23:24:36.621  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+05-25 23:24:36.622  1601 10638 I MediaCodec: (0xe9d833a0) kWhatStartCompleted
+05-25 23:24:36.622  1601 10638 D MediaCodec: [0xe9d833a0] setState: 6
+05-25 23:24:36.622  1894  2263 D InetDiagMessage: Destroyed live tcp sockets for uids={10209} in 12ms
+05-25 23:24:36.623 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.623 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.626  1197  2107 D C2MtkComponentStore: setDmaBufUsage: usage 5, flags 0, heapName mtk_mm for decoder.
+05-25 23:24:36.624  3214  3214 W batt_health: type=1400 audit(0.0:1449853): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:36.627  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:36.631  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.635  1601 10636 D AudioTrack: INSP: type=audio,case=1,set=0xee5832f0,stream_type=3,sample_rate=44100,format=0x1,channel_mask=0x3,frame_count=22572,flags=0x8,notification_frames=0,session_id=17593,transfer_type=0,uid=10465,pid=10064
+05-25 23:24:36.635  1601 10636 D AudioTrack: INSP: type=audio,case=1,attributes=1,content_type=4,usage=1,source=-1,flags=0x800
+05-25 23:24:36.635  1601 10636 D AudioTrack: set(): streamType 3, sampleRate 44100, format 0x1, channelMask 0x3, frameCount 22572, flags 0x8, notificationFrames 0, sessionId 17593, transferType 0, uid 10465, pid 10064
+05-25 23:24:36.638 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"display":"granted"}
+05-25 23:24:36.638 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.638  1303  6262 D APM_AudioPolicyManager: getOutputForAttrInt() attributes={ Content type: AUDIO_CONTENT_TYPE_SONIFICATION Usage: AUDIO_USAGE_MEDIA Source: AUDIO_SOURCE_INVALID Flags: 0xc00 Tags:  } stream=AUDIO_STREAM_MUSIC session 17593 selectedDeviceId 0
+05-25 23:24:36.639 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528596, pluginId: ForegroundService, methodName: createNotificationChannel
+05-25 23:24:36.639 10064 10064 V Capacitor: callback: 106528596, pluginId: ForegroundService, methodName: createNotificationChannel, methodData: {"id":"vibes_bg_service","name":"Background Playback Service","description":"Keeps audio running in the background. Media controls appear in a separate notification.","importance":2}
+05-25 23:24:36.640  1303  6262 D AudioFlinger_Threads: Client defaulted notificationFrames to 7524 for frameCount 22572
+05-25 23:24:36.641  1303  6262 D AF::Track: Track, track(0xb400007837cbd6e0): mFastIndex -1, mStreamType 3, mId 2015, mFrameCount 22572, mSampleRate 44100, mFormat 1, mChannelCount 2, mTrackCount 1960, thread 0xb400007a798abfe8, sessionId 17593, AudioOut_15, primary-8
+05-25 23:24:36.645 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.645 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.646 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.646 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.648  1601 10636 D AudioTrack: createTrack_l(2230): 0xee5832f0, mCblk = 0xed9e7000, mLatency = 617, mAfLatency = 106, frameCount = 22572, mSampleRate = 44100, mFlags = 0x8, mReqFrameCount = 22572, mNotificationFramesAct = 7524
+05-25 23:24:36.649  1601 10636 D AudioTrack: setVolume(2230): 0xee5832f0, left = 0.800000, right = 0.800000
+05-25 23:24:36.649  1601 10636 D AudioTrack: setVolume: mRelativePercentage:1.000000, left:0.800000, right:0.800000
+05-25 23:24:36.652  1601 10636 D AudioTrack: setVolume(2230): 0xee5832f0, left = 0.800000, right = 0.800000
+05-25 23:24:36.652  1179 21392 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 10
+05-25 23:24:36.652  1601 10636 D AudioTrack: setVolume: mRelativePercentage:1.000000, left:0.800000, right:0.800000
+05-25 23:24:36.652  1601 10636 D AudioTrack: start(2230): 0xee5832f0, prior state:STATE_STOPPED
+05-25 23:24:36.652  1303 24592 I AudioEffect: set 0xb400007997ccd430 uuid: 0x0 timeLow 00000000
+05-25 23:24:36.653  1303 24592 W Permission: The package name(android) provided does not correspond to the uid 1041
+05-25 23:24:36.653  1303 24592 I AudioFlinger: createEffect pid 1303, effectClient 0xb400007927cd0270, priority 0, sessionId 17593, io 21, factory 0xb400007867cb97a0
+05-25 23:24:36.653 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:36.654  1303 24592 I AudioFlinger_Threads: createEffect_l() thread 0xb400007a798677b0 effect Music Listener on session 17593
+05-25 23:24:36.654  1303 24592 I EffectChain: EffectChain(): new EffectChain = 0xb400007897cce8f0
+05-25 23:24:36.654 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:36.655 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 106528597, pluginId: ForegroundService, methodName: startForegroundService
+05-25 23:24:36.656 10064 10064 V Capacitor: callback: 106528597, pluginId: ForegroundService, methodName: startForegroundService, methodData: {"id":101,"title":"Vibes","body":"__Ixora Native QA Offline Alternate","smallIcon":"ic_stat_audio","notificationChannelId":"vibes_bg_service","silent":true,"serviceType":2}
+05-25 23:24:36.661 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.662 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.664  1303 24592 I AudioFlinger_Threads: createEffect_l() got effect 0x0 on chain 0xb400007897cce8f0
+05-25 23:24:36.664  1179 12430 I EffectsFactory: EffectCreate() UUID: 40F66C8B-5AA5-4345-8919-53EC431AAA98
+05-25 23:24:36.664  1179 12430 I EffectsFactory: EffectCreate() create_effect
+05-25 23:24:36.664  1179 12430 V DlbVolumeListener: Create Dolby Listener Effect.
+05-25 23:24:36.664  1179 12430 V DlbVolumeListener: create CREATED_CONTEXT 0xb4000075b42c5610 sessionId 17593 ioId 21 stream_type 0
+05-25 23:24:36.664  1179 12430 I DlbVolumeListener: create() Created effect Music Listener
+05-25 23:24:36.664  1179 12430 V DlbVolumeListener: effectGetDescriptor
+05-25 23:24:36.664  1179 12430 I DlbVolumeListener: effectGetDescriptor() Returning descriptor for Music Listener
+05-25 23:24:36.665  1179 21392 V DlbVolumeListener: effectGetDescriptor
+05-25 23:24:36.665  1179 21392 I DlbVolumeListener: effectGetDescriptor() Returning descriptor for Music Listener
+05-25 23:24:36.665  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 0
+05-25 23:24:36.665  1179 12430 V DlbVolumeListener: effectCommand
+05-25 23:24:36.665  1179 12430 V DlbVolumeListener: effectCommand :: Command EFFECT_CMD_INIT
+05-25 23:24:36.665  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 20
+05-25 23:24:36.665  1179 12430 V DlbVolumeListener: effectCommand
+05-25 23:24:36.665  1179 12430 D DlbVolumeListener: effectCommand :: Command EFFECT_CMD_OFFLOAD offload=0 ioHandle=21
+05-25 23:24:36.665  1303 24592 I EffectModule: EffectModule Constructor success name Music Listener, Interface 0xb400007867cc1db0
+05-25 23:24:36.666  1303 24592 I EffectChain: addEffect_l() effect 0xb400007967cbfab0, added in chain 0xb400007897cce8f0 at rank 0
+05-25 23:24:36.666  1179 21392 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 1
+05-25 23:24:36.666  1179 21392 V DlbVolumeListener: effectCommand
+05-25 23:24:36.666  1179 21392 V DlbVolumeListener: effectCommand :: Command EFFECT_CMD_SET_CONFIG
+05-25 23:24:36.666  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 1
+05-25 23:24:36.666  1179 12430 V DlbVolumeListener: effectCommand
+05-25 23:24:36.666  1179 12430 V DlbVolumeListener: effectCommand :: Command EFFECT_CMD_SET_CONFIG
+05-25 23:24:36.667  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 9
+05-25 23:24:36.667  1179 12430 V DlbVolumeListener: effectCommand
+05-25 23:24:36.668  1303 24592 I AudioEffect: set() 0xb400007997ccd430 OK effect: Music Listener id: 8251 status 0 enabled 0 pid 1303
+05-25 23:24:36.669  1303 24592 I AudioEffect: enable 0xb400007997ccd430
+05-25 23:24:36.669  1303 24592 D AudioPolicyManagerCustomImpl: hifiAudio_startOutputSamplerate() +output = 21  portId = 2230 samplerate = 44100 HifiState = 1 stream 3, session 17593
+05-25 23:24:36.670  1303 24592 D APM_AudioPolicyManager: startOutput() output 21, stream 3, session 17593
+05-25 23:24:36.670  1303 24592 I AudioFlinger_Threads: removeEffectChain_l() 0xb400007897ccee90 from thread 0xb400007a79c077b0 for session 0
+05-25 23:24:36.670  1303 24592 I AudioFlinger_Threads: removeEffect_l(): 0xb400007a79c077b0, effect = 0xb400007967cbd850, name = DAP
+05-25 23:24:36.671  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 4
+05-25 23:24:36.671  1179 12430 D DlbDlbEffect: handle_EFFECT_CMD_DISABLE()
+05-25 23:24:36.671  1179 12430 D DlbEffectDap: updateProcessEnabled(enabled=0, bypassed=0)
+05-25 23:24:36.671  1179 12430 D DlbCrossfadeProcess: setEnabled transitioning from PREROLL_ACTIVE state to PROCESS_BYPASSED
+05-25 23:24:36.671  1303 24592 I EffectChain: removeEffect_l() effect 0xb400007967cbd850, removed from chain 0xb400007897ccee90 at rank 0
+05-25 23:24:36.671  1303 24592 I AudioFlinger_Threads: removeEffectChain_l() 0xb400007897ccee90 from thread 0xb400007a79c077b0 for session 0
+05-25 23:24:36.671  1303 24592 I EffectChain: EffectChain(): new EffectChain = 0xb400007897cc5b30
+05-25 23:24:36.674  1303 24592 I AudioFlinger_Threads: addEffect_ll: 0xb400007a798677b0 chain 0xb400007897cc5b30 effect 0xb400007967cbd850,name = DAP
+05-25 23:24:36.674  1303 24592 I EffectChain: addEffect_l() effect 0xb400007967cbd850, added in chain 0xb400007897cc5b30 at rank 0
+05-25 23:24:36.675  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 1
+05-25 23:24:36.675  1179 12430 D DlbDlbEffect: handle_EFFECT_CMD_SET_CONFIG()
+05-25 23:24:36.676  1179 12430 D DlbDapEffectContext: updateInputFormat() mIsDmsContentProcEnabled: 1, channels: 0x3, mCurrentDevice: 0x2, mAudioFlags: 0x0
+05-25 23:24:36.676  1179 12430 D DlbDap2Process: setHTParam: mIsBinauralInput: 0
+05-25 23:24:36.676  1179 12430 D DlbDap2Process: DAP input format is 0x22 with input channel mask 0x3
+05-25 23:24:36.676  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 1
+05-25 23:24:36.676  1179 12430 D DlbDlbEffect: handle_EFFECT_CMD_SET_CONFIG()
+05-25 23:24:36.676  1179 12430 D DlbDapEffectContext: updateInputFormat() mIsDmsContentProcEnabled: 1, channels: 0x3, mCurrentDevice: 0x2, mAudioFlags: 0x0
+05-25 23:24:36.676  1179 12430 D DlbDap2Process: setHTParam: mIsBinauralInput: 0
+05-25 23:24:36.676  1179 12430 D DlbDap2Process: DAP input format is 0x22 with input channel mask 0x3
+05-25 23:24:36.677  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 9
+05-25 23:24:36.678  1179 12430 D DlbDlbEffect: handle_EFFECT_CMD_SET_DEVICE(device=0x00000002)
+05-25 23:24:36.678  1179 12430 D DlbDapEndpointParamCache: setDevice(device=0x00000002)
+05-25 23:24:36.679  1252  1252 D DolbyManagerService: setActiveDevice called with device = 0x2 (original 0x2)
+05-25 23:24:36.680  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 11
+05-25 23:24:36.680 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.681  1179 12430 D DlbEffectDap: setAudioMode(mode = 0)
+05-25 23:24:36.681 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.681  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 5
+05-25 23:24:36.682  1179 12430 D DlbEffectContext: addPregainObserver(): Pregain observer added for audio io 21 and Dolby effect type 0
+05-25 23:24:36.682  1179 12430 D DlbDapCrossfadeProcess: clear()
+05-25 23:24:36.682  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationRemoved: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|ONLY_ALERT_ONCE|NO_CLEAR|FOREGROUND_SERVICE color=0x00000000 vis=PRIVATE) reason= 8
+05-25 23:24:36.682  2570  2590 I AudioEffect: commandExecuted(): 0xb4000077314ee410, cmdCode = 5
+05-25 23:24:36.682  1179 21392 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 3
+05-25 23:24:36.683  1179 21392 D DlbDlbEffect: handle_EFFECT_CMD_ENABLE()
+05-25 23:24:36.683  1179 21392 D DlbEffectDap: updateProcessEnabled(enabled=1, bypassed=0)
+05-25 23:24:36.683  1179 21392 D DlbCrossfadeProcess: setEnabled transitioning from PROCESS_BYPASSED state to PREROLL_ACTIVE
+05-25 23:24:36.683  1303 24592 D AudioFlinger: moveEffectChain_ll: successful move of session 0 from srcThread 0xb400007a79c4bfe8 to dstThread 0xb400007a798abfe8 (1 effects moved, 1 effects started)
+05-25 23:24:36.683  1303  1853 I EffectChain: ~EffectChain(): delete EffectChain = 0xb400007897ccee90
+05-25 23:24:36.689  1303 24592 D APM_AudioPolicyManager: [MTK_APM_Route]setOutputDevices mIoHandle 21 : changing device 0x2 to 0x2, delayMs = 0, force = 1, skipMuteDelay = 0, skipDelayMTK = 0, caller startSource[[portId:5][io:21, deep_buffer]]
+05-25 23:24:36.690  1179 21392 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 10
+05-25 23:24:36.691  1179  1179 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 3
+05-25 23:24:36.691  1179  1179 V DlbVolumeListener: effectCommand
+05-25 23:24:36.691  1179  1179 V DlbVolumeListener: effectCommand :: Command EFFECT_CMD_ENABLE
+05-25 23:24:36.691  1303  1862 D EffectChain: process reset volume
+05-25 23:24:36.694 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.695 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.697  1179  2744 D DlbDapCrossfadeProcess: process transitioning from PREROLL_ACTIVE state to FADE_TO_ACTIVE
+05-25 23:24:36.701  1894  2720 I ActivityManager: Background started FGS: Allowed [callingPackage: io.ionic.starter; callingUid: 10465; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { cmp=io.ionic.starter/io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService (has extras) }; code:PROC_STATE_TOP; tempAllowListReason:<null>; targetSdkVersion:36; callerTargetSdkVersion:36; startForegroundCount:0; bindFromPackage:null: isBindService:false]
+05-25 23:24:36.701 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:36.701 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:36.703  1750  1750 D NLService: Successfully marked the removed notification identified by 101
+05-25 23:24:36.704  1894  1981 D addPss  : tracker=ProcessState{2939e0e io.ionic.starter/10465 pkg=io.ionic.starter}
+05-25 23:24:36.708  5688  5688 I MotoLights: StateMachine - moveToState - Trying to move to state IdleState
+05-25 23:24:36.709 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.710  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 9
+05-25 23:24:36.710  1179 12430 V DlbVolumeListener: effectCommand
+05-25 23:24:36.711  1179 21392 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 9
+05-25 23:24:36.711  1179 21392 D DlbDlbEffect: handle_EFFECT_CMD_SET_DEVICE(device=0x00000002)
+05-25 23:24:36.711  1179 21392 D DlbDapEndpointParamCache: setDevice(device=0x00000002)
+05-25 23:24:36.711 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.711  1252  1252 D DolbyManagerService: setActiveDevice called with device = 0x2 (original 0x2)
+05-25 23:24:36.711  1179  1179 D AudioALSAHardware: +createAudioPatch() num_sources [1] , num_sinks [1], handle [0x6b3], current mAudioHalPatchVector size 5
+05-25 23:24:36.711  1179  1179 D AudioALSAStreamManager: +setParameters(), IOport = 21, keyValuePairs = routing=2
+05-25 23:24:36.711  1179  1179 D AudioALSAStreamManager: setParameters(), Send to mStreamOutVector[1], flag 8
+05-25 23:24:36.711  1179  1179 D AudioALSAStreamOut: updatePolicyDevice(), flag: 0x8, device: 0x2
+05-25 23:24:36.711  1179  1179 D AudioALSAStreamManager: getMode(), mAudioMode = 0
+05-25 23:24:36.711  1179  1179 W AudioALSAStreamManager: routingOutputDevice(), flag: 0x8, output_devices == current_output_devices(0x00000002), return
+05-25 23:24:36.711  1179  1179 D AudioIEMsController: routing(+), cur out 0x0 in 0x0, hs 0, bt 0, usb 0, device 0x2, mask 0x1, on 0
+05-25 23:24:36.711  1179  1179 D AudioIEMsController: routing(-), cur out 0x0 in 0x0
+05-25 23:24:36.711  1179  1179 D AudioALSAHardware: -createAudioPatch() num_sources [1] , num_sinks [1], handle [0x6b4]
+05-25 23:24:36.713  1303  1614 D AudioFlinger::PatchCommandThread: updateAudioPatch handle 13820 mHalHandle 1716 num sinks 1 device sink 00000002
+05-25 23:24:36.713  1303 24592 D APM_AudioPolicyManager: setOutputDevices() AF::createAudioPatch returned 0 patchHandle 13828 num_sources 1 num_sinks 1
+05-25 23:24:36.715  1303 24592 W APM::AudioPolicyEngine/ProductStrategy: getVolumeGroupForStreamType: no volume group for AUDIO_STREAM_DEFAULT, using default
+05-25 23:24:36.715  1303 24592 W APM::AudioPolicyEngine/ProductStrategy: getVolumeGroupForStreamType: no volume group for AUDIO_STREAM_DEFAULT, using default
+05-25 23:24:36.716  1303 24592 W APM::AudioPolicyEngine/ProductStrategy: getVolumeGroupForStreamType: no volume group for AUDIO_STREAM_DEFAULT, using default
+05-25 23:24:36.716  1303 24592 W APM::AudioPolicyEngine/ProductStrategy: getVolumeGroupForStreamType: no volume group for AUDIO_STREAM_DEFAULT, using default
+05-25 23:24:36.719  1303 24592 D audioserver: logFgsApiBegin: FGS Logger Transaction failed, -129
+05-25 23:24:36.720  1179 12430 D AudioALSAStreamOut: +setParameters(): flag 8, MixerThreadSleep=
+05-25 23:24:36.720  1179 12430 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "MixerThreadSleep="
+05-25 23:24:36.721  1179 21392 D AudioALSAStreamOut: +setParameters(): flag 8, NoAudioTrack=0
+05-25 23:24:36.721  1179 21392 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "NoAudioTrack=0"
+05-25 23:24:36.721  1601 10636 D AudioSystem: +setParameters(): MAGT-Process=1601;MAGT-AudioThread=10636 
+05-25 23:24:36.721  1303  1862 D AudioFlinger: checkAudioTracks(flags=0x800) with audio track flags updated to 0x800 on audio output 21
+05-25 23:24:36.722  1179 12430 I EffectsFactory: Effect_Command(): self = 0xb4000076d4332480, cmdCode = 5
+05-25 23:24:36.722  1179 12430 D DlbDapEffectContext: setParam() received parameter EFFECT_PARAM_SET_AUDIO_FLAG
+05-25 23:24:36.722  1179 12430 D DlbDapEffectContext: setAudioFlags(flag=0x00000800)
+05-25 23:24:36.722  1179 12430 D DlbDapEffectContext: updateInputFormat() mIsDmsContentProcEnabled: 1, channels: 0x3, mCurrentDevice: 0x2, mAudioFlags: 0x800
+05-25 23:24:36.722  1179 12430 D DlbDap2Process: setHTParam: mIsBinauralInput: 0
+05-25 23:24:36.722  1179 12430 D DlbDap2Process: DAP input format is 0x22 with input channel mask 0x3
+05-25 23:24:36.722  1303 24592 D AudioFlinger: setParameters, get MAGT Process id 1601
+05-25 23:24:36.722  1303 24592 D AudioFlinger: setParameters, get MAGT Thread id 10636
+05-25 23:24:36.722  1303 24592 W libc    : Access denied finding property "vendor.audio.qos"
+05-25 23:24:36.722  1303 24592 D AudioFlinger: setParameters, qos, set vip
+05-25 23:24:36.723  2570  2590 I AudioEffect: commandExecuted(): 0xb4000077314ee410, cmdCode = 5
+05-25 23:24:36.723 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.723  1179 17637 D AudioALSAHardware: +setParameters(): MAGT-AudioThread=10636;MAGT-Process=1601
+05-25 23:24:36.723  1179 17637 D AudioALSAHardware: -setParameters(): MAGT-AudioThread=10636;MAGT-Process=1601
+05-25 23:24:36.723 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.724  1601 10636 D AudioTrack: getTimestamp_l(2230): device stall time corrected using current time 201222158385377
+05-25 23:24:36.727  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationRemoved: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|NO_CLEAR|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY color=0x00000000 groupKey=ranker_group vis=PRIVATE) reason= 16
+05-25 23:24:36.729  1324  1324 I BufferQueueProducer: [StatusBar#91](this:0xb4000076b4a88d70,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=1.67 dur=12538.03 max=12273.15 min=10.28
+05-25 23:24:36.729 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:36.735  5688  5688 I MotoLights: StateMachine - moveToState - Trying to move to state IdleState
+05-25 23:24:36.741  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.743  1750  1750 D NLService: Successfully marked the removed notification identified by 2147483647
+05-25 23:24:36.745 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.745 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.748  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.751  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.751  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.752  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.756 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.757 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.762  1601 10638 D PipelineWatcher: [0xe869572c] pipelineFull: too many frames in pipeline (4)
+05-25 23:24:36.771 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.771 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.784 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.787 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.794 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.796  1894  1894 W NotificationHistory: Attempted to add notif for locked/gone/disabled user 0
+05-25 23:24:36.796  1179 12430 D AudioALSAStreamOut: +setParameters(): flag 8, MixerThreadSleep=
+05-25 23:24:36.796  1179 12430 W AudioALSAStreamOut: setParameters(), still have param.size() = 1, remain param = "MixerThreadSleep="
+05-25 23:24:36.797  1179 21392 I EffectsFactory: Effect_Command(): self = 0xb4000076d4327650, cmdCode = 10
+05-25 23:24:36.797  1179 21392 V DlbVolumeListener: effectCommand
+05-25 23:24:36.797  1179 21392 V DlbVolumeListener: Command EFFECT_CMD_SET_VOLUME: left 150593, right 150593
+05-25 23:24:36.797  1303  1862 D AudioMixer: setParameter(RESAMPLE, SAMPLE_RATE, 44100, channelMask 0x3)
+05-25 23:24:36.799  1179  2285 D DlbDapEndpointParamCache: commit() Applying parameters for device 0x40000000
+05-25 23:24:36.799  1179  2285 D DlbDapEndpointParamCache: doCommit() Committed 0 parameters out of 14.
+05-25 23:24:36.799  1179  2285 D DlbDapEndpointParamCache: commit() Overriding parameters for current device 0x00000002
+05-25 23:24:36.799  1179  2285 D DlbDapEndpointParamCache: doCommit() Committed 0 parameters out of 65.
+05-25 23:24:36.804  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationPosted: Notification(channel=native_audio_channel shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|ONLY_ALERT_ONCE|NO_CLEAR|NO_DISMISS color=0x00000000 category=transport actions=3 vis=PUBLIC)
+05-25 23:24:36.805 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.806 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.806 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.806  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:36.806  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 1001
+05-25 23:24:36.808 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.814  1179  2744 D DlbDapCrossfadeProcess: process transitioning from FADE_TO_ACTIVE state to PROCESS_ACTIVE
+05-25 23:24:36.815 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:36.815 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:36.818 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.818 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.818 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.825 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.831 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.832 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.832 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.836  2382  2382 I KgdSliceProvider: The weather info has not change, does not need to be updated. mTempF=50 iconNumber=4 celsius=true
+05-25 23:24:36.848 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.848 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.849  2382  2464 D MediaDeviceManager: Can not get LocalBluetoothLeBroadcast
+05-25 23:24:36.850  2382  2464 D MediaDeviceManager: Can not get LocalBluetoothLeBroadcast
+05-25 23:24:36.860 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.861 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:36.871  1894  2781 E PersistenceController: SettingNotFoundException: sv_custom_ai_icon_enabled
+05-25 23:24:36.872 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.874 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.882  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:36.882 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.883  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:36.883  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:36.883  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:36.884  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:36.884  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:36.884  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:36.896 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.906 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.915 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.921  2382  2382 E ndroid.systemui: == MALI DEBUG ===eglp_winsys_populate_image_templates ==12288
+05-25 23:24:36.921 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:36.921 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:36.924 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.934 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.944 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.953  1894  1894 W NotificationHistory: Attempted to add notif for locked/gone/disabled user 0
+05-25 23:24:36.954 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.956  1894  1894 E PersistenceController: SettingNotFoundException: sv_custom_ai_icon_enabled
+05-25 23:24:36.958  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationPosted: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|ONLY_ALERT_ONCE|NO_CLEAR|FOREGROUND_SERVICE color=0x00000000 vis=PRIVATE)
+05-25 23:24:36.960  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:36.960  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 101
+05-25 23:24:36.962  2382  2382 D MotoMediaSessionUtils: addToActiveControllers: it is already added.
+05-25 23:24:36.990 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.990 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.990 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.992  2382  2904 D LocalImageResolver: Couldn't use ImageDecoder for drawable, falling back to non-resized load.
+05-25 23:24:36.999  1750  1780 W appium.settings: Reducing the number of considered missed Gc histogram windows from 1036 to 100
+05-25 23:24:37.021 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.021 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.025  1601 10636 W NuPlayerRenderer: onNewAudioMediaTime updateAnchor: nowMediaus 165718, delta[93336]us ,nowUs 201222459 ms
+05-25 23:24:37.031  2382  2904 D LocalImageResolver: Couldn't use ImageDecoder for drawable, falling back to non-resized load.
+05-25 23:24:37.057  1324  3055 I SurfaceFlinger: onHandleDestroyed: name=Surface(name=d0de90f io.ionic.starter/io.ionic.starter.MainActivity)/@0x28de0e2 - animation-leash of starting_reveal#39864, layerId=39864, parentId=0
+05-25 23:24:37.064  1324  1324 I BufferQueueDebug: [Surface(name=d0de90f io.ionic.starter/io.ionic.starter.MainActivity)/@0x28de0e2 - animation-leash of starting_reveal#39864](this:0xb4000076b4a9dad0,id:-1,api:0,p:-1,c:1324) onDestructor()
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:37.070  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:37.082  2382  2392 W System  : A resource failed to call release. 
+05-25 23:24:37.083  2382  2392 W System  : A resource failed to call release. 
+05-25 23:24:37.083  1324  3055 D SurfaceFlinger: [SF client] REMOVE (0xb400007734942d00) for (2382:com.android.systemui)
+05-25 23:24:37.084  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:56.745934,dur:1004.48,max:62.98,min:6.20  
+05-25 23:24:37.123 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.123 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.128  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:37.128  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:37.128  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:37.128  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:37.170  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationPosted hide: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|NO_CLEAR|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY color=0x00000000 groupKey=ranker_group vis=PUBLIC)
+05-25 23:24:37.174  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:37.175  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 2147483647
+05-25 23:24:37.226 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.226 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.244  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:86
+05-25 23:24:37.244  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:58
+05-25 23:24:37.330 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.330 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.375  2382  2382 D MotoMediaSessionUtils: addToActiveControllers: it is already added.
+05-25 23:24:37.386  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:37.401  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.58 dur=1262.33 max=938.63 min=323.69
+05-25 23:24:37.433 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.433 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.536 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.537 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.582  5623  5862 I DynamicVolume: DynamicVolumeService: recordCurrentConfigs: [10465] AppPlayStatusModel(id=0, packageUid=10465, packageName=io.ionic.starter, packagePid=10064, processName=, playStatus=1, timeInMillis=1779776677582, formattedDate=25 de mai. de 2026 23:24:37, algoType=0)
+05-25 23:24:37.624  3214  3214 W batt_health: type=1400 audit(0.0:1449858): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:37.628  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:37.639 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.640 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.659 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:37.682  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=31.18 dur=1603.43 max=675.66 min=10.67
+05-25 23:24:37.686  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:37.687  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:37.687  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:37.688  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:37.688  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:37.689  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:37.689  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:37.691  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:37.691  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:37.692  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:37.692  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:37.730  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:37.742 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.743 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.804  1613  1836 D ULogGuard: Monitoring: 12 threads, 0 requests, 0 time-bombs; 9 guards. ResetFlags = 0x7
+05-25 23:24:37.847 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.847 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.950 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.951 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.054 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.054 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.128  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:38.129  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:38.130  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:38.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449860): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:38.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449861): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:38.157 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.157 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:91
+05-25 23:24:38.245  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:38.245  1265  1314 I libPowerHal: [updateFPS] pid(10064) : 60 => -1
+05-25 23:24:38.246  1265  1334 I libPowerHal: [perfNotifyAppState] pack:io.ionic.starter, act:io.ionic.starter.MainActivity, state:5, pid:10064, uid:10465, fps:-1
+05-25 23:24:38.248  1265  1334 I UxUtility: notifyForegroundApp pack:io.ionic.starter, uid:10465
+05-25 23:24:38.248  1265  1334 I TouchUtility: notifyAppState error = NULL
+05-25 23:24:38.260 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.261 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.364 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.364 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.466 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.466 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.569 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.569 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.604  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.609  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.632  3214  3214 W batt_health: type=1400 audit(0.0:1449862): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:38.635  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:38.641 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:38.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.665  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.671 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.671 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.672  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:16.999271,dur:1588.30,max:926.17,min:10.65  
+05-25 23:24:38.676  1179  2744 D DlbDap2Process: process() called [2237000] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:38.722  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:38.732  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.50 dur=1331.02 max=986.44 min=344.59
+05-25 23:24:38.773 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.774 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.876 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.876 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.980 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.980 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.082 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.082 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449863): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:39.130  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:39.131  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:39.131  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:39.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449864): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:39.132  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:39.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449865): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:39.186 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.186 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:39.245  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:39.289 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.289 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.393 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.394 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.497 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.497 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.600 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.600 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.605  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.610  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.632  3214  3214 W batt_health: type=1400 audit(0.0:1449866): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:39.636  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:39.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.647 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:39.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.665  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.668  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=1.01 dur=1986.00 max=999.83 min=986.16
+05-25 23:24:39.704 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.704 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.714  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:39.732  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.00 dur=1000.20 max=1000.20 min=1000.20
+05-25 23:24:39.733  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:2.828956,dur:1060.46,max:939.68,min:60.30  
+05-25 23:24:39.806 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.807 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.912 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.912 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.016 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.016 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.085  3214  3214 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:40.086  1894  2169 D BatteryService: uevent={POWER_SUPPLY_VOLTAGE_NOW=4458000, POWER_SUPPLY_VBUS_PRESENT=true, POWER_SUPPLY_TYPE=Battery, POWER_SUPPLY_HEALTH=Good, POWER_SUPPLY_TECHNOLOGY=Li-poly, POWER_SUPPLY_SCOPE=83, POWER_SUPPLY_CHARGE_FULL_DESIGN=4400000, SEQNUM=336496, POWER_SUPPLY_STATUS=Charging, POWER_SUPPLY_CYCLE_COUNT=945, POWER_SUPPLY_CAPACITY=100, DEVPATH=/devices/platform/smart_battery/power_supply/battery, POWER_SUPPLY_ENERGY_EMPTY=0, POWER_SUPPLY_CHARGE_RATE=Normal, POWER_SUPPLY_CAPACITY_LEVEL=Full, POWER_SUPPLY_CURRENT_NOW=275000, POWER_SUPPLY_PRESENT=1, POWER_SUPPLY_POWER_WATT=2, POWER_SUPPLY_CHARGE_FULL=3636000, SUBSYSTEM=power_supply, POWER_SUPPLY_VOLTAGE_OCV=4458000, POWER_SUPPLY_TEMP=289, ACTION=change, POWER_SUPPLY_AGE=83, POWER_SUPPLY_NAME=battery, POWER_SUPPLY_LPD_PRESENT=false, POWER_SUPPLY_CHARGE_COUNTER=3636000}
+05-25 23:24:40.080  3214  3214 W batt_health: type=1400 audit(0.0:1449867): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:40.109  1894  1894 V UiModeManager: updateLocked: null action, mDockState=0, category=null
+05-25 23:24:40.109  1894  1894 D UiModeManager: updateConfigurationLocked: mDockState=0; mCarMode=false; mNightMode=com.android.server.UiModeManagerService$1@88740f5; mNightModeCustomType=-1; uiMode=33
+05-25 23:24:40.110  2382  3827 D PowerUI : can't show warning due to - plugged: true status unknown: false
+05-25 23:24:40.118 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.118 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.132  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:40.132  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:40.133  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:40.133  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:40.200 25879 25879 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiService }
+05-25 23:24:40.212 24350 24350 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.onboardingconsent.api.ConsentManagerApiService.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsApiService }
+05-25 23:24:40.219 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.220 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:40.246  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:40.325 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.325 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.428 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.428 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.531 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.531 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.606  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.610  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.635 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.636 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.632  3214  3214 W batt_health: type=1400 audit(0.0:1449871): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:40.638  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:40.642 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:40.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.665  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.668  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=1.00 dur=1000.26 max=1000.26 min=1000.26
+05-25 23:24:40.718  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:40.734  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.00 dur=1001.35 max=1001.35 min=1001.35
+05-25 23:24:40.735  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.996762,dur:1001.62,max:939.85,min:61.77  
+05-25 23:24:40.738 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.738 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime

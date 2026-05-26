@@ -1,0 +1,3 @@
+model=motorola edge 2023
+device=aion
+package=io.ionic.starter

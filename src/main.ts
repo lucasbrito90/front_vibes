@@ -37,6 +37,9 @@ import './theme/motion.css';
 import './theme/layout.css';
 
 import { initThemeMode } from '@/composables/useThemeMode';
+import { installNativeQaDiagnostics } from '@/diagnostics/native-qa-diagnostics';
+
+installNativeQaDiagnostics();
 
 // ── Google Auth initialisation ────────────────────────────────────────────────
 // Initialize the plugin once at startup so it is ready before the first sign-in

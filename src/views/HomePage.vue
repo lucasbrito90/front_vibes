@@ -9,17 +9,17 @@
     <ion-content class="home-ion-content" :fullscreen="true">
       <div class="page-shell page-content home-inner">
         <AppLoadingState
-          v-if="loading && !vibes.length && !error"
+          v-if="vibesListLoading && !vibes.length && !vibesListError"
           compact
           title="Loading…"
           description="Fetching your vibes"
         />
 
         <AppErrorState
-          v-else-if="error && !vibes.length"
+          v-else-if="vibesListError && !vibes.length"
           compact
           title="Couldn’t load your vibes"
-          :description="error"
+          :description="vibesListError"
           retry-label="Try again"
           @retry="fetchVibes"
         />
@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed } from 'vue';
 import {
   IonButton,
   IonContent,
@@ -84,6 +84,7 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
+  onIonViewWillEnter,
 } from '@ionic/vue';
 import { chevronForwardOutline, sparklesOutline } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
@@ -96,7 +97,7 @@ import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 
 const router = useRouter();
 const { currentUser } = useAuth();
-const { vibes, loading, error, fetchVibes } = useVibes();
+const { vibes, vibesListLoading, vibesListError, fetchVibes } = useVibes();
 
 const continueVibe = computed(
   () => vibes.value.find((v) => v.is_active) ?? vibes.value[0] ?? null,
@@ -108,7 +109,7 @@ const continueCardStyle = computed(() => {
   return getVibeCardBackgroundStyle(v, 0);
 });
 
-onMounted(() => {
+onIonViewWillEnter(() => {
   void fetchVibes();
 });
 

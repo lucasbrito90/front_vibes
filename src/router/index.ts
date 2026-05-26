@@ -6,6 +6,7 @@ import { auth } from '@/services/firebase';
 import { authService, LARAVEL_SYNC_FAILURE_MESSAGE } from '@/services/auth.service';
 import { createLogger } from '@/utils/player-debug';
 import { syncStatusBarWithRoute } from '@/composables/useStatusBarStyle';
+import { shouldSkipLaravelSyncForOfflinePlayer } from '@/router/offline-player-guard';
 
 const log = createLogger('Router');
 
@@ -160,6 +161,11 @@ router.beforeEach(async (to) => {
   const user = await waitForAuthState();
 
   if (to.meta.requiresAuth && user) {
+    if (shouldSkipLaravelSyncForOfflinePlayer(to.path, true)) {
+      log.debug('offline player route — skipping Laravel sync', { path: to.path });
+      return true;
+    }
+
     try {
       await authService.ensureLaravelUserSynced(user);
     } catch (err) {

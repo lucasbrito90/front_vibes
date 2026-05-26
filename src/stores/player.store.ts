@@ -78,14 +78,21 @@ export const usePlayerStore = defineStore('player', () => {
   const hasActiveLayers      = ref(false);
 
   /**
-   * MiniPlayer represents an audible session only (playing/paused).
-   * Preparing and error keep vibe context on the full player page but must
-   * not surface a mini-player bar.
+   * MiniPlayer — session bar when the user can continue or control playback from tabs.
+   * - playing / paused: normal.
+   * - preparing + hasActiveLayers: prepare handshake in progress (Native/HTML). Navigating back
+   *   must still show MiniPlayer so offline/online flows match; errors clear layers → hidden.
    */
   const showMiniPlayer = computed(
     () =>
       currentVibeId.value !== null
-      && (playbackState.value === 'playing' || playbackState.value === 'paused'),
+      && playbackState.value !== 'error'
+      && playbackState.value !== 'idle'
+      && (
+        playbackState.value === 'playing'
+        || playbackState.value === 'paused'
+        || (playbackState.value === 'preparing' && hasActiveLayers.value)
+      ),
   );
 
   function _syncHasActiveLayersFromService(): void {

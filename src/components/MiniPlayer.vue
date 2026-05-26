@@ -4,6 +4,7 @@
       v-if="isVisible"
       class="mini-player"
       :class="{
+        'mini-player--preparing': playbackState === 'preparing',
         'mini-player--playing': playbackState === 'playing',
         'mini-player--paused': playbackState === 'paused',
       }"
@@ -49,13 +50,21 @@
           type="button"
           class="mini-player-btn"
           :class="{
+            'mini-player-btn--disabled': playbackState === 'preparing',
             'mini-player-btn--pulse': playPausePulse,
           }"
+          :disabled="playbackState === 'preparing'"
           :aria-label="playPauseLabel"
           @click.stop="handlePlayPause"
         >
           <Transition name="mini-player-control-icon" mode="out-in">
-            <ion-icon key="icon" :icon="playPauseIcon" />
+            <ion-spinner
+              v-if="playbackState === 'preparing'"
+              key="preparing-spinner"
+              name="crescent"
+              class="mini-player-spinner"
+            />
+            <ion-icon v-else key="icon" :icon="playPauseIcon" />
           </Transition>
         </button>
 
@@ -73,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonIcon } from '@ionic/vue';
+import { IonIcon, IonSpinner } from '@ionic/vue';
 import {
   pauseOutline,
   playOutline,
@@ -134,20 +143,26 @@ const artworkGradient = computed(() => ({
 
 // ── Display text ──────────────────────────────────────────────────────────────
 
-const stateLabel = computed(() =>
-  playbackState.value === 'playing' ? 'Playing' : 'Paused',
-);
+const stateLabel = computed(() => {
+  if (playbackState.value === 'preparing') return 'Starting';
+  return playbackState.value === 'playing' ? 'Playing' : 'Paused';
+});
 
 const metaText = computed(() => {
   const base = currentSoundSummary.value;
+  if (playbackState.value === 'preparing') {
+    const layerHint = base || 'ambient mix';
+    return `${layerHint} • Starting playback…`;
+  }
   return base ? `${base} • ${stateLabel.value}` : stateLabel.value;
 });
 
 // ── Dot styling ───────────────────────────────────────────────────────────────
 
 const dotClass = computed(() => ({
+  'mini-player-dot--preparing': playbackState.value === 'preparing',
   'mini-player-dot--playing': playbackState.value === 'playing',
-  'mini-player-dot--paused':  playbackState.value === 'paused',
+  'mini-player-dot--paused': playbackState.value === 'paused',
 }));
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -156,9 +171,10 @@ const playPauseIcon = computed(() =>
   playbackState.value === 'playing' ? pauseOutline : playOutline,
 );
 
-const playPauseLabel = computed(() =>
-  playbackState.value === 'playing' ? 'Pause' : 'Resume',
-);
+const playPauseLabel = computed(() => {
+  if (playbackState.value === 'preparing') return 'Starting playback';
+  return playbackState.value === 'playing' ? 'Pause' : 'Resume';
+});
 
 watch(playbackState, (next, prev) => {
   const toggled =
@@ -175,6 +191,7 @@ watch(playbackState, (next, prev) => {
 });
 
 function handlePlayPause(): void {
+  if (playbackState.value === 'preparing') return;
   if (playbackState.value === 'playing') {
     log.debug('pause tapped');
     store.pausePlayback();

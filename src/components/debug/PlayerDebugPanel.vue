@@ -18,6 +18,39 @@
         Read-only diagnostics. Does not start, stop, or mutate playback.
       </p>
 
+      <!-- 0. API / account QA (dev-only harness) -->
+      <section class="player-debug-section">
+        <h3 class="player-debug-section-title">API / account QA</h3>
+        <p class="player-debug-hint">
+          Compare with Laravel <code class="player-debug-code-inline">GET /api/debug/me</code> (non-production only).
+        </p>
+        <div class="player-debug-grid">
+          <span class="player-debug-key">VITE_API_BASE_URL</span>
+          <strong class="player-debug-val player-debug-val--url" :title="displayApiBaseFull">
+            {{ truncateForDisplay(displayApiBaseFull) }}
+          </strong>
+
+          <span class="player-debug-key">Firebase email</span>
+          <strong class="player-debug-val">{{ firebaseEmailLabel }}</strong>
+
+          <span class="player-debug-key">Laravel user id</span>
+          <strong class="player-debug-val">{{ laravelIdLabel }}</strong>
+
+          <span class="player-debug-key">Laravel firebase_uid</span>
+          <strong
+            class="player-debug-val player-debug-val--url"
+            :title="laravelFirebaseUidFull"
+          >
+            {{ truncateForDisplay(laravelFirebaseUidFull) }}
+          </strong>
+
+          <span class="player-debug-key">Backend debug snapshot</span>
+          <button type="button" class="player-debug-fetch-btn" @click="pullBackendDebugMe">Fetch</button>
+        </div>
+        <p v-if="backendDebugHarnessError" class="player-debug-warn">{{ backendDebugHarnessError }}</p>
+        <pre v-if="backendDebugHarnessJson" class="player-debug-pre">{{ backendDebugHarnessJson }}</pre>
+      </section>
+
       <!-- 1. Current player state -->
       <section class="player-debug-section">
         <h3 class="player-debug-section-title">Current player state</h3>
@@ -278,6 +311,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 
+import { useAuth } from '@/composables/useAuth';
 import { usePlayerStore } from '@/stores/player.store';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
 import { useVibeSounds } from '@/composables/useVibeSounds';
@@ -299,6 +333,57 @@ import {
 import { clearLogBuffer, logBuffer } from '@/utils/player-debug';
 
 const isDev = import.meta.env.DEV;
+
+const { currentUser, laravelUser, getIdToken } = useAuth();
+
+const displayApiBaseFull = computed(
+  () => (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() || '— (unset)',
+);
+
+const firebaseEmailLabel = computed(() => currentUser.value?.email ?? '—');
+
+const laravelIdLabel = computed(() =>
+  laravelUser.value?.id != null ? String(laravelUser.value.id) : '—',
+);
+
+const laravelFirebaseUidFull = computed(() => laravelUser.value?.firebase_uid ?? '—');
+
+const backendDebugHarnessJson = ref<string | null>(null);
+const backendDebugHarnessError = ref<string | null>(null);
+
+async function pullBackendDebugMe(): Promise<void> {
+  backendDebugHarnessError.value = null;
+  backendDebugHarnessJson.value = null;
+
+  const rawBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ?? '';
+  const base = rawBase.replace(/\/+$/, '');
+  const token = await getIdToken();
+
+  if (!base) {
+    backendDebugHarnessError.value = 'Missing VITE_API_BASE_URL';
+    return;
+  }
+  if (!token) {
+    backendDebugHarnessError.value = 'No Firebase ID token (sign in first)';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${base}/api/debug/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+    const text = await res.text();
+    backendDebugHarnessJson.value = text.length ? text : `(empty body, HTTP ${res.status})`;
+    if (!res.ok) {
+      backendDebugHarnessError.value = `HTTP ${res.status}`;
+    }
+  } catch (err: unknown) {
+    backendDebugHarnessError.value = err instanceof Error ? err.message : String(err);
+  }
+}
 
 const store = usePlayerStore();
 const {
@@ -735,5 +820,41 @@ onUnmounted(() => {
   margin-top: 2px;
   color: rgba(148, 163, 184, 0.8);
   word-break: break-all;
+}
+
+.player-debug-code-inline {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  color: rgba(253, 230, 138, 0.85);
+}
+
+.player-debug-fetch-btn {
+  justify-self: start;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: rgba(253, 230, 138, 0.95);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.player-debug-warn {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #fbbf24;
+}
+
+.player-debug-pre {
+  margin: 8px 0 0;
+  padding: 8px;
+  max-height: 160px;
+  overflow: auto;
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgba(224, 231, 255, 0.9);
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 6px;
 }
 </style>

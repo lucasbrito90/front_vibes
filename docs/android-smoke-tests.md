@@ -154,6 +154,13 @@ The spec switches to the Capacitor `WEBVIEW_*` context and uses the same Vue rou
 
 ---
 
+## Native offline MiniPlayer QA (full checklist)
+
+For **download, offline playback, MiniPlayer pause/resume/stop**, see **[native-offline-qa.md](./native-offline-qa.md)**.  
+Requires real Firebase auth, API fixture seed (`ixora:seed-native-offline-qa`), and longer timeouts than the smoke skeleton.
+
+---
+
 ## CI posture
 
 **Not wired.** Run locally before release or after NativeAudio / Android manifest / foreground-service changes. No device farm, no GitHub Actions job in this skeleton.

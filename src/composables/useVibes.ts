@@ -6,19 +6,40 @@ const selectedVibe = ref<Vibe | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
+/** List GET /api/vibes only — avoids Home/Vibes reacting to mutation or detail-fetch errors and enables safe concurrent tab mounts. */
+const vibesListLoading = ref(false);
+const vibesListError = ref<string | null>(null);
+
+let vibesListFetchGen = 0;
+
 function handleError(err: unknown): void {
   error.value = err instanceof Error ? err.message : 'Something went wrong.';
 }
 
+function handleListFetchError(err: unknown): void {
+  vibesListError.value = err instanceof Error ? err.message : 'Something went wrong.';
+}
+
 async function fetchVibes(): Promise<void> {
-  loading.value = true;
-  error.value = null;
+  const gen = ++vibesListFetchGen;
+  vibesListLoading.value = true;
+  vibesListError.value = null;
   try {
-    vibes.value = await vibeService.getVibes();
+    const data = await vibeService.getVibes();
+    if (gen !== vibesListFetchGen) {
+      return;
+    }
+    vibes.value = data;
+    vibesListError.value = null;
   } catch (err) {
-    handleError(err);
+    if (gen !== vibesListFetchGen) {
+      return;
+    }
+    handleListFetchError(err);
   } finally {
-    loading.value = false;
+    if (gen === vibesListFetchGen) {
+      vibesListLoading.value = false;
+    }
   }
 }
 
@@ -99,6 +120,8 @@ export function useVibes() {
     selectedVibe,
     loading,
     error,
+    vibesListLoading,
+    vibesListError,
     fetchVibes,
     fetchVibe,
     createVibe,

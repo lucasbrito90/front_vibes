@@ -77,17 +77,23 @@ export function useAppLifecycleAudio(): void {
         return;
       }
 
-      if (store.playbackState === 'playing' || store.playbackState === 'preparing') {
+      if (store.playbackState === 'playing') {
         /*
          * Fallback path (web or foreground service not running):
          * Immediately soft-pause before Android suspends the WebView.
-         * store.pausePlayback() calls audioPlayerService.pauseAll() and
-         * freezes the elapsed ticker. It does NOT clear currentVibeId /
-         * currentVibeName, so the Mini Player remains visible as 'paused'.
+         * pausePlayback clears neither currentVibeId nor summaries — MiniPlayer
+         * stays visible as 'paused'.
          */
         store.pausePlayback();
         _pausedByBackground = true;
       }
+
+      /*
+       * Prepare handshake (`preparing`): pausePlayback is a deliberate no-op
+       * in the store. Do nothing here — tearing down mid-prepare would regress
+       * offline startup; transient appState flicker during Ionic route swaps
+       * must not strand the mini bar as hidden-after-back.
+       */
       return;
     }
 
