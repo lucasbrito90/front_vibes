@@ -1,7 +1,6 @@
 /**
- * WebdriverIO + Appium — Android smoke tests (local only).
- *
- * Prerequisites: see docs/android-smoke-tests.md
+ * WebdriverIO — native Android player lifecycle QA (real auth).
+ * Run: E2E_USER_EMAIL=... E2E_USER_PASSWORD=... npm run test:lifecycle:android
  */
 /// <reference types="node" />
 import path from 'node:path';
@@ -10,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 import type { Capabilities, Options } from '@wdio/types';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
-
 const appiumBin = path.join(rootDir, 'node_modules', '.bin', 'appium');
 
 const apkPath =
@@ -25,38 +23,18 @@ const androidCapabilities = {
   'appium:appPackage': process.env.ANDROID_APP_PACKAGE ?? 'io.ionic.starter',
   'appium:appActivity': process.env.ANDROID_APP_ACTIVITY ?? '.MainActivity',
   'appium:autoGrantPermissions': true,
-  'appium:newCommandTimeout': 120,
-  // UiAutomator2 option not yet in @wdio/types
+  'appium:newCommandTimeout': 180,
   'appium:chromedriverAutodownload': true,
 } as Capabilities.RequestedStandaloneCapabilities;
 
 export const config: Options.Testrunner & Capabilities.WithRequestedTestrunnerCapabilities = {
   runner: 'local',
-
-  specs: ['./tests/smoke/android/**/*.spec.ts'],
-  exclude: ['./tests/smoke/android/player-lifecycle-native.spec.ts'],
-
+  specs: ['./tests/smoke/android/player-lifecycle-native.spec.ts'],
   maxInstances: 1,
-
   capabilities: [androidCapabilities],
-
-  services: [
-    [
-      'appium',
-      {
-        command: appiumBin,
-        args: { relaxedSecurity: true },
-      },
-    ],
-  ],
-
+  services: [['appium', { command: appiumBin, args: { relaxedSecurity: true } }]],
   framework: 'mocha',
   reporters: ['spec'],
-
-  mochaOpts: {
-    ui: 'bdd',
-    timeout: 120_000,
-  },
-
+  mochaOpts: { ui: 'bdd', timeout: 300_000 },
   logLevel: 'info',
 };

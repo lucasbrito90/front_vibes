@@ -86,6 +86,13 @@ function hydrateSelectedVibeFromOffline(vibe: Vibe): void {
   selectedVibe.value = vibe;
 }
 
+/** Drop cached detail when navigating to a different vibe route. */
+function clearSelectedVibeIfNot(id: number): void {
+  if (selectedVibe.value !== null && selectedVibe.value.id !== id) {
+    selectedVibe.value = null;
+  }
+}
+
 export function useVibes() {
   return {
     vibes,
@@ -98,5 +105,6 @@ export function useVibes() {
     updateVibe,
     deleteVibe,
     hydrateSelectedVibeFromOffline,
+    clearSelectedVibeIfNot,
   };
 }

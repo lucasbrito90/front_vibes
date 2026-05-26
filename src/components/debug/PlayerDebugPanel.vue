@@ -42,6 +42,12 @@
           <span class="player-debug-key">isPreparing</span>
           <strong class="player-debug-val">{{ isPreparing }}</strong>
 
+          <span class="player-debug-key">isError</span>
+          <strong class="player-debug-val">{{ isError }}</strong>
+
+          <span class="player-debug-key">showMiniPlayer</span>
+          <strong class="player-debug-val">{{ showMiniPlayer }}</strong>
+
           <span class="player-debug-key">elapsedSeconds</span>
           <strong class="player-debug-val">{{ elapsedSeconds }}</strong>
 
@@ -241,6 +247,7 @@ const {
   currentVibeArtworkUrl,
   elapsedSeconds,
   hasActiveLayers,
+  showMiniPlayer,
 } = storeToRefs(store);
 
 const { executionPlan } = usePlayerEngine();
@@ -256,6 +263,7 @@ let resolvePollId: ReturnType<typeof setInterval> | null = null;
 const isPlaying = computed(() => playbackState.value === 'playing');
 const isPaused = computed(() => playbackState.value === 'paused');
 const isPreparing = computed(() => playbackState.value === 'preparing');
+const isError = computed(() => playbackState.value === 'error');
 
 const playableLayerCount = computed(() => countPlayableLayers(executionPlan.value));
 

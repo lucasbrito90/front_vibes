@@ -9,17 +9,29 @@ import {
 const vibeSounds = ref<VibeSound[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
+let loadedVibeId: number | null = null;
 
 function handleError(err: unknown): void {
   error.value = err instanceof Error ? err.message : 'Something went wrong.';
 }
 
+/** Clear cached sounds when navigating to a different vibe route. */
+function resetVibeSoundsForRouteChange(nextVibeId: number): void {
+  if (loadedVibeId !== null && loadedVibeId !== nextVibeId) {
+    vibeSounds.value = [];
+    loadedVibeId = null;
+  }
+}
+
 async function fetchVibeSounds(vibeId: number): Promise<void> {
   loading.value = true;
   error.value = null;
-  vibeSounds.value = []; // clear stale data from previous vibe immediately
+  if (loadedVibeId !== vibeId) {
+    vibeSounds.value = [];
+  }
   try {
     vibeSounds.value = await vibeSoundService.getVibeSounds(vibeId);
+    loadedVibeId = vibeId;
   } catch (err) {
     handleError(err);
   } finally {
@@ -78,8 +90,9 @@ async function removeVibeSound(vibeId: number, soundId: number): Promise<boolean
 }
 
 /** Player page: restore GET /vibes/:id/sounds when API fails but offline snapshot exists. */
-function hydrateVibeSoundsFromOffline(sounds: VibeSound[]): void {
+function hydrateVibeSoundsFromOffline(sounds: VibeSound[], vibeId?: number): void {
   vibeSounds.value = sounds.map((s) => ({ ...s }));
+  if (vibeId != null) loadedVibeId = vibeId;
 }
 
 export function useVibeSounds() {
@@ -92,5 +105,6 @@ export function useVibeSounds() {
     updateVibeSound,
     removeVibeSound,
     hydrateVibeSoundsFromOffline,
+    resetVibeSoundsForRouteChange,
   };
 }
