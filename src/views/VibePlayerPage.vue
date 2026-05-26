@@ -36,7 +36,7 @@
                   Restart vibe
                 </ion-item>
                 <ion-item
-                  v-if="_isNativePlatform && !vibeOfflineReady"
+                  v-if="_isNativePlatform && showDownloadOfflineMenu"
                   button
                   :detail="false"
                   lines="full"
@@ -44,7 +44,7 @@
                   :disabled="isDownloading || !hasPlayableLayers"
                 >
                   <ion-icon :icon="isDownloading ? cloudDoneOutline : cloudDownloadOutline" slot="start" class="player-menu-icon" />
-                  {{ isDownloading ? 'Downloading…' : 'Download for offline' }}
+                  {{ downloadOfflineMenuLabel }}
                 </ion-item>
                 <ion-item
                   v-if="_isNativePlatform && vibeOfflineReady"
@@ -267,7 +267,15 @@ import {
   offlineMetaToVibe,
   saveOfflineVibeSnapshot,
 } from '@/services/offline-vibe-cache.service';
-import { isVibeDownloaded, removeDownloadedVibe } from '@/services/offline-downloads.service';
+import {
+  assessOfflineVibeHealth,
+  isVibeDownloaded,
+  offlineHealthNeedsUpdate,
+  removeDownloadedVibe,
+  repairBrokenOfflineState,
+  type OfflineVibeHealthReport,
+} from '@/services/offline-downloads.service';
+import { backupOfflineAudioManifestForVibe, rollbackOfflineAudioDownloadBatch } from '@/services/audio-engine/offline-audio-storage';
 import {
   formatDuration,
   isExecutionLayerPlayable,
@@ -292,7 +300,7 @@ const vibeId = computed(() => Number(route.params.id));
 // ── Data ──────────────────────────────────────────────────────────────────────
 
 const { vibes, selectedVibe, fetchVibe, hydrateSelectedVibeFromOffline, clearSelectedVibeIfNot } = useVibes();
-const { vibeSounds, fetchVibeSounds, hydrateVibeSoundsFromOffline, resetVibeSoundsForRouteChange } = useVibeSounds();
+const { vibeSounds, fetchVibeSounds, hydrateVibeSoundsFromOffline, resetVibeSoundsForRouteChange, error: vibeSoundsError } = useVibeSounds();
 const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
 
 const store = usePlayerStore();
@@ -310,6 +318,7 @@ const isDownloading             = ref(false);
 let loadGeneration              = 0;
 /** Full-file download + snapshot saved — distinct from “playing from snapshot this session”. */
 const vibeOfflineReady          = ref(false);
+const offlineHealth             = ref<OfflineVibeHealthReport | null>(null);
 /** Offline visit without snapshot — show inline guidance (not only toast). */
 const offlineUnavailableAfterLoad = ref(false);
 /** True when sounds + vibe detail were restored from `offline_vibe_manifest_v1` (API had no usable sounds). */
@@ -373,8 +382,32 @@ const playableLayers = computed(() => executionPlan.value.filter(isExecutionLaye
 const hasPlayableLayers = computed(() => playableLayers.value.length > 0);
 
 async function refreshOfflineDownloadState(): Promise<void> {
+  await repairBrokenOfflineState(vibeId.value);
   vibeOfflineReady.value = await isVibeDownloaded(vibeId.value);
+  if (executionPlan.value.length > 0 || vibeSounds.value.length > 0) {
+    offlineHealth.value = await assessOfflineVibeHealth(
+      vibeId.value,
+      vibeSounds.value,
+      executionPlan.value,
+    );
+  } else {
+    offlineHealth.value = null;
+  }
 }
+
+const offlineNeedsUpdate = computed(
+  () => offlineHealth.value != null && offlineHealthNeedsUpdate(offlineHealth.value.status),
+);
+
+const showDownloadOfflineMenu = computed(
+  () => !vibeOfflineReady.value || offlineNeedsUpdate.value,
+);
+
+const downloadOfflineMenuLabel = computed((): string => {
+  if (isDownloading.value) return 'Downloading…';
+  if (offlineNeedsUpdate.value) return 'Update offline download';
+  return 'Download for offline';
+});
 
 watch(
   vibeId,
@@ -449,6 +482,9 @@ const warningText = computed((): string | null => {
   if (loading.value) return null;
   if (playbackErroredThisVibe.value) return null;
   if (offlineUnavailableAfterLoad.value) return null;
+  if (offlineNeedsUpdate.value && navigator.onLine) {
+    return offlineHealth.value?.label ?? 'Offline copy is out of date — update from the menu.';
+  }
   if (isThisVibePreparing.value) return null;
   if (!vibeSounds.value.length) return 'No sounds configured';
   if (isAnotherVibePlaying.value) return 'Another vibe is playing — tap Play to switch';
@@ -527,12 +563,20 @@ const badgeItems = computed((): PlayerBadgeItem[] => {
       tone:  'info',
     });
   }
-  if (vibeOfflineReady.value) {
+  if (vibeOfflineReady.value && !offlineNeedsUpdate.value) {
     items.push({
       key: 'available-offline',
       label: 'Available offline',
       icon:  checkmarkCircleOutline,
       tone:  'success',
+    });
+  }
+  if (offlineNeedsUpdate.value) {
+    items.push({
+      key: 'offline-update-needed',
+      label: 'Update offline download',
+      icon:  cloudDownloadOutline,
+      tone:  'warn',
     });
   }
   if (isThisVibePreparing.value) {
@@ -724,6 +768,7 @@ async function handleRemoveOfflineDownload(): Promise<void> {
   try {
     await removeDownloadedVibe(id);
     vibeOfflineReady.value = false;
+    offlineHealth.value = null;
     await showPlaybackToast('Offline download removed');
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Could not remove offline files.';
@@ -754,6 +799,7 @@ async function handleDownloadForOffline(): Promise<void> {
 
   log.debug('[AudioCache] download requested', { vibeId: id, layers: plan.length });
   isDownloading.value = true;
+  const audioBackup = await backupOfflineAudioManifestForVibe(id);
 
   try {
     const result = await store.cacheVibeAudio(id, plan);
@@ -766,21 +812,22 @@ async function handleDownloadForOffline(): Promise<void> {
     });
 
     if (result.failed > 0) {
+      await rollbackOfflineAudioDownloadBatch(id, audioBackup);
       const failedNames = result.details
         .filter((d) => d.status === 'failed')
         .map((d) => d.soundName);
-      log.warn('[AudioCache] failed layers', { vibeId: id, failed: failedNames });
+      log.warn('[AudioCache] failed layers — rolled back partial batch', { vibeId: id, failed: failedNames });
     }
 
     if (result.succeeded === 0 && result.failed > 0) {
       await showPlaybackToast('Could not download this sound.');
     } else if (result.failed > 0) {
       await showPlaybackToast(
-        `Downloaded ${result.succeeded} sound${result.succeeded !== 1 ? 's' : ''}. ${result.failed} could not be downloaded.`,
+        `${result.failed} sound${result.failed !== 1 ? 's' : ''} could not be downloaded. Nothing was saved offline.`,
       );
     } else if (result.succeeded === 0) {
       await showPlaybackToast('No sounds were downloaded.');
-    } else {
+    } else if (result.failed === 0 && result.succeeded > 0) {
       const v = displayVibe.value;
       if (v?.id === id && vibeSounds.value.length > 0) {
         try {
@@ -791,13 +838,18 @@ async function handleDownloadForOffline(): Promise<void> {
           });
         } catch (snapErr) {
           const msg = snapErr instanceof Error ? snapErr.message : String(snapErr);
-          log.warn('[OfflineVibe] snapshot save failed', { vibeId: id, error: msg });
+          log.warn('[OfflineVibe] snapshot save failed — rolling back audio batch', { vibeId: id, error: msg });
+          await rollbackOfflineAudioDownloadBatch(id, audioBackup);
+          await showPlaybackToast('Download saved audio but could not save offline metadata.');
+          return;
         }
       }
-      await refreshOfflineDownloadState();
-      await showPlaybackToast('Downloaded for offline');
+      const wasUpdate = offlineNeedsUpdate.value;
+      await showPlaybackToast(wasUpdate ? 'Offline download updated' : 'Downloaded for offline');
     }
+    await refreshOfflineDownloadState();
   } catch (err) {
+    await rollbackOfflineAudioDownloadBatch(id, audioBackup);
     const msg = err instanceof Error ? err.message : 'Unknown error';
     log.warn('[AudioCache] download failed', { vibeId: id, error: msg });
     await showPlaybackToast('Could not download this sound.');
@@ -887,10 +939,12 @@ async function loadPlayerPage(id: number): Promise<void> {
         console.log('[OfflineMode] vibe UI hydrated from offline snapshot', { vibeId: id });
       }
     } else {
-      const offline =
+      const deviceOffline =
         typeof navigator !== 'undefined' && !navigator.onLine;
-      offlineUnavailableAfterLoad.value = offline;
-      if (offline) {
+      const soundsApiFailed = vibeSoundsError.value != null;
+      // Empty API response while online is a valid empty vibe — not an offline failure.
+      offlineUnavailableAfterLoad.value = deviceOffline && soundsApiFailed;
+      if (offlineUnavailableAfterLoad.value) {
         await showPlaybackToast('This vibe is not available offline');
       }
       buildPlan(vibeSounds.value);
@@ -900,6 +954,7 @@ async function loadPlayerPage(id: number): Promise<void> {
   if (generation !== loadGeneration) return;
 
   loading.value = false;
+  await refreshOfflineDownloadState();
   log.debug('loaded', {
     sounds:           vibeSounds.value.length,
     planLayers:       executionPlan.value.length,

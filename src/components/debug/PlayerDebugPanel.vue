@@ -154,6 +154,59 @@
         </ul>
       </section>
 
+      <!-- 3b. Offline diagnostics -->
+      <section class="player-debug-section">
+        <h3 class="player-debug-section-title">Offline diagnostics</h3>
+        <div class="player-debug-grid">
+          <span class="player-debug-key">vibeId (page)</span>
+          <strong class="player-debug-val">{{ pageVibeId || '—' }}</strong>
+
+          <span class="player-debug-key">offline health</span>
+          <strong
+            class="player-debug-val"
+            :class="offlineHealthClass"
+          >
+            {{ offlineReport?.label ?? '—' }}
+          </strong>
+
+          <span class="player-debug-key">local layers</span>
+          <strong class="player-debug-val">{{ offlineReport?.localLayerCount ?? 0 }}</strong>
+
+          <span class="player-debug-key">URL mismatches</span>
+          <strong class="player-debug-val">{{ offlineReport?.staleUrlLayerCount ?? 0 }}</strong>
+
+          <span class="player-debug-key">missing files</span>
+          <strong class="player-debug-val">{{ offlineReport?.missingFileLayerCount ?? 0 }}</strong>
+        </div>
+        <p v-if="!executionPlan.length" class="player-debug-empty">No layers for offline lookup.</p>
+        <div
+          v-for="row in offlineLayerRows"
+          :key="`offline-${row.soundId}`"
+          class="player-debug-layer player-debug-layer--compact"
+        >
+          <p class="player-debug-layer-name">{{ row.soundName }}</p>
+          <div class="player-debug-grid player-debug-grid--layer">
+            <span class="player-debug-key">resolution</span>
+            <strong
+              class="player-debug-val"
+              :class="row.reason === 'local' ? 'player-debug-tag--ok' : 'player-debug-tag--bad'"
+            >
+              {{ layerResolutionLabel(row.reason) }}
+            </strong>
+
+            <span class="player-debug-key">plan URL</span>
+            <strong class="player-debug-val player-debug-val--url" :title="row.planUrl">
+              {{ truncateForDisplay(row.planUrl) }}
+            </strong>
+
+            <span class="player-debug-key">manifest URL</span>
+            <strong class="player-debug-val player-debug-val--url" :title="row.manifestRemoteUrl ?? undefined">
+              {{ row.manifestRemoteUrl ? truncateForDisplay(row.manifestRemoteUrl) : '—' }}
+            </strong>
+          </div>
+        </div>
+      </section>
+
       <!-- 4. Runtime source visibility -->
       <section class="player-debug-section">
         <h3 class="player-debug-section-title">Runtime source visibility</h3>
@@ -222,12 +275,20 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { storeToRefs } from 'pinia';
 
 import { usePlayerStore } from '@/stores/player.store';
 import { usePlayerEngine } from '@/composables/usePlayerEngine';
+import { useVibeSounds } from '@/composables/useVibeSounds';
 import { audioPlayerService } from '@/services/audio-player.service';
 import { audioEngine } from '@/services/audio-engine';
+import { inspectOfflineLayer } from '@/services/audio-engine/offline-audio-storage';
+import {
+  assessOfflineVibeHealth,
+  type OfflineVibeHealthReport,
+} from '@/services/offline-downloads.service';
+import { layerResolutionLabel } from '@/services/offline-playback-status';
 import {
   classifyUrlSource,
   countPlayableLayers,
@@ -251,11 +312,33 @@ const {
 } = storeToRefs(store);
 
 const { executionPlan } = usePlayerEngine();
+const { vibeSounds } = useVibeSounds();
+const route = useRoute();
 
 const harnessExpanded = ref(false);
 const logsExpanded = ref(false);
 const serviceHasActiveLayers = ref(false);
 const resolvedUrlBySoundId = ref<Record<number, string>>({});
+const offlineReport = ref<OfflineVibeHealthReport | null>(null);
+const offlineLayerRows = ref<Array<{
+  soundId: number;
+  soundName: string;
+  reason: import('@/services/audio-engine/offline-audio-storage').OfflineLayerResolutionReason;
+  manifestRemoteUrl: string | null;
+  planUrl: string;
+}>>([]);
+
+const pageVibeId = computed(() => {
+  const id = Number(route.params.id);
+  return Number.isFinite(id) && id > 0 ? id : 0;
+});
+
+const offlineHealthClass = computed(() => {
+  const status = offlineReport.value?.status;
+  if (status === 'ready') return 'player-debug-tag--ok';
+  if (status === 'not_downloaded') return '';
+  return 'player-debug-tag--bad';
+});
 
 let servicePollId: ReturnType<typeof setInterval> | null = null;
 let resolvePollId: ReturnType<typeof setInterval> | null = null;
@@ -277,6 +360,28 @@ function resolvedSourceLabel(soundId: number): string {
     return currentVibeId.value ? 'pending…' : '— (no active vibe)';
   }
   return formatUrlSourceLabel(classifyUrlSource(resolved));
+}
+
+async function refreshOfflineDiagnostics(): Promise<void> {
+  const id = pageVibeId.value || currentVibeId.value || 0;
+  if (!id || executionPlan.value.length === 0) {
+    offlineReport.value = null;
+    offlineLayerRows.value = [];
+    return;
+  }
+
+  offlineReport.value = await assessOfflineVibeHealth(
+    id,
+    vibeSounds.value,
+    executionPlan.value,
+  );
+
+  offlineLayerRows.value = await Promise.all(
+    executionPlan.value.map(async (layer) => {
+      const row = await inspectOfflineLayer(id, layer.soundId, layer.fileUrl);
+      return { ...row, soundName: layer.soundName };
+    }),
+  );
 }
 
 async function refreshResolvedSources(): Promise<void> {
@@ -306,6 +411,7 @@ function startPolling(): void {
 
   resolvePollId = setInterval(() => {
     void refreshResolvedSources();
+    void refreshOfflineDiagnostics();
   }, 2_000);
 }
 
@@ -321,9 +427,10 @@ function stopPolling(): void {
 }
 
 watch(
-  [currentVibeId, executionPlan],
+  [currentVibeId, executionPlan, pageVibeId, vibeSounds],
   () => {
     void refreshResolvedSources();
+    void refreshOfflineDiagnostics();
   },
   { deep: true },
 );
