@@ -9,7 +9,15 @@ import { fileURLToPath } from 'node:url';
 import { browser } from '@wdio/globals';
 
 import { signInWithEmailPassword } from '../tests/smoke/android/helpers/auth.js';
-import { navigateAppRoute, switchToWebView } from '../tests/smoke/android/helpers/webview.js';
+import {
+  clickPlayerBack,
+  collectPlayerNavDiagnostics,
+  navigateAppRouteSpa,
+  openPlayerRouteSpa,
+  switchToWebView,
+  waitForLeftPlayerPage,
+  waitForMiniPlayer,
+} from '../tests/smoke/android/helpers/webview.js';
 
 const APP = process.env.ANDROID_APP_PACKAGE ?? 'io.ionic.starter';
 const OUT = path.join(path.dirname(fileURLToPath(import.meta.url)), 'output', 'offline-qa');
@@ -209,7 +217,7 @@ async function collectAndLogVibesListQaProbe(phase: string): Promise<void> {
 }
 
 async function openVibeCard(index: number): Promise<{ name: string; vibeId: number | null }> {
-  await navigateAppRoute('/vibes');
+  await navigateAppRouteSpa('/vibes');
   await browser.$('ion-title').waitForExist({ timeout: 20_000 });
   await collectAndLogVibesListQaProbe('after-nav');
 
@@ -245,21 +253,16 @@ async function openVibeCard(index: number): Promise<{ name: string; vibeId: numb
   return { name, vibeId };
 }
 
-async function openPlayerDirect(vibeId: number): Promise<void> {
-  await navigateAppRoute(`/vibes/${vibeId}/player`);
-  await browser.waitUntil(
-    async () => {
-      const onPlayer = await browser.$('[data-testid="player-page"]').isExisting();
-      const onSignIn = (await browser.execute(() => window.location.pathname)).includes('sign-in');
-      return onPlayer || onSignIn;
-    },
-    { timeout: 45_000 },
-  );
+/** Reopen player without full WebView reload (preserves Pinia + NativeAudio session). */
+async function reopenPlayerSpa(vibeId: number): Promise<void> {
   const path = await browser.execute(() => window.location.pathname);
-  if (path.includes('sign-in')) {
-    throw new Error(`Auth redirect blocked offline player route: ${path}`);
+  if (path === `/vibes/${vibeId}/player`) {
+    await browser.$('[data-testid="player-page"]').waitForExist({ timeout: 5_000 });
+    return;
   }
-  await browser.$('[data-testid="player-page"]').waitForExist({ timeout: 5_000 });
+
+  await openPlayerRouteSpa(vibeId);
+  await collectPlayerNavDiagnostics(`reopen-player-spa-${vibeId}`);
 }
 
 async function waitForToastContains(fragment: string, timeoutMs = 120_000): Promise<boolean> {
@@ -419,10 +422,11 @@ describe('Native Android — offline playback QA', () => {
     await browser.pause(3000);
     record(5, 'Enable airplane mode / disable network', true, 'airplane+wifi+data disabled via adb');
 
-    await browser.$('button.player-icon-btn[aria-label="Back"]').click();
-    await browser.pause(1500);
+    await clickPlayerBack();
+    await waitForLeftPlayerPage();
+    await collectPlayerNavDiagnostics('after-back-before-offline-reopen');
     if (vibeId) {
-      await openPlayerDirect(vibeId);
+      await reopenPlayerSpa(vibeId);
     } else {
       await openVibeCard(0);
     }
@@ -448,9 +452,10 @@ describe('Native Android — offline playback QA', () => {
     record(7, 'Play downloaded vibe offline (audio)', true,
       offlineLocal ? 'file:// in logcat' : 'playing state reached');
 
-    await browser.$('button.player-icon-btn[aria-label="Back"]').click();
-    const mini = await browser.$('.mini-player');
-    await mini.waitForExist({ timeout: 10_000 });
+    await clickPlayerBack();
+    await waitForLeftPlayerPage();
+    await collectPlayerNavDiagnostics('after-back-offline-playback');
+    const mini = await waitForMiniPlayer(10_000);
     await capture('06-mini-player-offline');
     record(8, 'MiniPlayer works offline', await mini.isExisting(), 'mini player visible');
 
@@ -502,8 +507,8 @@ describe('Native Android — offline playback QA', () => {
     await clickMenuItem('Stop vibe');
     await browser.pause(800);
 
-    await browser.$('button.player-icon-btn[aria-label="Back"]').click();
-    await browser.pause(1_500);
+    await clickPlayerBack();
+    await browser.pause(500);
     await browser.waitUntil(
       async () => !(await browser.$('.mini-player').isExisting()),
       { timeout: 12_000 },
@@ -549,9 +554,9 @@ describe('Native Android — offline playback QA', () => {
     setAirplaneMode(true);
     await browser.pause(2000);
     if (vibeId) {
-      await openPlayerDirect(vibeId);
+      await reopenPlayerSpa(vibeId);
     } else {
-      await navigateAppRoute('/vibes');
+      await navigateAppRouteSpa('/vibes');
       await openVibeCard(0);
     }
     clearLogcat();
@@ -584,7 +589,7 @@ describe('Native Android — offline playback QA', () => {
     record(11, 'Stale manifest / URL mismatch', false,
       'not exercised automatically — requires server URL rotation or manual manifest edit');
 
-    await navigateAppRoute('/vibes');
+    await navigateAppRouteSpa('/vibes');
     await browser.$('ion-title').waitForExist({ timeout: 25_000 });
     await browser.waitUntil(
       async () => !(await browser.$('text=Loading your vibes…').isExisting().catch(() => false)),
