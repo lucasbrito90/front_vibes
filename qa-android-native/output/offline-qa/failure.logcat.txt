@@ -1,0 +1,802 @@
+--------- beginning of main
+05-25 23:24:36.805 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.806 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.806 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.806  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:36.806  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 1001
+05-25 23:24:36.808 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.814  1179  2744 D DlbDapCrossfadeProcess: process transitioning from FADE_TO_ACTIVE state to PROCESS_ACTIVE
+05-25 23:24:36.815 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:36.815 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:36.818 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.818 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.818 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.825 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:36.831 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.832 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.832 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.836  2382  2382 I KgdSliceProvider: The weather info has not change, does not need to be updated. mTempF=50 iconNumber=4 celsius=true
+05-25 23:24:36.848 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.848 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.849  2382  2464 D MediaDeviceManager: Can not get LocalBluetoothLeBroadcast
+05-25 23:24:36.850  2382  2464 D MediaDeviceManager: Can not get LocalBluetoothLeBroadcast
+05-25 23:24:36.860 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.861 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:36.870  2382  2382 W ConstraintSet: id unknown cancel
+--------- beginning of system
+05-25 23:24:36.871  1894  2781 E PersistenceController: SettingNotFoundException: sv_custom_ai_icon_enabled
+05-25 23:24:36.872 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.874 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.882  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:36.882 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.883  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:36.883  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:36.883  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:36.884  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:36.884  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:36.884  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:36.885  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:36.889  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:36.896 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.906 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.915 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.921  2382  2382 E ndroid.systemui: == MALI DEBUG ===eglp_winsys_populate_image_templates ==12288
+05-25 23:24:36.921 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:36.921 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:36.924 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.934 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.944 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.953  1894  1894 W NotificationHistory: Attempted to add notif for locked/gone/disabled user 0
+05-25 23:24:36.954 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.956  1894  1894 E PersistenceController: SettingNotFoundException: sv_custom_ai_icon_enabled
+05-25 23:24:36.958  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationPosted: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|ONLY_ALERT_ONCE|NO_CLEAR|FOREGROUND_SERVICE color=0x00000000 vis=PRIVATE)
+05-25 23:24:36.960  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:36.960  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 101
+05-25 23:24:36.962  2382  2382 D MotoMediaSessionUtils: addToActiveControllers: it is already added.
+05-25 23:24:36.990 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.990 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.990 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:36.992  2382  2904 D LocalImageResolver: Couldn't use ImageDecoder for drawable, falling back to non-resized load.
+05-25 23:24:36.999  1750  1780 W appium.settings: Reducing the number of considered missed Gc histogram windows from 1036 to 100
+05-25 23:24:37.021 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.021 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.025  1601 10636 W NuPlayerRenderer: onNewAudioMediaTime updateAnchor: nowMediaus 165718, delta[93336]us ,nowUs 201222459 ms
+05-25 23:24:37.031  2382  2904 D LocalImageResolver: Couldn't use ImageDecoder for drawable, falling back to non-resized load.
+05-25 23:24:37.057  1324  3055 I SurfaceFlinger: onHandleDestroyed: name=Surface(name=d0de90f io.ionic.starter/io.ionic.starter.MainActivity)/@0x28de0e2 - animation-leash of starting_reveal#39864, layerId=39864, parentId=0
+05-25 23:24:37.064  1324  1324 I BufferQueueDebug: [Surface(name=d0de90f io.ionic.starter/io.ionic.starter.MainActivity)/@0x28de0e2 - animation-leash of starting_reveal#39864](this:0xb4000076b4a9dad0,id:-1,api:0,p:-1,c:1324) onDestructor()
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:37.065  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:37.070  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:37.082  2382  2392 W System  : A resource failed to call release. 
+05-25 23:24:37.083  2382  2392 W System  : A resource failed to call release. 
+05-25 23:24:37.083  1324  3055 D SurfaceFlinger: [SF client] REMOVE (0xb400007734942d00) for (2382:com.android.systemui)
+05-25 23:24:37.084  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:56.745934,dur:1004.48,max:62.98,min:6.20  
+05-25 23:24:37.123 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.123 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.128  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:37.128  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:37.128  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:37.128  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:37.170  5707  5707 I MotoDesktopLog: [ NotificationMonitorService ] - onNotificationPosted hide: Notification(channel=vibes_bg_service shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|NO_CLEAR|LOCAL_ONLY|GROUP_SUMMARY|AUTOGROUP_SUMMARY color=0x00000000 groupKey=ranker_group vis=PUBLIC)
+05-25 23:24:37.174  1750  1750 D NLService: The notifications buffer size has reached its maximum size of 100 items. Shrinking it in order to satisfy the constraints.
+05-25 23:24:37.175  1750  1750 D NLService: Successfully stored the newly arrived notification identified by 2147483647
+05-25 23:24:37.226 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.226 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.244  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:86
+05-25 23:24:37.244  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:58
+05-25 23:24:37.330 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.330 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.375  2382  2382 D MotoMediaSessionUtils: addToActiveControllers: it is already added.
+05-25 23:24:37.386  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:37.401  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.58 dur=1262.33 max=938.63 min=323.69
+05-25 23:24:37.433 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.433 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.536 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.537 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.582  5623  5862 I DynamicVolume: DynamicVolumeService: recordCurrentConfigs: [10465] AppPlayStatusModel(id=0, packageUid=10465, packageName=io.ionic.starter, packagePid=10064, processName=, playStatus=1, timeInMillis=1779776677582, formattedDate=25 de mai. de 2026 23:24:37, algoType=0)
+05-25 23:24:37.624  3214  3214 W batt_health: type=1400 audit(0.0:1449858): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:37.628  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:37.639 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.640 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.659 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:37.682  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=31.18 dur=1603.43 max=675.66 min=10.67
+05-25 23:24:37.686  2382  2382 W ConstraintSet: id unknown center_vertical_guideline
+05-25 23:24:37.687  2382  2382 W ConstraintSet: id unknown action_button_guideline
+05-25 23:24:37.687  2382  2382 W ConstraintSet: id unknown icon
+05-25 23:24:37.688  2382  2382 W ConstraintSet: id unknown media_seamless
+05-25 23:24:37.688  2382  2382 W ConstraintSet: id unknown media_action_barrier_start
+05-25 23:24:37.689  2382  2382 W ConstraintSet: id unknown media_action_barrier_end
+05-25 23:24:37.689  2382  2382 W ConstraintSet: id unknown media_action_barrier_top
+05-25 23:24:37.691  2382  2382 W ConstraintSet: id unknown remove_text
+05-25 23:24:37.691  2382  2382 W ConstraintSet: id unknown settings
+05-25 23:24:37.692  2382  2382 W ConstraintSet: id unknown dismiss
+05-25 23:24:37.692  2382  2382 W ConstraintSet: id unknown cancel
+05-25 23:24:37.730  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:37.742 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.743 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.804  1613  1836 D ULogGuard: Monitoring: 12 threads, 0 requests, 0 time-bombs; 9 guards. ResetFlags = 0x7
+05-25 23:24:37.847 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.847 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:37.950 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:37.951 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.054 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.054 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.128  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:38.129  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:38.130  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:38.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449860): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:38.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449861): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:38.157 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.157 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:91
+05-25 23:24:38.245  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:38.245  1265  1314 I libPowerHal: [updateFPS] pid(10064) : 60 => -1
+05-25 23:24:38.246  1265  1334 I libPowerHal: [perfNotifyAppState] pack:io.ionic.starter, act:io.ionic.starter.MainActivity, state:5, pid:10064, uid:10465, fps:-1
+05-25 23:24:38.248  1265  1334 I UxUtility: notifyForegroundApp pack:io.ionic.starter, uid:10465
+05-25 23:24:38.248  1265  1334 I TouchUtility: notifyAppState error = NULL
+05-25 23:24:38.260 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.261 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.364 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.364 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.466 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.466 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.569 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.569 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.604  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.609  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.632  3214  3214 W batt_health: type=1400 audit(0.0:1449862): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:38.635  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:38.641 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:38.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.665  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:38.671 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.671 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.672  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:16.999271,dur:1588.30,max:926.17,min:10.65  
+05-25 23:24:38.676  1179  2744 D DlbDap2Process: process() called [2237000] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:38.722  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:38.732  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.50 dur=1331.02 max=986.44 min=344.59
+05-25 23:24:38.773 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.774 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.876 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.876 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:38.980 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:38.980 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.082 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.082 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449863): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:39.130  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:39.131  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:39.131  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:39.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449864): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:39.132  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:39.128  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449865): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:39.186 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.186 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:39.245  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:39.289 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.289 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.393 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.394 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.497 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.497 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.600 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.600 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.605  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.610  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.632  3214  3214 W batt_health: type=1400 audit(0.0:1449866): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:39.636  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:39.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.647 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:39.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.665  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:39.668  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=1.01 dur=1986.00 max=999.83 min=986.16
+05-25 23:24:39.704 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.704 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.714  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:39.732  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.00 dur=1000.20 max=1000.20 min=1000.20
+05-25 23:24:39.733  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:2.828956,dur:1060.46,max:939.68,min:60.30  
+05-25 23:24:39.806 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.807 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:39.912 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:39.912 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.016 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.016 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.085  3214  3214 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:40.086  1894  2169 D BatteryService: uevent={POWER_SUPPLY_VOLTAGE_NOW=4458000, POWER_SUPPLY_VBUS_PRESENT=true, POWER_SUPPLY_TYPE=Battery, POWER_SUPPLY_HEALTH=Good, POWER_SUPPLY_TECHNOLOGY=Li-poly, POWER_SUPPLY_SCOPE=83, POWER_SUPPLY_CHARGE_FULL_DESIGN=4400000, SEQNUM=336496, POWER_SUPPLY_STATUS=Charging, POWER_SUPPLY_CYCLE_COUNT=945, POWER_SUPPLY_CAPACITY=100, DEVPATH=/devices/platform/smart_battery/power_supply/battery, POWER_SUPPLY_ENERGY_EMPTY=0, POWER_SUPPLY_CHARGE_RATE=Normal, POWER_SUPPLY_CAPACITY_LEVEL=Full, POWER_SUPPLY_CURRENT_NOW=275000, POWER_SUPPLY_PRESENT=1, POWER_SUPPLY_POWER_WATT=2, POWER_SUPPLY_CHARGE_FULL=3636000, SUBSYSTEM=power_supply, POWER_SUPPLY_VOLTAGE_OCV=4458000, POWER_SUPPLY_TEMP=289, ACTION=change, POWER_SUPPLY_AGE=83, POWER_SUPPLY_NAME=battery, POWER_SUPPLY_LPD_PRESENT=false, POWER_SUPPLY_CHARGE_COUNTER=3636000}
+05-25 23:24:40.080  3214  3214 W batt_health: type=1400 audit(0.0:1449867): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:40.109  1894  1894 V UiModeManager: updateLocked: null action, mDockState=0, category=null
+05-25 23:24:40.109  1894  1894 D UiModeManager: updateConfigurationLocked: mDockState=0; mCarMode=false; mNightMode=com.android.server.UiModeManagerService$1@88740f5; mNightModeCustomType=-1; uiMode=33
+05-25 23:24:40.110  2382  3827 D PowerUI : can't show warning due to - plugged: true status unknown: false
+05-25 23:24:40.118 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.118 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.132  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:40.132  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:40.133  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:40.133  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:40.200 25879 25879 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentApiService }
+05-25 23:24:40.212 24350 24350 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.onboardingconsent.api.ConsentManagerApiService.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsApiService }
+05-25 23:24:40.219 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.220 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:40.246  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:40.325 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.325 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.428 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.428 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.531 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.531 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.606  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.610  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.635 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.636 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.632  3214  3214 W batt_health: type=1400 audit(0.0:1449871): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:40.638  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:40.642 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:40.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.665  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:40.668  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=1.00 dur=1000.26 max=1000.26 min=1000.26
+05-25 23:24:40.718  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:40.734  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=1.00 dur=1001.35 max=1001.35 min=1001.35
+05-25 23:24:40.735  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.996762,dur:1001.62,max:939.85,min:61.77  
+05-25 23:24:40.738 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.738 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.806  1613  1836 D ULogGuard: Monitoring: 12 threads, 0 requests, 0 time-bombs; 9 guards. ResetFlags = 0x7
+05-25 23:24:40.842 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.842 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:40.945 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:40.945 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.047 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.047 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.133  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:41.134  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:41.135  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:41.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449872): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:41.136  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:41.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449873): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:41.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449874): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:41.153 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.153 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.209 25879 25879 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/... cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+05-25 23:24:41.245  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:41.246  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:41.255 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.256 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.326  1179  2744 D DlbDap2Process: process() called [2237500] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:41.360 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.361 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.464 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.464 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.567 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.567 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.605  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.610  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.621  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.632  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.638  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:41.636  3214  3214 W batt_health: type=1400 audit(0.0:1449875): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:41.643  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.652 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.654  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.666  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.668 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.669 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.679  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=0.99 dur=1010.83 max=1010.83 min=1010.83
+05-25 23:24:41.689 10064 10213 D Capacitor: Handling local request: https://localhost/vibes
+05-25 23:24:41.715 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.720 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.720 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.726  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:41.736  1601 10638 D BufferPoolAccessor2.0: bufferpool2 0xe9d46e68 : 8(65536 size) total buffers - 5(40960 size) used buffers - 201/209 (recycle/alloc) - 8/414 (fetch/transfer)
+05-25 23:24:41.739  1623 10640 D BufferPoolAccessor2.0: bufferpool2 0xb4000075377affb8 : 4(18432 size) total buffers - 1(4608 size) used buffers - 204/208 (recycle/alloc) - 4/207 (fetch/transfer)
+05-25 23:24:41.740 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.743  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=0.99 dur=1009.19 max=1009.19 min=1009.19
+05-25 23:24:41.743  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:1.982976,dur:1008.59,max:948.64,min:59.94  
+05-25 23:24:41.744  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:41.761 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.772 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.772 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.798 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.798 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.812 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.812 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.833 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.834 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144512, pluginId: NativeAudio, methodName: configure
+05-25 23:24:41.834 10064 10064 V Capacitor: callback: 18144512, pluginId: NativeAudio, methodName: configure, methodData: {"backgroundPlayback":true,"showNotification":true,"focus":true,"debug":true}
+05-25 23:24:41.834 10064 10270 W AudioManager: Use of stream types is deprecated for operations other than volume control
+05-25 23:24:41.834 10064 10270 W AudioManager: See the documentation of requestAudioFocus() for what to use instead with android.media.AudioAttributes to qualify your playback use case
+05-25 23:24:41.836 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.836 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.837  1894  5523 I MediaFocusControl: requestAudioFocus() from uid/pid 10465/10064 AA=USAGE_MEDIA/CONTENT_TYPE_UNKNOWN clientId=android.media.AudioManager@bb847b9ee.forgr.audio.NativeAudio@56717fe callingPack=io.ionic.starter req=3 flags=0x0 sdk=36
+05-25 23:24:41.837 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144513, pluginId: NativeAudio, methodName: addListener
+05-25 23:24:41.838  1894  5523 V AS.AudioService: setMode(mode=0, pid=10064, uid=10465, caller=io.ionic.starter)
+05-25 23:24:41.838 10064 10064 V Capacitor: callback: 18144513, pluginId: NativeAudio, methodName: addListener, methodData: {"eventName":"playbackState"}
+05-25 23:24:41.838  1894  5523 W AS.AudioService: Audio Settings Permission Denial: setMode() from pid=10064, uid=10465
+05-25 23:24:41.838 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144514, pluginId: GoogleAuth, methodName: initialize
+05-25 23:24:41.838 10064 10064 V Capacitor: callback: 18144514, pluginId: GoogleAuth, methodName: initialize, methodData: {"clientId":"443152571832-l9iftgda1qh86uovm6t5jq4ve9ddh2eh.apps.googleusercontent.com","scopes":["profile","email"],"grantOfflineAccess":false}
+05-25 23:24:41.841 10064 10216 D Capacitor: Handling local request: https://localhost/assets/TabsLayout-D1atWDhm.js
+05-25 23:24:41.841 10064 10214 D Capacitor: Handling local request: https://localhost/assets/TabsLayout-C8Fv1aMp.css
+05-25 23:24:41.844 10064 10221 D Capacitor: Handling local request: https://localhost/assets/VibesPage-DkJeNKBp.css
+05-25 23:24:41.845 10064 10213 D Capacitor: Handling local request: https://localhost/assets/VibesPage-mLnVS9cX.js
+05-25 23:24:41.850  1623  2038 D BufferPoolAccessor2.0: bufferpool2 0xb4000075377a82d8 : 0(0 size) total buffers - 0(0 size) used buffers - 624/628 (recycle/alloc) - 5/628 (fetch/transfer)
+05-25 23:24:41.850  1623  2038 D BufferPoolAccessor2.0: bufferpool2 0xb4000075377abca8 : 0(0 size) total buffers - 0(0 size) used buffers - 0/0 (recycle/alloc) - 0/0 (fetch/transfer)
+05-25 23:24:41.850  1623  2038 D BufferPoolAccessor2.0: evictor expired: 3, evicted: 2
+05-25 23:24:41.850  1601  2246 D BufferPoolAccessor2.0: bufferpool2 0xe9d43508 : 0(0 size) total buffers - 0(0 size) used buffers - 621/630 (recycle/alloc) - 9/1256 (fetch/transfer)
+05-25 23:24:41.850  1601  2246 D BufferPoolAccessor2.0: evictor expired: 1, evicted: 1
+05-25 23:24:41.867 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.868 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.873 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.873 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.877 10064 10225 D Capacitor: Handling local request: https://localhost/favicon.png
+05-25 23:24:41.878  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:41.879 10064 10224 D Capacitor: Handling local request: https://localhost/favicon.png
+05-25 23:24:41.880 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144515, pluginId: StatusBar, methodName: show
+05-25 23:24:41.880 10064 10064 V Capacitor: callback: 18144515, pluginId: StatusBar, methodName: show, methodData: {}
+05-25 23:24:41.880 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144516, pluginId: Preferences, methodName: get
+05-25 23:24:41.880 10064 10064 V Capacitor: callback: 18144516, pluginId: Preferences, methodName: get, methodData: {"key":"ixora_theme_mode_v1"}
+05-25 23:24:41.881 10064 10064 V Capacitor/StatusBarPlugin: Notifying listeners for event statusBarVisibilityChanged
+05-25 23:24:41.882 10064 10064 D Capacitor/StatusBarPlugin: No listeners found for event statusBarVisibilityChanged
+05-25 23:24:41.885 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.886 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.888 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144517, pluginId: StatusBar, methodName: setStyle
+05-25 23:24:41.888 10064 10064 V Capacitor: callback: 18144517, pluginId: StatusBar, methodName: setStyle, methodData: {"style":"LIGHT"}
+05-25 23:24:41.895 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"value":null}
+05-25 23:24:41.895 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.896 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144518, pluginId: StatusBar, methodName: show
+05-25 23:24:41.896 10064 10064 V Capacitor: callback: 18144518, pluginId: StatusBar, methodName: show, methodData: {}
+05-25 23:24:41.897 10064 10064 V Capacitor/StatusBarPlugin: Notifying listeners for event statusBarVisibilityChanged
+05-25 23:24:41.897 10064 10064 D Capacitor/StatusBarPlugin: No listeners found for event statusBarVisibilityChanged
+05-25 23:24:41.898 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.898 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:41.908 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.909 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144519, pluginId: Keyboard, methodName: getResizeMode
+05-25 23:24:41.909 10064 10064 V Capacitor: callback: 18144519, pluginId: Keyboard, methodName: getResizeMode, methodData: {}
+05-25 23:24:41.910 10064 10270 D Capacitor: Sending plugin error: {"save":false,"callbackId":"18144519","pluginId":"Keyboard","methodName":"getResizeMode","success":false,"error":{"message":"not implemented","code":"UNIMPLEMENTED"}}
+05-25 23:24:41.913 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.914 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144520, pluginId: App, methodName: addListener
+05-25 23:24:41.914 10064 10064 V Capacitor: callback: 18144520, pluginId: App, methodName: addListener, methodData: {"eventName":"appStateChange"}
+05-25 23:24:41.919  1324  1324 I BufferQueueProducer: [StatusBar#91](this:0xb4000076b4a88d70,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=7.90 dur=5190.08 max=4580.90 min=10.36
+05-25 23:24:41.922 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.922 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144521, pluginId: Preferences, methodName: get
+05-25 23:24:41.923 10064 10064 V Capacitor: callback: 18144521, pluginId: Preferences, methodName: get, methodData: {"key":"offline_vibe_manifest_v1"}
+05-25 23:24:41.925 10064 10213 D Capacitor: Handling local request: https://localhost/assets/p-Cz5nLPGT-Cao1T_Xl.js
+05-25 23:24:41.939 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.940 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.941 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144522, pluginId: StatusBar, methodName: setBackgroundColor
+05-25 23:24:41.941 10064 10064 V Capacitor: callback: 18144522, pluginId: StatusBar, methodName: setBackgroundColor, methodData: {"color":"#ffffff"}
+05-25 23:24:41.953 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.954 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.955 10064 10064 E Capacitor/Console: File:  - Line 330 - Msg: [object Object]
+05-25 23:24:41.958 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: {"value":"{\"version\":1,\"vibes\":{\"5\":{\"vibeId\":5,\"downloadedAt\":1779776655296,\"vibe\":{\"id\":5,\"name\":\"__Ixora Native QA Offline Alternate\",\"description\":\"Seeded for native Android offline QA (second vibe / switch tests).\",\"thumbnail_url\":null,\"card_image_url\":null,\"player_background_url\":null,\"artwork_url\":null,\"is_active\":true,\"sounds_count\":1},\"vibeSounds\":[{\"id\":4,\"name\":\"__Ixora Native QA Fixture Sound B\",\"file_url\":\"https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3\",\"thumbnail_url\":\"https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop\",\"category\":\"__qa_native__\",\"duration\":null,\"volume\":80,\"loop\":true,\"sort_order\":0,\"play_mode\":\"loop\",\"repeat_interval_seconds\":null,\"start_offset_seconds\":null,\"play_duration_seconds\":null,\"fade_in_seconds\":null,\"fade_out_seconds\":null}]}}}"}
+05-25 23:24:41.959 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.959 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144523, pluginId: StatusBar, methodName: setStyle
+05-25 23:24:41.959 10064 10064 V Capacitor: callback: 18144523, pluginId: StatusBar, methodName: setStyle, methodData: {"style":"DARK"}
+05-25 23:24:41.970 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.972 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.973 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.973 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.974 10064 10064 I Capacitor/Console: File:  - Line 349 - Msg: [object Object]
+05-25 23:24:41.975 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144524, pluginId: StatusBar, methodName: setBackgroundColor
+05-25 23:24:41.975 10064 10064 V Capacitor: callback: 18144524, pluginId: StatusBar, methodName: setBackgroundColor, methodData: {"color":"#121212"}
+05-25 23:24:41.976 10064 10064 V Capacitor/Plugin: To native (Capacitor plugin): callbackId: 18144525, pluginId: App, methodName: addListener
+05-25 23:24:41.976 10064 10064 V Capacitor: callback: 18144525, pluginId: App, methodName: addListener, methodData: {"eventName":"backButton"}
+05-25 23:24:41.976 10064 10216 D Capacitor: Handling local request: https://localhost/assets/p-BgwEQWW6-Dq_cgUaX.js
+05-25 23:24:41.977 10064 10214 D Capacitor: Handling local request: https://localhost/assets/p-CneGxKsZ-gUKSkKCY.js
+05-25 23:24:41.980 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.984 10064 10275 E o.ionic.starter: == MALI DEBUG ===BAD ALLOC from gles_texture_egl_image_get_2d_template err is 0
+05-25 23:24:41.987 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.987 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.987 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.987 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.987 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:41.996 10064 10064 I Capacitor/Console: File:  - Line 333 - Msg: undefined
+05-25 23:24:41.999 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:41.999 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.004 10064 10064 W Capacitor/Console: File: https://localhost/assets/useVibes-7bWjDji_.js - Line 1 - Msg: Mixed Content: The page at 'https://localhost/vibes' was loaded over HTTPS, but requested an insecure resource 'http://192.168.1.70:8000/api/vibes'. This content should also be served over HTTPS.
+05-25 23:24:42.028 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:42.029 10064 10129 E GPUAUX  : [AUX]GuiExtAuxCheckAuxPath:670: Null anb
+05-25 23:24:42.102 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.102 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449876): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:42.135  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:42.136  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:42.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449877): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:42.136  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:42.136  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:42.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449878): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:42.167  7405  7457 W fbservices-stub:NotificationDeliveryStorePreferences: [AI] Failed to deserialize notification item
+05-25 23:24:42.168  7405  7457 W fbservices-stub:NotificationDeliveryStorePreferences: [AI] Failed to deserialize notification item
+05-25 23:24:42.198  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:42.203 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.203 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.208  1894  2226 D WifiConfigStore: Writing to stores completed in 11 ms.
+05-25 23:24:42.246  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:91
+05-25 23:24:42.246  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:47
+05-25 23:24:42.246  1265  1314 I libPowerHal: [updateFPS] pid(10064) : -1 => 60
+05-25 23:24:42.247  1265  1334 I libPowerHal: [perfNotifyAppState] pack:io.ionic.starter, act:io.ionic.starter.MainActivity, state:5, pid:10064, uid:10465, fps:60
+05-25 23:24:42.248  1265  1334 I UxUtility: notifyForegroundApp pack:io.ionic.starter, uid:10465
+05-25 23:24:42.248  1265  1334 I TouchUtility: notifyAppState error = NULL
+05-25 23:24:42.305 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.305 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.408 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.409 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.512 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.513 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.616 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.617 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.640  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:42.636  3214  3214 W batt_health: type=1400 audit(0.0:1449879): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:42.719 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.720 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.822 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.822 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:42.892  1329  1358 D ccci_mdinit: (1):monitor_time_update_thread round:38340 ########
+05-25 23:24:42.926 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:42.926 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.028 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.029 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.131 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.131 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.137  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:43.137  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:43.138  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:43.138  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:43.132  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449880): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:43.136  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449881): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:43.136  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449882): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:43.236 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.236 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.246  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:43.246  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:43.246  1265  1314 I libPowerHal: [updateFPS] pid(10064) : 60 => -1
+05-25 23:24:43.247  1265  1334 I libPowerHal: [perfNotifyAppState] pack:io.ionic.starter, act:io.ionic.starter.MainActivity, state:5, pid:10064, uid:10465, fps:-1
+05-25 23:24:43.248  1265  1334 I UxUtility: notifyForegroundApp pack:io.ionic.starter, uid:10465
+05-25 23:24:43.248  1265  1334 I TouchUtility: notifyAppState error = NULL
+05-25 23:24:43.250  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.254  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.265  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.276  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.287  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.298  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.310  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:43.338 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.338 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.440 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.440 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.541 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.542 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.641  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:43.636  3214  3214 W batt_health: type=1400 audit(0.0:1449883): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:43.643 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.644 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.745 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.745 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.807  1613  1836 D ULogGuard: Monitoring: 12 threads, 0 requests, 0 time-bombs; 9 guards. ResetFlags = 0x7
+05-25 23:24:43.846 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.846 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:43.949 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:43.949 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.012  1179  2744 D DlbDap2Process: process() called [2238000] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:44.052 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.052 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.138  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:44.139  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:44.136  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449884): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:44.140  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:44.141  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:44.136  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449885): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:44.155 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.155 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.246  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:44.247  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:44.258 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.259 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.362 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.363 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.470 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.470 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.571 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.572 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.642  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:44.642 24350  7800 I gle.android.gms: Explicit concurrent mark compact GC freed 10MB AllocSpace bytes, 30(1432KB) LOS objects, 50% free, 35MB/71MB, paused 392us,2.177ms total 162.970ms
+05-25 23:24:44.640  3214  3214 W batt_health: type=1400 audit(0.0:1449887): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:44.655 24350 24356 W gle.android.gms: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~sny61YjKUflYA0KKIoW4-g==/io.ionic.starter-SkT9kq4OOZxL7FMDiDKH6A==/base.apk' with 1 weak references
+05-25 23:24:44.674 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.674 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.778 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.778 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.881 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.881 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:44.985 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:44.985 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.089 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.089 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.140  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:45.141  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:45.136  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449888): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:45.141  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:45.142  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:45.140  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449890): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:45.192 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.193 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.247  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:45.247  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:45.295 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.295 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.398 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.398 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.501 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.502 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.604 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.604 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.640  3214  3214 W batt_health: type=1400 audit(0.0:1449891): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:45.643  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:45.707 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.707 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.810 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.810 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:45.914 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:45.914 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.016 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.016 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.119 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.119 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.142  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:46.143  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:46.143  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:46.143  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:46.140  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449892): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:46.140  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449893): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:46.140  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449894): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:46.224 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.224 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.247  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:46.248  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:46.326 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.327 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.428 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.429 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.532 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.533 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.636 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.636 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.640  3214  3214 W batt_health: type=1400 audit(0.0:1449895): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:46.644  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:46.659  1179  2744 D DlbDap2Process: process() called [2238500] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:46.741 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.741 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.809  1613  1836 D ULogGuard: Monitoring: 12 threads, 0 requests, 0 time-bombs; 9 guards. ResetFlags = 0x7
+05-25 23:24:46.844 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.844 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:46.947 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:46.947 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.049 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.049 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.144  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:47.140  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449896): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:47.144  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:47.145  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:47.145  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:47.151 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.151 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.247  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:47.247  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:47.251  1601 10638 D BufferPoolAccessor2.0: bufferpool2 0xe9d46e68 : 8(65536 size) total buffers - 5(40960 size) used buffers - 413/421 (recycle/alloc) - 8/838 (fetch/transfer)
+05-25 23:24:47.254 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.255 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.255  1623 10640 D BufferPoolAccessor2.0: bufferpool2 0xb4000075377affb8 : 4(18432 size) total buffers - 1(4608 size) used buffers - 416/420 (recycle/alloc) - 4/419 (fetch/transfer)
+05-25 23:24:47.273  1894  2336 D ActivityManager: freezing 8347 android.process.acore, reason=moto_freezer, adj=915, adjType=cch-empty
+05-25 23:24:47.279  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+05-25 23:24:47.280  1894  2263 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+05-25 23:24:47.280  1894  2263 D InetDiagMessage: Destroyed live tcp sockets for uids={10128} in 4ms
+05-25 23:24:47.357 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.357 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.463 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.464 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.567 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.567 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.644  3214  3214 W batt_health: type=1400 audit(0.0:1449899): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:47.646  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:47.669 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.670 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.773 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.773 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.876 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.876 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:47.978 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:47.978 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.082 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.082 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.145  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:48.146  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:48.146  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:48.147  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:48.144  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449900): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:48.144  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449901): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:48.144  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449902): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:48.185 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.186 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.248  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:48.248  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:48.288 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.289 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.392 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.392 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.494 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.494 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.599 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.600 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.644  3214  3214 W batt_health: type=1400 audit(0.0:1449903): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:48.647  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:48.702 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.702 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.805 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.806 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:48.910 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:48.911 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.013 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.014 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.116 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.116 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.147  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:49.144  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449904): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:49.144  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449905): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:49.144  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449906): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:49.148  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:49.148  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:49.148  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:49.219 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.220 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.248  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:49.248  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:49.324 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.325 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.343  1179  2744 D DlbDap2Process: process() called [2239000] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:49.429 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.430 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.534 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.535 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.640 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.640 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.649  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:49.644  3214  3214 W batt_health: type=1400 audit(0.0:1449907): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:49.699  1894  2564 I DataStallMonitor: TcpDataFromSnmp:0,0,0,0
+05-25 23:24:49.743 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.743 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.810  1613  1836 D ULogGuard: Monitoring: 12 threads, 0 requests, 0 time-bombs; 9 guards. ResetFlags = 0x7
+05-25 23:24:49.847 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.847 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:49.949 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:49.950 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.052 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.052 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.116  3214  3214 W batt_health: type=1400 audit(0.0:1449908): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:50.121  3214  3214 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:50.123  1894  2169 D BatteryService: uevent={POWER_SUPPLY_VOLTAGE_NOW=4461000, POWER_SUPPLY_VBUS_PRESENT=true, POWER_SUPPLY_TYPE=Battery, POWER_SUPPLY_HEALTH=Good, POWER_SUPPLY_TECHNOLOGY=Li-poly, POWER_SUPPLY_SCOPE=83, POWER_SUPPLY_CHARGE_FULL_DESIGN=4400000, SEQNUM=336497, POWER_SUPPLY_STATUS=Charging, POWER_SUPPLY_CYCLE_COUNT=945, POWER_SUPPLY_CAPACITY=100, DEVPATH=/devices/platform/smart_battery/power_supply/battery, POWER_SUPPLY_ENERGY_EMPTY=0, POWER_SUPPLY_CHARGE_RATE=Normal, POWER_SUPPLY_CAPACITY_LEVEL=Full, POWER_SUPPLY_CURRENT_NOW=289000, POWER_SUPPLY_PRESENT=1, POWER_SUPPLY_POWER_WATT=2, POWER_SUPPLY_CHARGE_FULL=3636000, SUBSYSTEM=power_supply, POWER_SUPPLY_VOLTAGE_OCV=4461000, POWER_SUPPLY_TEMP=289, ACTION=change, POWER_SUPPLY_AGE=83, POWER_SUPPLY_NAME=battery, POWER_SUPPLY_LPD_PRESENT=false, POWER_SUPPLY_CHARGE_COUNTER=3636000}
+05-25 23:24:50.147  1894  1894 V UiModeManager: updateLocked: null action, mDockState=0, category=null
+05-25 23:24:50.148  1894  1894 D UiModeManager: updateConfigurationLocked: mDockState=0; mCarMode=false; mNightMode=com.android.server.UiModeManagerService$1@88740f5; mNightModeCustomType=-1; uiMode=33
+05-25 23:24:50.148  2382  3646 D PowerUI : can't show warning due to - plugged: true status unknown: false
+05-25 23:24:50.149  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:50.149  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:50.150  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:50.150  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:50.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449910): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:50.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449911): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:50.154 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.155 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.248  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:50.248  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:50.256 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.256 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.363 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.363 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.466 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.466 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.570 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.570 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.648  3214  3214 W batt_health: type=1400 audit(0.0:1449912): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:50.651  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:50.673 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.674 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.776 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.777 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.879 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.880 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:50.983 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:50.983 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.086 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.086 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.150  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:51.151  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:51.151  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:51.151  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:51.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449913): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:51.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449914): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:51.189 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.189 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.248  1265  1314 I libPerfCtl: xgfGetFPS pid:2382 fps:-1
+05-25 23:24:51.249  1265  1314 I libPerfCtl: xgfGetFPS pid:10064 fps:-1
+05-25 23:24:51.292 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.292 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.394 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.394 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.498 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.498 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.603 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.604 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.652  3214  3220 W libc    : Access denied finding property "ro.sys.battery.FirstUsageDate"
+05-25 23:24:51.648  3214  3214 W batt_health: type=1400 audit(0.0:1449916): avc:  denied  { read } for  name="u:object_r:moto_battinfo_prop:s0" dev="tmpfs" ino=286 scontext=u:r:batt_health:s0 tcontext=u:object_r:moto_battinfo_prop:s0 tclass=file permissive=0
+05-25 23:24:51.705 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.706 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.808 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.808 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.911 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:51.911 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:51.992  1179  2744 D DlbDap2Process: process() called [2239500] times with input format 0x22 and channel mask 0x3 (ProcessingMode=10), htEnable=0(0, 0, 0)
+05-25 23:24:52.014 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:52.015 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:52.117 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:52.117 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:52.152  1580  1580 W lbs_dbg_ext: Waited for hwservicemanager.ready for a second, waiting another...
+05-25 23:24:52.153  1580  1580 W libc    : Access denied finding property "hwservicemanager.disabled"
+05-25 23:24:52.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449917): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:52.153  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:52.153  1580  1580 W libc    : Access denied finding property "hwservicemanager.ready"
+05-25 23:24:52.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449918): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:52.148  1580  1580 W binder:1580_2: type=1400 audit(0.0:1449919): avc:  denied  { read } for  name="u:object_r:hwservicemanager_prop:s0" dev="tmpfs" ino=233 scontext=u:r:lbs_dbg_ext:s0 tcontext=u:object_r:hwservicemanager_prop:s0 tclass=file permissive=0
+05-25 23:24:52.220 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:52.221 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:52.289  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:52.298  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:52.310  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:52.321  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:52.323 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:52.323 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime
+05-25 23:24:52.332  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:52.343  1191  1485 I hwcomposer: [DRMDEV] (0) failed to waitNextVsync: -1  
+05-25 23:24:52.346  1324  1324 I BufferQueueProducer: [io.ionic.starter/io.ionic.starter.MainActivity#39861](this:0xb4000076b4abcee0,id:-1,api:0,p:-1,c:1324) queueBuffer: fps=1.03 dur=10666.91 max=10293.48 min=10.94
+05-25 23:24:52.349  1191  1288 I hwcomposer: [HWCDisplay] [Display_0 (type:1)] fps:2.545799,dur:10605.71,max:10133.84,min:9.89  
+05-25 23:24:52.394  1191  1480 I hwcomposer: [HWC] (0)fire a callback of refresh to SF[4]  
+05-25 23:24:52.406  1324  1324 I BufferQueueProducer: [FramebufferSurface](this:0xb4000075c48f0960,id:-1,api:1,p:1324,c:1324) queueBuffer: fps=0.28 dur=10663.03 max=10191.30 min=148.41
+05-25 23:24:52.455 10064 10064 V Capacitor/NativeAudio: Notifying listeners for event currentTime
+05-25 23:24:52.455 10064 10064 D Capacitor/NativeAudio: No listeners found for event currentTime

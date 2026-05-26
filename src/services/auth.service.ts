@@ -50,6 +50,67 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 /** Firebase UID for which `laravelUser` was populated this session. */
 let syncedFirebaseUid: string | null = null;
 
+const DEFAULT_FIREBASE_AUTH_WAIT_MS = 15_000;
+
+/** Thrown when a protected API call cannot obtain a Firebase ID token (signed out or auth not restored in time). */
+export class FirebaseAuthNotReadyError extends Error {
+  constructor(message = 'Not signed in. Sign in again to continue.') {
+    super(message);
+    this.name = 'FirebaseAuthNotReadyError';
+  }
+}
+
+let firebaseUserWaitInflight: Promise<User | null> | null = null;
+
+/**
+ * Resolves once Firebase has finished restoring auth state (`auth.authStateReady()`),
+ * capped by `timeoutMs`. Afterwards reads `auth.currentUser` so protected callers avoid
+ * sending requests without a Bearer token immediately after reload / navigation.
+ *
+ * Dedupes concurrent waiters onto a single pending promise.
+ */
+export async function waitForFirebaseUser(
+  timeoutMs: number = DEFAULT_FIREBASE_AUTH_WAIT_MS,
+): Promise<User | null> {
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+
+  if (!firebaseUserWaitInflight) {
+    firebaseUserWaitInflight = (async (): Promise<User | null> => {
+      await Promise.race([
+        auth.authStateReady(),
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, timeoutMs);
+        }),
+      ]);
+      return auth.currentUser;
+    })().finally(() => {
+      firebaseUserWaitInflight = null;
+    });
+  }
+
+  return firebaseUserWaitInflight;
+}
+
+/**
+ * Ensures Firebase has restored `currentUser`, then returns a Firebase ID token.
+ * Use for protected Laravel routes so requests never omit `Authorization`.
+ */
+export async function getRequiredIdToken(
+  timeoutMs: number = DEFAULT_FIREBASE_AUTH_WAIT_MS,
+): Promise<string> {
+  const user = await waitForFirebaseUser(timeoutMs);
+  if (!user) {
+    throw new FirebaseAuthNotReadyError();
+  }
+  const token = await user.getIdToken();
+  if (!token) {
+    throw new FirebaseAuthNotReadyError('No Firebase ID token available.');
+  }
+  return token;
+}
+
 function clearBackendSession(): void {
   syncedFirebaseUid = null;
   laravelUser.value = null;
@@ -243,4 +304,6 @@ export const authService = {
   getIdToken,
   requestPasswordReset,
   ensureLaravelUserSynced,
+  waitForFirebaseUser,
+  getRequiredIdToken,
 };

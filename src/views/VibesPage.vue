@@ -10,18 +10,18 @@
       <div class="vibes-content page-shell">
 
         <AppLoadingState
-          v-if="loading && !vibes.length"
+          v-if="vibesListLoading && !vibes.length"
           class="vibes-state-slot"
           compact
           title="Loading your vibes…"
         />
 
         <AppErrorState
-          v-else-if="error && !vibes.length"
+          v-else-if="vibesListError && !vibes.length"
           class="vibes-state-slot"
           compact
           title="Couldn’t load vibes"
-          :description="error ?? ''"
+          :description="vibesListError ?? ''"
           retry-label="Retry"
           @retry="fetchVibes"
         />
@@ -123,14 +123,14 @@ import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { addOutline, cloudOfflineOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
 import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
 import { getVibeCardBackgroundStyle, getVibeCardImageUrl } from '@/utils/artwork';
 
 const router = useRouter();
-const { vibes, loading, error, fetchVibes, deleteVibe } = useVibes();
+const { vibes, vibesListLoading, vibesListError, fetchVibes, deleteVibe } = useVibes();
 
 const offlineVibeIds = ref<number[]>([]);
 
@@ -138,12 +138,8 @@ async function refreshOfflineBadges(): Promise<void> {
   offlineVibeIds.value = await getDownloadedVibeIds();
 }
 
-onMounted(() => {
-  void fetchVibes();
-  void refreshOfflineBadges();
-});
-
 onIonViewWillEnter(() => {
+  void fetchVibes();
   void refreshOfflineBadges();
 });
 
