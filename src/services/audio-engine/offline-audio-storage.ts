@@ -30,6 +30,19 @@ export interface OfflineManifestEntry {
   savedAt: number;
 }
 
+export type OfflineLayerResolutionReason =
+  | 'local'
+  | 'no_manifest_entry'
+  | 'stale_url'
+  | 'missing_file';
+
+export interface OfflineLayerInspection {
+  soundId: number;
+  reason: OfflineLayerResolutionReason;
+  manifestRemoteUrl: string | null;
+  planUrl: string;
+}
+
 export function offlineAudioKey(vibeId: number, soundId: number): string {
   return `${vibeId}:${soundId}`;
 }
@@ -58,6 +71,153 @@ async function readManifest(): Promise<Record<string, OfflineManifestEntry>> {
 
 async function writeManifest(manifest: Record<string, OfflineManifestEntry>): Promise<void> {
   await Preferences.set({ key: MANIFEST_KEY, value: JSON.stringify(manifest) });
+}
+
+function vibeManifestPrefix(vibeId: number): string {
+  return `${vibeId}:`;
+}
+
+/** Snapshot manifest rows for one vibe before a download batch (rollback on partial failure). */
+export async function backupOfflineAudioManifestForVibe(
+  vibeId: number,
+): Promise<Record<string, OfflineManifestEntry>> {
+  const manifest = await readManifest();
+  const prefix = vibeManifestPrefix(vibeId);
+  const backup: Record<string, OfflineManifestEntry> = {};
+  for (const [key, entry] of Object.entries(manifest)) {
+    if (key.startsWith(prefix)) backup[key] = { ...entry };
+  }
+  return backup;
+}
+
+/**
+ * Reverts manifest rows changed during a failed download batch and deletes new/changed files.
+ * Prior entries from `priorEntries` are restored exactly.
+ */
+export async function rollbackOfflineAudioDownloadBatch(
+  vibeId: number,
+  priorEntries: Record<string, OfflineManifestEntry>,
+): Promise<void> {
+  if (!Capacitor.isNativePlatform() || vibeId <= 0) return;
+
+  const manifest = await readManifest();
+  const prefix = vibeManifestPrefix(vibeId);
+  const currentKeys = Object.keys(manifest).filter((k) => k.startsWith(prefix));
+
+  for (const key of currentKeys) {
+    const current = manifest[key];
+    const prior = priorEntries[key];
+
+    if (!prior) {
+      try {
+        await Filesystem.deleteFile({
+          path: current.relativePath,
+          directory: Directory.Data,
+        });
+      } catch {
+        /* already gone */
+      }
+      delete manifest[key];
+      continue;
+    }
+
+    if (prior.relativePath !== current.relativePath || prior.remoteUrl !== current.remoteUrl) {
+      if (prior.relativePath !== current.relativePath) {
+        try {
+          await Filesystem.deleteFile({
+            path: current.relativePath,
+            directory: Directory.Data,
+          });
+        } catch {
+          /* already gone */
+        }
+      }
+      manifest[key] = { ...prior };
+    }
+  }
+
+  await writeManifest(manifest);
+  console.warn(`${LOG} rolled back partial download batch`, { vibeId, restoredKeys: Object.keys(priorEntries).length });
+}
+
+/** True when audio manifest rows exist but no vibe metadata snapshot (broken partial state). */
+export async function hasOrphanOfflineAudioManifest(vibeId: number): Promise<boolean> {
+  const manifest = await readManifest();
+  return Object.keys(manifest).some((k) => k.startsWith(vibeManifestPrefix(vibeId)));
+}
+
+/** Removes audio files + manifest rows when no snapshot exists (partial download cleanup). */
+export async function cleanupOrphanedOfflineAudio(vibeId: number): Promise<boolean> {
+  if (!Capacitor.isNativePlatform() || vibeId <= 0) return false;
+  const hasRows = await hasOrphanOfflineAudioManifest(vibeId);
+  if (!hasRows) return false;
+  await removeAllOfflineAudioForVibe(vibeId);
+  console.warn(`${LOG} removed orphaned audio manifest (no vibe snapshot)`, { vibeId });
+  return true;
+}
+
+export async function getOfflineManifestRemoteUrlsForVibe(
+  vibeId: number,
+): Promise<Record<number, string>> {
+  const manifest = await readManifest();
+  const prefix = vibeManifestPrefix(vibeId);
+  const out: Record<number, string> = {};
+  for (const [key, entry] of Object.entries(manifest)) {
+    if (!key.startsWith(prefix)) continue;
+    const soundId = Number(key.slice(prefix.length));
+    if (Number.isFinite(soundId)) out[soundId] = entry.remoteUrl;
+  }
+  return out;
+}
+
+async function offlineFileExists(relativePath: string): Promise<boolean> {
+  try {
+    await Filesystem.stat({ path: relativePath, directory: Directory.Data });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Read-only layer inspection — explains why playback would use local vs HTTPS fallback. */
+export async function inspectOfflineLayer(
+  vibeId: number,
+  soundId: number,
+  currentRemoteUrl: string,
+): Promise<OfflineLayerInspection> {
+  const planUrl = currentRemoteUrl.trim();
+  if (!Capacitor.isNativePlatform() || vibeId <= 0) {
+    return { soundId, reason: 'no_manifest_entry', manifestRemoteUrl: null, planUrl };
+  }
+
+  const manifest = await readManifest();
+  const entry = manifest[offlineAudioKey(vibeId, soundId)];
+
+  if (!entry) {
+    return { soundId, reason: 'no_manifest_entry', manifestRemoteUrl: null, planUrl };
+  }
+
+  if (entry.remoteUrl !== planUrl) {
+    console.warn(`${LOG} manifest URL mismatch`, {
+      vibeId,
+      soundId,
+      manifestUrl: entry.remoteUrl.slice(0, 80),
+      planUrl: planUrl.slice(0, 80),
+    });
+    return { soundId, reason: 'stale_url', manifestRemoteUrl: entry.remoteUrl, planUrl };
+  }
+
+  const exists = await offlineFileExists(entry.relativePath);
+  if (!exists) {
+    console.warn(`${LOG} manifest entry present but file missing`, {
+      vibeId,
+      soundId,
+      relativePath: entry.relativePath,
+    });
+    return { soundId, reason: 'missing_file', manifestRemoteUrl: entry.remoteUrl, planUrl };
+  }
+
+  return { soundId, reason: 'local', manifestRemoteUrl: entry.remoteUrl, planUrl };
 }
 
 export function guessAudioExtension(remoteUrl: string, contentType: string | null): string {
@@ -186,15 +346,20 @@ export async function getOfflinePlaybackUriIfValid(
   const entry    = manifest[offlineAudioKey(vibeId, soundId)];
   const trimmed  = currentRemoteUrl.trim();
 
-  if (!entry || entry.remoteUrl !== trimmed) return null;
+  if (!entry) return null;
 
-  try {
-    await Filesystem.stat({
-      path:      entry.relativePath,
-      directory: Directory.Data,
+  if (entry.remoteUrl !== trimmed) {
+    console.warn(`${LOG} local URI skipped — URL mismatch`, {
+      vibeId,
+      soundId,
+      manifestUrl: entry.remoteUrl.slice(0, 80),
+      planUrl: trimmed.slice(0, 80),
     });
-  } catch {
-    console.warn(`${LOG} local URI resolved — missing file`, {
+    return null;
+  }
+
+  if (!(await offlineFileExists(entry.relativePath))) {
+    console.warn(`${LOG} local URI skipped — missing file`, {
       vibeId,
       soundId,
       relativePath: entry.relativePath,
