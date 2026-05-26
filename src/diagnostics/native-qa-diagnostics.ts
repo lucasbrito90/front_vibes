@@ -4,6 +4,7 @@
  */
 import { auth } from '@/services/firebase';
 import { getRequiredIdToken, laravelUser } from '@/services/auth.service';
+import { usePlayerStore } from '@/stores/player.store';
 
 export const NATIVE_QA_GLOBAL_KEY = '__IXORA_NATIVE_QA__' as const;
 
@@ -36,6 +37,22 @@ export function installNativeQaDiagnostics(): void {
 
     getLaravelSyncedSnapshot(): typeof laravelUser.value {
       return laravelUser.value;
+    },
+
+    /** Pinia player store snapshot for native WebView QA (no secrets). */
+    getPlayerStoreSnapshot(): {
+      currentVibeId: number | null;
+      playbackState: string;
+      showMiniPlayer: boolean;
+      hasActiveLayers: boolean;
+    } {
+      const store = usePlayerStore();
+      return {
+        currentVibeId: store.currentVibeId,
+        playbackState: store.playbackState,
+        showMiniPlayer: store.showMiniPlayer,
+        hasActiveLayers: store.hasActiveLayers,
+      };
     },
 
     /** Calls backend GET /api/debug/me (non-production Laravel only). */
