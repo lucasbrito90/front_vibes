@@ -4,7 +4,6 @@
       v-if="isVisible"
       class="mini-player"
       :class="{
-        'mini-player--preparing': playbackState === 'preparing',
         'mini-player--playing': playbackState === 'playing',
         'mini-player--paused': playbackState === 'paused',
       }"
@@ -50,21 +49,13 @@
           type="button"
           class="mini-player-btn"
           :class="{
-            'mini-player-btn--disabled': playbackState === 'preparing',
             'mini-player-btn--pulse': playPausePulse,
           }"
-          :disabled="playbackState === 'preparing'"
           :aria-label="playPauseLabel"
           @click.stop="handlePlayPause"
         >
           <Transition name="mini-player-control-icon" mode="out-in">
-            <ion-spinner
-              v-if="showPlayPauseSpinner"
-              key="spinner"
-              name="crescent"
-              class="mini-player-spinner"
-            />
-            <ion-icon v-else key="icon" :icon="playPauseIcon" />
+            <ion-icon key="icon" :icon="playPauseIcon" />
           </Transition>
         </button>
 
@@ -82,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { IonIcon, IonSpinner } from '@ionic/vue';
+import { IonIcon } from '@ionic/vue';
 import {
   pauseOutline,
   playOutline,
@@ -109,6 +100,7 @@ const {
   currentVibeName,
   currentSoundSummary,
   currentVibeArtworkUrl,
+  showMiniPlayer,
 } = storeToRefs(store);
 
 const playPausePulse = ref(false);
@@ -120,12 +112,7 @@ const artworkKey = computed(
 // ── Visibility ────────────────────────────────────────────────────────────────
 
 const isVisible = computed(
-  () =>
-    !route.meta.hideMiniPlayer
-    && currentVibeId.value !== null
-    && (playbackState.value === 'playing'
-      || playbackState.value === 'paused'
-      || playbackState.value === 'preparing'),
+  () => !route.meta.hideMiniPlayer && showMiniPlayer.value,
 );
 
 watch(isVisible, (next, prev) => {
@@ -147,10 +134,9 @@ const artworkGradient = computed(() => ({
 
 // ── Display text ──────────────────────────────────────────────────────────────
 
-const stateLabel = computed(() => {
-  if (playbackState.value === 'preparing') return 'Preparing…';
-  return playbackState.value === 'playing' ? 'Playing' : 'Paused';
-});
+const stateLabel = computed(() =>
+  playbackState.value === 'playing' ? 'Playing' : 'Paused',
+);
 
 const metaText = computed(() => {
   const base = currentSoundSummary.value;
@@ -162,7 +148,6 @@ const metaText = computed(() => {
 const dotClass = computed(() => ({
   'mini-player-dot--playing': playbackState.value === 'playing',
   'mini-player-dot--paused':  playbackState.value === 'paused',
-  'mini-player-dot--preparing': playbackState.value === 'preparing',
 }));
 
 // ── Controls ──────────────────────────────────────────────────────────────────
@@ -171,12 +156,9 @@ const playPauseIcon = computed(() =>
   playbackState.value === 'playing' ? pauseOutline : playOutline,
 );
 
-const showPlayPauseSpinner = computed(() => playbackState.value === 'preparing');
-
-const playPauseLabel = computed(() => {
-  if (playbackState.value === 'preparing') return 'Preparing playback';
-  return playbackState.value === 'playing' ? 'Pause' : 'Resume';
-});
+const playPauseLabel = computed(() =>
+  playbackState.value === 'playing' ? 'Pause' : 'Resume',
+);
 
 watch(playbackState, (next, prev) => {
   const toggled =
@@ -193,7 +175,6 @@ watch(playbackState, (next, prev) => {
 });
 
 function handlePlayPause(): void {
-  if (playbackState.value === 'preparing') return;
   if (playbackState.value === 'playing') {
     log.debug('pause tapped');
     store.pausePlayback();

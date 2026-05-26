@@ -61,7 +61,7 @@ import MiniPlayer from '@/components/MiniPlayer.vue';
 import { usePlayerStore } from '@/stores/player.store';
 
 const route = useRoute();
-const { playbackState } = storeToRefs(usePlayerStore());
+const { showMiniPlayer } = storeToRefs(usePlayerStore());
 
 /** Must match the `height` in MiniPlayer.vue. */
 const MINI_PLAYER_HEIGHT = 68; // px
@@ -78,11 +78,8 @@ const TAB_BAR_HEIGHT     = 56; // px
  *                             the extra scroll clearance.
  */
 const miniPlayerCssVar = computed(() => {
-  const isHidden =
-    playbackState.value === 'idle'
-    || playbackState.value === 'error'
-    || !!route.meta.hideMiniPlayer;
-  const h = isHidden ? 0 : MINI_PLAYER_HEIGHT;
+  const isVisible = showMiniPlayer.value && !route.meta.hideMiniPlayer;
+  const h = isVisible ? MINI_PLAYER_HEIGHT : 0;
   return {
     '--app-tab-bar-height':    `${TAB_BAR_HEIGHT}px`,
     '--app-mini-player-height': `${h}px`,
