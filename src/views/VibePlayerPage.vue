@@ -291,8 +291,8 @@ const vibeId = computed(() => Number(route.params.id));
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-const { vibes, selectedVibe, fetchVibe, hydrateSelectedVibeFromOffline } = useVibes();
-const { vibeSounds, fetchVibeSounds, hydrateVibeSoundsFromOffline }         = useVibeSounds();
+const { vibes, selectedVibe, fetchVibe, hydrateSelectedVibeFromOffline, clearSelectedVibeIfNot } = useVibes();
+const { vibeSounds, fetchVibeSounds, hydrateVibeSoundsFromOffline, resetVibeSoundsForRouteChange } = useVibeSounds();
 const { executionPlan, buildPlan, clearPlan } = usePlayerEngine();
 
 const store = usePlayerStore();
@@ -380,7 +380,8 @@ watch(
   vibeId,
   (id, prev) => {
     if (prev != null && id !== prev) {
-      hydrateVibeSoundsFromOffline([]);
+      resetVibeSoundsForRouteChange(id);
+      clearSelectedVibeIfNot(id);
       clearPlan();
       isDownloading.value = false;
     }
@@ -841,12 +842,19 @@ watch(
 
 async function loadPlayerPage(id: number): Promise<void> {
   const generation = ++loadGeneration;
-  log.debug('loadPlayerPage', { vibeId: id, generation });
+  const hasCachedMeta =
+    vibes.value.some((v) => v.id === id)
+    || selectedVibe.value?.id === id;
 
-  loading.value = true;
+  log.debug('loadPlayerPage', { vibeId: id, generation, hasCachedMeta });
+
   loadedFromOfflineSnapshot.value = false;
   offlineUnavailableAfterLoad.value = false;
-  clearPlan();
+
+  if (!hasCachedMeta) {
+    loading.value = true;
+    clearPlan();
+  }
 
   await Promise.all([
     fetchVibe(id),
@@ -868,7 +876,7 @@ async function loadPlayerPage(id: number): Promise<void> {
 
     if (snap && snap.vibeId === id && snap.vibeSounds.length > 0) {
       hydrateSelectedVibeFromOffline(offlineMetaToVibe(snap.vibe));
-      hydrateVibeSoundsFromOffline(snap.vibeSounds);
+      hydrateVibeSoundsFromOffline(snap.vibeSounds, id);
       buildPlan(vibeSounds.value);
       loadedFromOfflineSnapshot.value = true;
       log.debug('[OfflineVibe] restored snapshot', {

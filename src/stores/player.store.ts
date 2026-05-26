@@ -20,7 +20,7 @@
  */
 
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { toastController } from '@ionic/vue';
 
 import {
@@ -76,6 +76,21 @@ export const usePlayerStore = defineStore('player', () => {
    * never need to call the service directly.
    */
   const hasActiveLayers      = ref(false);
+
+  /**
+   * MiniPlayer represents an audible session only (playing/paused).
+   * Preparing and error keep vibe context on the full player page but must
+   * not surface a mini-player bar.
+   */
+  const showMiniPlayer = computed(
+    () =>
+      currentVibeId.value !== null
+      && (playbackState.value === 'playing' || playbackState.value === 'paused'),
+  );
+
+  function _syncHasActiveLayersFromService(): void {
+    hasActiveLayers.value = audioPlayerService.hasActiveLayers();
+  }
 
   // ── Elapsed clock ──────────────────────────────────────────────────────────
 
@@ -220,7 +235,9 @@ export const usePlayerStore = defineStore('player', () => {
       const prev = playbackState.value;
       playbackState.value = 'playing';
       _logTransition('playbackState', prev, 'playing');
+      _syncHasActiveLayersFromService();
       beginSessionClock();
+      void startBackgroundAudio(currentVibeName.value).catch(() => undefined);
       if (import.meta.env.DEV) uxLog.debug('[PlayerUX] preparing → playing');
     },
     onFailed() {
@@ -312,8 +329,8 @@ export const usePlayerStore = defineStore('player', () => {
     _clearPlaybackErrorResetTimer();
     resetElapsed();
 
-    // Set vibe context BEFORE audio engine starts so the Mini Player is
-    // immediately visible while native preload runs ("preparing").
+    // Set vibe context BEFORE audio engine starts so the full player page can
+    // show per-vibe preparing/error UX. MiniPlayer only appears after audible start.
     setCurrentVibe(id, vibeName, soundSummary, artworkUrl);
 
     // Push vibe name + artwork to audio service so every upcoming
@@ -322,17 +339,14 @@ export const usePlayerStore = defineStore('player', () => {
     setNotificationArtworkUrl(artworkUrl ?? null);
 
     const prevState = playbackState.value;
-    hasActiveLayers.value = true;
-    playbackState.value   = 'preparing';
+    playbackState.value = 'preparing';
     if (prevState !== 'preparing') _logTransition('playbackState', prevState, 'preparing');
 
     // Hand off to the audio engine. playPlan() stops any previous session
     // first (under _playPlanInProgress guard), then registers new layers.
     log.debug('playVibe — calling audioPlayerService.playPlan()', { valid });
     audioPlayerService.playPlan(layers);
-
-    // Start (or update) the foreground service so audio continues in background.
-    void startBackgroundAudio(vibeName).catch(() => undefined);
+    _syncHasActiveLayersFromService();
 
     log.debug('playVibe — done', {
       svcHasActive:  audioPlayerService.hasActiveLayers(),
@@ -365,16 +379,13 @@ export const usePlayerStore = defineStore('player', () => {
     resetElapsed();
 
     const prevState = playbackState.value;
-    hasActiveLayers.value = true;
-    playbackState.value   = 'preparing';
+    playbackState.value = 'preparing';
     if (prevState !== 'preparing') _logTransition('playbackState', prevState, 'preparing');
 
     audioPlayerService.setPlaybackVibeContext(currentVibeId.value);
     log.debug('playPlan — calling audioPlayerService.playPlan()', { valid });
     audioPlayerService.playPlan(layers);
-
-    // Start (or keep) the foreground service with the current vibe name.
-    void startBackgroundAudio(currentVibeName.value).catch(() => undefined);
+    _syncHasActiveLayersFromService();
 
     log.debug('playPlan — done', {
       svcHasActive:  audioPlayerService.hasActiveLayers(),
@@ -394,6 +405,7 @@ export const usePlayerStore = defineStore('player', () => {
       const prev = playbackState.value;
       playbackState.value = 'paused';
       if (prev !== 'paused') _logTransition('playbackState', prev, 'paused');
+      _syncHasActiveLayersFromService();
     }
     pauseElapsedTicker();
   }
@@ -409,6 +421,7 @@ export const usePlayerStore = defineStore('player', () => {
       const prev = playbackState.value;
       playbackState.value = 'playing';
       if (prev !== 'playing') _logTransition('playbackState', prev, 'playing');
+      _syncHasActiveLayersFromService();
     }
     resumeElapsedTicker();
   }
@@ -453,16 +466,14 @@ export const usePlayerStore = defineStore('player', () => {
     _clearPlaybackErrorResetTimer();
     resetElapsed();
 
-    hasActiveLayers.value = true;
     const prevState = playbackState.value;
-    playbackState.value   = 'preparing';
+    playbackState.value = 'preparing';
     if (prevState !== 'preparing') _logTransition('playbackState', prevState, 'preparing');
 
     audioPlayerService.setPlaybackVibeContext(currentVibeId.value);
     log.debug('restartPlayback — calling audioPlayerService.restartPlan()', { valid });
     audioPlayerService.restartPlan(layers);
-    // Keep / start the foreground service on restart.
-    void startBackgroundAudio(currentVibeName.value).catch(() => undefined);
+    _syncHasActiveLayersFromService();
     return true;
   }
 
@@ -510,6 +521,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentVibeArtworkUrl,
     elapsedSeconds,
     hasActiveLayers,
+    showMiniPlayer,
 
     // elapsed clock
     beginSessionClock,
