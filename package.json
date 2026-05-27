@@ -19,6 +19,8 @@
     "cap:sync:android": "cap sync android",
     "build:android:smoke": "VITE_E2E_MOCK_AUTH=true npm run build && npm run cap:sync:android",
     "test:native-offline-qa:android": "wdio run wdio.android.offline-qa.conf.ts",
+    "test:native-pause-resume-qa:android": "wdio run wdio.android.pause-resume-qa.conf.ts",
+    "capture:playback-logcat": "bash scripts/capture-playback-logcat.sh",
     "android:apk:debug": "cd android && ./gradlew assembleDebug",
     "appium:setup": "appium driver install uiautomator2",
     "test:smoke:android": "wdio run ./wdio.android.conf.ts",

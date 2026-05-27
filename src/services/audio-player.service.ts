@@ -1515,6 +1515,19 @@ function _resumeLayerDurationAfterPause(managed: ManagedLayer, layer: VibeExecut
   }, remDur);
 }
 
+export type ResumeAllSkippedReason = 'not_paused' | 'no_layers' | 'nothing_to_resume';
+
+export interface ResumeAllResult {
+  /** True when at least one layer/timer was resumed and all native/HTML resumes succeeded. */
+  resumed: boolean;
+  /** Set when resumeAll returned early without attempting playback. */
+  skipped?: ResumeAllSkippedReason;
+  /** Native asset ids whose NativeAudio.resume() rejected. */
+  failedAssetIds?: string[];
+  /** True when an HTMLAudioElement.play() rejected during resume. */
+  htmlPlayFailed?: boolean;
+}
+
 function pauseAll(): void {
   log.debug('pauseAll', { layers: _layers.size, nativeLayers: _nativeLayers.size });
   if (!_layers.size) {
@@ -1582,18 +1595,28 @@ function pauseAll(): void {
   }
 }
 
-function resumeAll(): void {
+async function resumeAll(): Promise<ResumeAllResult> {
   log.debug('resumeAll', {
     sessionPaused: _sessionPaused,
     layers:        _layers.size,
     nativeLayers:  _nativeLayers.size,
   });
-  if (!_sessionPaused || !_layers.size) {
-    log.debug('resumeAll — skipped (not paused or no layers)');
-    return;
+
+  if (!_sessionPaused) {
+    log.debug('resumeAll — skipped', { reason: 'not_paused' });
+    return { resumed: false, skipped: 'not_paused' };
+  }
+  if (!_layers.size) {
+    log.debug('resumeAll — skipped', { reason: 'no_layers' });
+    return { resumed: false, skipped: 'no_layers' };
   }
 
-  _sessionPaused = false;
+  type NativeResumeOp = { assetId: string; run: () => Promise<void> };
+  type HtmlPlayOp = { layer: VibeExecutionLayer; run: () => Promise<void> };
+
+  const nativeResumeOps: NativeResumeOp[] = [];
+  const htmlPlayOps: HtmlPlayOp[] = [];
+  const applyTimerResumes: Array<() => void> = [];
 
   for (const managed of _layers.values()) {
     const layer = managed.layer;
@@ -1601,52 +1624,65 @@ function resumeAll(): void {
     // ── Delayed start still pending ─────────────────────────────
     if (!managed.audio && managed.pendingStartRemainingMs !== null) {
       const ms = managed.pendingStartRemainingMs;
-      managed.pendingStartRemainingMs = null;
-      if (ms > 0) {
-        managed.startFiresAtEpochMs = Date.now() + ms;
-        managed.startTimerId = setTimeout(() => {
-          managed.startTimerId        = null;
-          managed.startFiresAtEpochMs = null;
-          if (!_layers.has(layer.soundId)) return;
+      applyTimerResumes.push(() => {
+        managed.pendingStartRemainingMs = null;
+        if (ms > 0) {
+          managed.startFiresAtEpochMs = Date.now() + ms;
+          managed.startTimerId = setTimeout(() => {
+            managed.startTimerId        = null;
+            managed.startFiresAtEpochMs = null;
+            if (!_layers.has(layer.soundId)) return;
+            _beginLayerAfterDelay(layer, managed);
+          }, ms);
+        } else {
           _beginLayerAfterDelay(layer, managed);
-        }, ms);
-      } else {
-        _beginLayerAfterDelay(layer, managed);
-      }
+        }
+      });
       continue;
     }
 
     // ── Interval: waiting in gap (no tick audio) ───────────────
     if (layer.playMode === 'interval' && managed.audio === null && managed.pendingIntervalRemainingMs !== null) {
       const ms = managed.pendingIntervalRemainingMs;
-      managed.pendingIntervalRemainingMs = null;
+      applyTimerResumes.push(() => {
+        managed.pendingIntervalRemainingMs = null;
+        _resumeLayerDurationAfterPause(managed, layer);
+        if (!_layers.has(layer.soundId)) return;
 
-      _resumeLayerDurationAfterPause(managed, layer);
-      if (!_layers.has(layer.soundId)) continue;
-
-      if (ms > 0) {
-        managed.intervalFiresAtEpochMs = Date.now() + ms;
-        managed.intervalTimerId = setTimeout(() => {
-          managed.intervalTimerId        = null;
-          managed.intervalFiresAtEpochMs = null;
-          if (!_layers.has(layer.soundId) || _sessionPaused) return;
+        if (ms > 0) {
+          managed.intervalFiresAtEpochMs = Date.now() + ms;
+          managed.intervalTimerId = setTimeout(() => {
+            managed.intervalTimerId        = null;
+            managed.intervalFiresAtEpochMs = null;
+            if (!_layers.has(layer.soundId) || _sessionPaused) return;
+            _intervalPlayTick(layer, managed);
+          }, ms);
+        } else if (!_sessionPaused) {
           _intervalPlayTick(layer, managed);
-        }, ms);
-      } else if (!_sessionPaused) {
-        _intervalPlayTick(layer, managed);
-      }
+        }
+      });
       continue;
     }
 
-    // ── Active native layer (loop or once) ───────────────────
+    // ── Active native layer (loop, once, or interval mid-tick) ──
     if (managed.isNative) {
       _resumeLayerDurationAfterPause(managed, layer);
       if (!_layers.has(layer.soundId)) continue;
 
       const assetId = _nativeAssetId(layer.soundId);
-      if (_nativeLayers.has(assetId)) {
-        void NativeAudio.resume({ assetId })
-          .catch((e) => _logNativeFailure('resume', assetId, e));
+      if (!_nativeLayers.has(assetId)) continue;
+
+      /*
+       * Mirror pauseAll(): only resume native audio when a tick is actively
+       * playing (interval) or for loop/once layers that were paused in native.
+       */
+      const tickPlaying =
+        layer.playMode !== 'interval' || _nativeOnceCompleteCallbacks.has(assetId);
+      if (tickPlaying) {
+        nativeResumeOps.push({
+          assetId,
+          run: () => NativeAudio.resume({ assetId }).then(() => undefined),
+        });
       }
       continue;
     }
@@ -1656,9 +1692,60 @@ function resumeAll(): void {
       _resumeLayerDurationAfterPause(managed, layer);
       if (!_layers.has(layer.soundId)) continue;
 
-      managed.audio.play().catch((error) => _logPlayFailure(layer, error));
+      const audio = managed.audio;
+      htmlPlayOps.push({
+        layer,
+        run: () => audio.play().then(() => undefined),
+      });
     }
   }
+
+  if (applyTimerResumes.length === 0 && nativeResumeOps.length === 0 && htmlPlayOps.length === 0) {
+    log.debug('resumeAll — skipped', { reason: 'nothing_to_resume' });
+    return { resumed: false, skipped: 'nothing_to_resume' };
+  }
+
+  _sessionPaused = false;
+  for (const apply of applyTimerResumes) {
+    apply();
+  }
+
+  const failedAssetIds: string[] = [];
+  for (const { assetId, run } of nativeResumeOps) {
+    try {
+      await run();
+    } catch (e) {
+      _logNativeFailure('resume', assetId, e);
+      failedAssetIds.push(assetId);
+    }
+  }
+
+  let htmlPlayFailed = false;
+  for (const { layer, run } of htmlPlayOps) {
+    try {
+      await run();
+    } catch (error) {
+      htmlPlayFailed = true;
+      _logPlayFailure(layer, error);
+    }
+  }
+
+  if (failedAssetIds.length > 0 || htmlPlayFailed) {
+    log.warn('resumeAll — failed; re-pausing session', { failedAssetIds, htmlPlayFailed });
+    pauseAll();
+    return {
+      resumed: false,
+      failedAssetIds: failedAssetIds.length > 0 ? failedAssetIds : undefined,
+      htmlPlayFailed: htmlPlayFailed || undefined,
+    };
+  }
+
+  log.debug('resumeAll — succeeded', {
+    timerResumes:  applyTimerResumes.length,
+    nativeResumes: nativeResumeOps.length,
+    htmlResumes:   htmlPlayOps.length,
+  });
+  return { resumed: true };
 }
 
 function stopAll(): void {
@@ -1682,6 +1769,21 @@ function hasActiveLayers(): boolean {
 
 function isSessionPaused(): boolean {
   return _sessionPaused;
+}
+
+/** Read-only session snapshot for native QA instrumentation (no secrets). */
+export function getPlaybackSessionSnapshot(): {
+  sessionPaused: boolean;
+  hasActiveLayers: boolean;
+  layerCount: number;
+  nativeLayerCount: number;
+} {
+  return {
+    sessionPaused: _sessionPaused,
+    hasActiveLayers: _layers.size > 0,
+    layerCount: _layers.size,
+    nativeLayerCount: _nativeLayers.size,
+  };
 }
 
 /**
