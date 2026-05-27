@@ -14,6 +14,7 @@ export type PlaybackBridgeSnapshot = {
     hasActiveLayers: boolean;
     layerCount: number;
     nativeLayerCount: number;
+    pausedByAudioFocus?: boolean;
   } | null;
   ui: {
     miniPlayerMeta: string;
