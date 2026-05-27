@@ -405,10 +405,14 @@ export const usePlayerStore = defineStore('player', () => {
     log.debug('pausePlayback', {
       playbackState: playbackState.value,
       svcHasActive:  audioPlayerService.hasActiveLayers(),
+      sessionPaused: audioPlayerService.isSessionPaused(),
     });
     if (playbackState.value === 'preparing') return;
     audioPlayerService.pauseAll();
-    if (audioPlayerService.hasActiveLayers()) {
+    if (
+      audioPlayerService.hasActiveLayers()
+      && audioPlayerService.isSessionPaused()
+    ) {
       const prev = playbackState.value;
       playbackState.value = 'paused';
       if (prev !== 'paused') _logTransition('playbackState', prev, 'paused');
@@ -417,20 +421,48 @@ export const usePlayerStore = defineStore('player', () => {
     pauseElapsedTicker();
   }
 
-  function resumePlayback(): void {
+  async function _showResumeFailedToast(): Promise<void> {
+    const toast = await toastController.create({
+      message:  'Couldn’t resume playback. Tap play to try again.',
+      duration: 3_000,
+      position: 'bottom',
+      color:    'warning',
+    });
+    await toast.present();
+  }
+
+  async function resumePlayback(): Promise<void> {
     log.debug('resumePlayback', {
       playbackState: playbackState.value,
       svcHasActive:  audioPlayerService.hasActiveLayers(),
+      sessionPaused: audioPlayerService.isSessionPaused(),
     });
     if (playbackState.value === 'preparing') return;
-    audioPlayerService.resumeAll();
-    if (audioPlayerService.hasActiveLayers()) {
-      const prev = playbackState.value;
+    if (playbackState.value !== 'paused') return;
+
+    const result = await audioPlayerService.resumeAll();
+
+    log.debug('resumePlayback — resumeAll result', { ...result });
+
+    if (result.resumed && audioPlayerService.hasActiveLayers()) {
+      _logTransition('playbackState', 'paused', 'playing');
       playbackState.value = 'playing';
-      if (prev !== 'playing') _logTransition('playbackState', prev, 'playing');
+      _syncHasActiveLayersFromService();
+      resumeElapsedTicker();
+      return;
+    }
+
+    // Keep Pinia paused when resume was skipped or native/HTML resume failed.
+    if (audioPlayerService.hasActiveLayers() && audioPlayerService.isSessionPaused()) {
+      playbackState.value = 'paused';
       _syncHasActiveLayersFromService();
     }
-    resumeElapsedTicker();
+
+    if (!result.skipped && !result.resumed) {
+      void _showResumeFailedToast();
+    } else if (result.skipped && result.skipped !== 'not_paused') {
+      log.warn('resumePlayback — resumeAll skipped', { reason: result.skipped });
+    }
   }
 
   function stopPlayback(): void {
