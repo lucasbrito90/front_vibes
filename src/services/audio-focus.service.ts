@@ -48,7 +48,11 @@ export function initAudioFocusService(): void {
   // (headphones unplugged, Bluetooth disconnected, etc.).
   window.addEventListener('audioBecomingNoisy', () => {
     log.debug('[Headset] AUDIO_BECOMING_NOISY — pausing playback');
-    _onBecomingNoisy?.();
+    if (!_onBecomingNoisy) {
+      log.warn('[Headset] onBecomingNoisy callback not registered yet — event ignored');
+      return;
+    }
+    _onBecomingNoisy();
   });
 
   log.debug('[Headset] audioBecomingNoisy listener registered');

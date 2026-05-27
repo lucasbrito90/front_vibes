@@ -12,7 +12,10 @@ const apkPath =
 
 export const config: Options.Testrunner & Capabilities.WithRequestedTestrunnerCapabilities = {
   runner: 'local',
-  specs: ['./qa-android-native/pause-resume-instrumentation.spec.ts'],
+  specs: [
+    './qa-android-native/pause-resume-instrumentation.spec.ts',
+    './qa-android-native/headset-noisy-qa.spec.ts',
+  ],
   maxInstances: 1,
   capabilities: [{
     platformName: 'Android',

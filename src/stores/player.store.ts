@@ -292,11 +292,27 @@ export const usePlayerStore = defineStore('player', () => {
   // headphones or disconnecting Bluetooth pauses playback immediately.
   setAudioFocusCallbacks({
     onBecomingNoisy() {
-      log.debug('[AudioFocus] headset/BT disconnected — pausing');
+      log.debug('[AudioFocus] headset/BT disconnected — pausing', {
+        playbackState: playbackState.value,
+        svcHasActive:  audioPlayerService.hasActiveLayers(),
+        sessionPaused: audioPlayerService.isSessionPaused(),
+      });
       if (playbackState.value === 'preparing') return;
+      if (!audioPlayerService.hasActiveLayers()) return;
+
       // Headset unplug is user/environment initiated — never auto-resume on focus gain.
       clearPausedByAudioFocus();
-      if (playbackState.value === 'playing') pausePlayback();
+
+      // Already fully paused — nothing to do (also blocks focus-gain auto-resume).
+      if (
+        playbackState.value === 'paused'
+        && audioPlayerService.isSessionPaused()
+      ) {
+        return;
+      }
+
+      // Pause native engine even if Pinia is briefly desynced; sync UI to Paused.
+      pausePlayback();
     },
   });
 
