@@ -201,10 +201,18 @@ export function setMediaControlCallbacks(opts: {
   _onRemoteStop  = opts.onStop;
 }
 
-// Tracks whether the most recent playback pause was caused by an audio focus
-// loss so we can safely auto-resume on focus gain without resuming after a
-// user-initiated pause.
+// Tracks whether the most recent playback pause was caused by a transient audio
+// focus loss so we can auto-resume on focus gain without resuming after a
+// user-initiated pause, headset disconnect, or failed resume.
 let _pausedByAudioFocus = false;
+
+/** Clears the transient-focus auto-resume flag (user pause/stop, noisy, failed resume). */
+export function clearPausedByAudioFocus(): void {
+  if (_pausedByAudioFocus) {
+    log.debug('[AudioFocus] cleared auto-resume flag');
+  }
+  _pausedByAudioFocus = false;
+}
 
 // Global 'playbackState' listener — active for the lifetime of the app.
 // Handles:
@@ -231,19 +239,28 @@ if (_isNativePlatform) {
     if (reason === 'audioFocusLossTransient') {
       // Another app temporarily needs audio (GPS navigation, voice command,
       // brief notification). Plugin has already paused native audio. Sync state.
-      log.debug('[AudioFocus] transient loss — pausing', { assetId });
-      _pausedByAudioFocus = true;
+      // Only mark for auto-resume when we were actively playing — not when the
+      // user (or headset disconnect) had already paused the session.
+      const wasPlaying = !_sessionPaused;
+      log.debug('[AudioFocus] transient loss — pausing', { assetId, wasPlaying });
       _onRemotePause?.();
+      if (wasPlaying) {
+        _pausedByAudioFocus = true;
+      }
       return;
     }
 
     if (reason === 'audioFocusGain') {
       // Focus returned. Plugin has already resumed native audio. Sync state,
-      // but only if WE paused due to focus — never auto-resume after a
-      // user-initiated pause.
-      log.debug('[AudioFocus] focus gained — resuming if focus-paused', { assetId, wasAutopaused: _pausedByAudioFocus });
-      if (_pausedByAudioFocus) {
-        _pausedByAudioFocus = false;
+      // but only if WE paused due to transient focus — never auto-resume after a
+      // user-initiated pause, headset disconnect, or failed resume.
+      const shouldAutoResume = _pausedByAudioFocus;
+      log.debug('[AudioFocus] focus gained — resuming if focus-paused', {
+        assetId,
+        wasAutopaused: shouldAutoResume,
+      });
+      clearPausedByAudioFocus();
+      if (shouldAutoResume) {
         _onRemotePlay?.();
       }
       return;
@@ -254,7 +271,7 @@ if (_isNativePlatform) {
       // Plugin has already stopped native audio. Stop fully, keep vibe selected
       // so user can manually resume.
       log.debug('[AudioFocus] permanent loss — stopping', { assetId });
-      _pausedByAudioFocus = false;
+      clearPausedByAudioFocus();
       _onRemoteStop?.();
       return;
     }
@@ -1463,6 +1480,7 @@ function playPlan(layers: VibeExecutionLayer[]): void {
   // it fires correctly if ALL new layers fail validation (nothing in _layers).
   _playPlanInProgress = true;
   try {
+    clearPausedByAudioFocus();
     stopAll();
     _sessionPaused = false;
     for (const layer of layers) {
@@ -1732,6 +1750,7 @@ async function resumeAll(): Promise<ResumeAllResult> {
 
   if (failedAssetIds.length > 0 || htmlPlayFailed) {
     log.warn('resumeAll — failed; re-pausing session', { failedAssetIds, htmlPlayFailed });
+    clearPausedByAudioFocus();
     pauseAll();
     return {
       resumed: false,
@@ -1750,6 +1769,7 @@ async function resumeAll(): Promise<ResumeAllResult> {
 
 function stopAll(): void {
   _cancelPlaybackPrepare();
+  clearPausedByAudioFocus();
   log.debug('stopAll', { layers: _layers.size, nativeLayers: _nativeLayers.size });
   _stopAllExplicit = true;
   try {
@@ -1777,12 +1797,14 @@ export function getPlaybackSessionSnapshot(): {
   hasActiveLayers: boolean;
   layerCount: number;
   nativeLayerCount: number;
+  pausedByAudioFocus: boolean;
 } {
   return {
     sessionPaused: _sessionPaused,
     hasActiveLayers: _layers.size > 0,
     layerCount: _layers.size,
     nativeLayerCount: _nativeLayers.size,
+    pausedByAudioFocus: _pausedByAudioFocus,
   };
 }
 
