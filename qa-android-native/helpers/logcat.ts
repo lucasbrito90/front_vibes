@@ -18,6 +18,10 @@ export const PLAYBACK_LOGCAT_PATTERNS = [
   'pausePlayback',
   'audioFocus',
   'MediaSession',
+  'MainActivity',
+  'audioBecomingNoisy',
+  'Headset',
+  'ACTION_AUDIO_BECOMING_NOISY',
 ] as const;
 
 export type PlaybackLogcatAnalysis = {
