@@ -4,7 +4,11 @@
  */
 import { auth } from '@/services/firebase';
 import { getRequiredIdToken, laravelUser } from '@/services/auth.service';
+import { getPlaybackSessionSnapshot } from '@/services/audio-player.service';
 import { usePlayerStore } from '@/stores/player.store';
+import { getOfflineManifestRemoteUrlsForVibe } from '@/services/audio-engine/offline-audio-storage';
+import { hasOfflineVibeSnapshot } from '@/services/offline-vibe-cache.service';
+import { Preferences } from '@capacitor/preferences';
 
 export const NATIVE_QA_GLOBAL_KEY = '__IXORA_NATIVE_QA__' as const;
 
@@ -52,6 +56,71 @@ export function installNativeQaDiagnostics(): void {
         playbackState: store.playbackState,
         showMiniPlayer: store.showMiniPlayer,
         hasActiveLayers: store.hasActiveLayers,
+      };
+    },
+
+    /** Audio engine session flags for pause/resume desync investigation. */
+    getPlaybackEngineSnapshot(): ReturnType<typeof getPlaybackSessionSnapshot> {
+      return getPlaybackSessionSnapshot();
+    },
+
+    /** Combined Pinia + engine snapshot at a single instant (WDIO pause/resume QA). */
+    getPlaybackBridgeSnapshot(): {
+      store: {
+        currentVibeId: number | null;
+        playbackState: string;
+        showMiniPlayer: boolean;
+        hasActiveLayers: boolean;
+      };
+      engine: ReturnType<typeof getPlaybackSessionSnapshot>;
+      ui: {
+        miniPlayerMeta: string;
+        playerStatusText: string;
+        playPauseAriaLabel: string;
+      };
+    } {
+      const store = usePlayerStore();
+      const playPauseBtn = document.querySelector(
+        '.mini-player-btn:not(.mini-player-btn--stop)',
+      ) as HTMLButtonElement | null;
+      return {
+        store: {
+          currentVibeId: store.currentVibeId,
+          playbackState: store.playbackState,
+          showMiniPlayer: store.showMiniPlayer,
+          hasActiveLayers: store.hasActiveLayers,
+        },
+        engine: getPlaybackSessionSnapshot(),
+        ui: {
+          miniPlayerMeta: document.querySelector('.mini-player-meta')?.textContent?.trim() ?? '',
+          playerStatusText: document.querySelector('.player-status-text')?.textContent?.trim() ?? '',
+          playPauseAriaLabel: playPauseBtn?.getAttribute('aria-label') ?? '',
+        },
+      };
+    },
+
+    /**
+     * Offline manifest presence via Capacitor Preferences (same path the app uses).
+     * Does not expose manifest JSON or remote URLs.
+     */
+    async probeOfflineStorageForQa(vibeId: number): Promise<{
+      audioManifestKeyPresent: boolean;
+      vibeManifestKeyPresent: boolean;
+      audioEntryCountForVibe: number;
+      vibeSnapshotPresent: boolean;
+    }> {
+      const [audioPref, vibePref, vibeSnapshotPresent, audioUrls] = await Promise.all([
+        Preferences.get({ key: 'ixora_offline_audio_manifest_v1' }),
+        Preferences.get({ key: 'offline_vibe_manifest_v1' }),
+        hasOfflineVibeSnapshot(vibeId),
+        getOfflineManifestRemoteUrlsForVibe(vibeId),
+      ]);
+
+      return {
+        audioManifestKeyPresent: Boolean(audioPref.value),
+        vibeManifestKeyPresent: Boolean(vibePref.value),
+        audioEntryCountForVibe: Object.keys(audioUrls).length,
+        vibeSnapshotPresent,
       };
     },
 

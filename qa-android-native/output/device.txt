@@ -1,1 +1,0 @@
-model=motorola edge 2023

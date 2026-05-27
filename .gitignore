@@ -35,6 +35,9 @@ npm-debug.log*
 /blob-report
 /playwright/.cache
 /wdio-logs
+
+# Native Android QA harness — local device run artifacts only
+/qa-android-native/output/
 /platforms
 /plugins
 /www
