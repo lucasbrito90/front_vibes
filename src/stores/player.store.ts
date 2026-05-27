@@ -25,6 +25,7 @@ import { toastController } from '@ionic/vue';
 
 import {
   audioPlayerService,
+  clearPausedByAudioFocus,
   setSessionEndedCallback,
   setMediaControlCallbacks,
   setPlaybackPrepareCallbacks,
@@ -293,6 +294,8 @@ export const usePlayerStore = defineStore('player', () => {
     onBecomingNoisy() {
       log.debug('[AudioFocus] headset/BT disconnected — pausing');
       if (playbackState.value === 'preparing') return;
+      // Headset unplug is user/environment initiated — never auto-resume on focus gain.
+      clearPausedByAudioFocus();
       if (playbackState.value === 'playing') pausePlayback();
     },
   });
@@ -408,6 +411,8 @@ export const usePlayerStore = defineStore('player', () => {
       sessionPaused: audioPlayerService.isSessionPaused(),
     });
     if (playbackState.value === 'preparing') return;
+    // User or remote media pause — must not auto-resume on later audioFocusGain.
+    clearPausedByAudioFocus();
     audioPlayerService.pauseAll();
     if (
       audioPlayerService.hasActiveLayers()
@@ -472,6 +477,7 @@ export const usePlayerStore = defineStore('player', () => {
       svcHasActive:  audioPlayerService.hasActiveLayers(),
     });
     _clearPlaybackErrorResetTimer();
+    clearPausedByAudioFocus();
     audioPlayerService.stopAll();
     const prev = playbackState.value;
     playbackState.value   = 'idle';
