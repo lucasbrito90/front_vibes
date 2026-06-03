@@ -1,7 +1,21 @@
 <template>
   <ion-page class="player-page" data-testid="player-page">
     <ion-content :fullscreen="true" class="player-content">
-      <div class="player-wrap">
+      <div
+        class="player-wrap"
+        :class="{
+          'player-wrap--playing': isThisVibePlaying,
+          'player-wrap--preparing': isThisVibePreparing,
+          'player-wrap--paused': isThisVibePaused,
+        }"
+      >
+        <!-- Stable gradient underlay — prevents flash while artwork layer crossfades -->
+        <div
+          class="player-bg-underlay"
+          :style="heroUnderlayStyle"
+          aria-hidden="true"
+        />
+
         <!-- Background layer (keyed for subtle enter transition on vibe / artwork change) -->
         <div
           :key="heroBgKey"
@@ -10,6 +24,9 @@
           :style="heroBackground"
           aria-hidden="true"
         />
+
+        <!-- Ambient glow while this vibe is active (opacity-only, GPU-friendly) -->
+        <div class="player-ambient" aria-hidden="true" />
 
         <!-- Legibility: gradient wash + vignette -->
         <div class="player-overlay" aria-hidden="true" />
@@ -67,39 +84,42 @@
 
         <!-- ── Center: Play / Pause ──────────────────── -->
         <div class="player-center">
-          <div v-if="loading" class="player-spinner-wrap">
-            <AppLoadingState
-              compact
-              tone="inverse"
-              title="Loading vibe…"
-            />
-          </div>
+          <Transition name="player-center-fade" mode="out-in">
+            <div v-if="loading" key="loading" class="player-spinner-wrap">
+              <AppLoadingState
+                compact
+                tone="inverse"
+                title="Loading vibe…"
+              />
+            </div>
 
-          <button
-            v-else
-            type="button"
-            class="player-control-btn"
-            data-testid="player-play-button"
-            :class="centerButtonClass"
-            :disabled="!canUsePlaybackControls || isThisVibePreparing"
-            :aria-label="centerAriaLabel"
-            @click="togglePlayback"
-          >
-            <Transition name="player-control-icon" mode="out-in">
-              <ion-spinner
-                v-if="isThisVibePreparing"
-                key="preparing"
-                name="crescent"
-                class="player-control-spinner"
-              />
-              <ion-icon
-                v-else
-                key="control"
-                :icon="centerIcon"
-                class="player-control-icon"
-              />
-            </Transition>
-          </button>
+            <button
+              v-else
+              key="control"
+              type="button"
+              class="player-control-btn"
+              data-testid="player-play-button"
+              :class="centerButtonClass"
+              :disabled="!canUsePlaybackControls || isThisVibePreparing"
+              :aria-label="centerAriaLabel"
+              @click="togglePlayback"
+            >
+              <Transition name="player-control-icon" mode="out-in">
+                <ion-spinner
+                  v-if="isThisVibePreparing"
+                  key="preparing"
+                  name="crescent"
+                  class="player-control-spinner"
+                />
+                <ion-icon
+                  v-else
+                  key="control"
+                  :icon="centerIcon"
+                  class="player-control-icon"
+                />
+              </Transition>
+            </button>
+          </Transition>
         </div>
 
         <!-- ── Bottom info panel ─────────────────────── -->
@@ -134,20 +154,29 @@
             {{ warningText }}
           </p>
 
-          <div
-            class="player-identity"
-            :class="{ 'player-identity--pending': loading }"
-            :key="`identity-${vibeId}`"
-          >
-            <p class="player-label">Ambient mix</p>
-            <h1 class="player-title">{{ displayVibe?.name ?? '…' }}</h1>
-            <p v-if="displayVibe?.description" class="player-desc">{{ displayVibe.description }}</p>
-            <p class="player-sounds-text">{{ soundsSummary }}</p>
-          </div>
+          <Transition name="player-identity-fade" mode="out-in">
+            <div
+              :key="`identity-${vibeId}`"
+              class="player-identity"
+              :class="{ 'player-identity--pending': loading }"
+            >
+              <p class="player-label">Ambient mix</p>
+              <h1
+                class="player-title"
+                data-testid="player-vibe-title"
+              >
+                {{ displayVibe?.name ?? '…' }}
+              </h1>
+              <p v-if="displayVibe?.description" class="player-desc">{{ displayVibe.description }}</p>
+              <p class="player-sounds-text">{{ soundsSummary }}</p>
+            </div>
+          </Transition>
 
-          <div
+          <TransitionGroup
             v-if="!loading && badgeItems.length > 0"
-            class="player-badge-row app-fade-in"
+            name="player-badge"
+            tag="div"
+            class="player-badge-row"
             role="status"
             aria-label="Session indicators"
           >
@@ -160,14 +189,16 @@
               <ion-icon :icon="b.icon" class="player-badge__icon" aria-hidden="true" />
               {{ b.label }}
             </span>
-          </div>
+          </TransitionGroup>
 
           <div v-if="!loading" class="player-status-row">
             <span
               class="player-status-dot"
               :class="statusDotClass"
             />
-            <span class="player-status-text">{{ statusText }}</span>
+            <Transition name="player-status-text" mode="out-in">
+              <span :key="statusText" class="player-status-text">{{ statusText }}</span>
+            </Transition>
           </div>
 
           <section
@@ -252,7 +283,7 @@ import {
   stopCircleOutline,
   trashOutline,
 } from 'ionicons/icons';
-import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Capacitor } from '@capacitor/core';
 
@@ -287,6 +318,7 @@ import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import {
   getVibeArtworkUrl,
+  getVibeFallbackGradient,
   getVibePlayerBackgroundUrl,
   getVibePlayerBackgroundStyle,
 } from '@/utils/artwork';
@@ -631,12 +663,15 @@ const centerAriaLabel = computed((): string => {
 
 // ── Toast helper ──────────────────────────────────────────────────────────────
 
-async function showPlaybackToast(message: string): Promise<void> {
+async function showPlaybackToast(
+  message: string,
+  opts?: { duration?: number; color?: string },
+): Promise<void> {
   const toast = await toastController.create({
     message,
-    duration: 2_800,
+    duration: opts?.duration ?? 2_400,
     position: 'bottom',
-    color: 'medium',
+    color: opts?.color ?? 'medium',
   });
   await toast.present();
 }
@@ -769,7 +804,7 @@ async function handleRemoveOfflineDownload(): Promise<void> {
     await removeDownloadedVibe(id);
     vibeOfflineReady.value = false;
     offlineHealth.value = null;
-    await showPlaybackToast('Offline download removed');
+    await showPlaybackToast('Offline download removed', { duration: 2_000 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Could not remove offline files.';
     await showPlaybackToast(msg);
@@ -845,7 +880,10 @@ async function handleDownloadForOffline(): Promise<void> {
         }
       }
       const wasUpdate = offlineNeedsUpdate.value;
-      await showPlaybackToast(wasUpdate ? 'Offline download updated' : 'Downloaded for offline');
+      await showPlaybackToast(
+        wasUpdate ? 'Offline download updated' : 'Downloaded for offline',
+        { duration: 2_000, color: 'success' },
+      );
     }
     await refreshOfflineDownloadState();
   } catch (err) {
@@ -870,6 +908,11 @@ function handleBack(): void {
 
 const heroBackground = computed(() => getVibePlayerBackgroundStyle(displayVibe.value));
 
+/** Persistent gradient under artwork crossfade — avoids white flash on vibe switch. */
+const heroUnderlayStyle = computed(() => ({
+  background: getVibeFallbackGradient(vibeId.value),
+}));
+
 function pulseControlFeedback(): void {
   controlPulse.value = false;
   window.requestAnimationFrame(() => {
@@ -892,11 +935,29 @@ watch(
   },
 );
 
+function hasRouteVibeMeta(routeId: number): boolean {
+  if (vibes.value.some((v) => v.id === routeId)) return true;
+  if (selectedVibe.value?.id === routeId) return true;
+  return false;
+}
+
+/** Keep page loading until route-scoped vibe metadata exists (or offline terminal state). */
+async function ensureRouteVibeMeta(routeId: number, generation: number): Promise<void> {
+  const maxAttempts = 4;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (generation !== loadGeneration) return;
+    if (hasRouteVibeMeta(routeId)) return;
+    if (offlineUnavailableAfterLoad.value) return;
+    if (loadedFromOfflineSnapshot.value) return;
+
+    await fetchVibe(routeId);
+    await nextTick();
+  }
+}
+
 async function loadPlayerPage(id: number): Promise<void> {
   const generation = ++loadGeneration;
-  const hasCachedMeta =
-    vibes.value.some((v) => v.id === id)
-    || selectedVibe.value?.id === id;
+  const hasCachedMeta = hasRouteVibeMeta(id);
 
   log.debug('loadPlayerPage', { vibeId: id, generation, hasCachedMeta });
 
@@ -945,12 +1006,15 @@ async function loadPlayerPage(id: number): Promise<void> {
       // Empty API response while online is a valid empty vibe — not an offline failure.
       offlineUnavailableAfterLoad.value = deviceOffline && soundsApiFailed;
       if (offlineUnavailableAfterLoad.value) {
-        await showPlaybackToast('This vibe is not available offline');
+        await showPlaybackToast('This vibe is not available offline', { duration: 3_200 });
       }
       buildPlan(vibeSounds.value);
     }
   }
 
+  if (generation !== loadGeneration) return;
+
+  await ensureRouteVibeMeta(id, generation);
   if (generation !== loadGeneration) return;
 
   loading.value = false;
@@ -988,20 +1052,75 @@ onUnmounted(() => {
   overflow-x: hidden;
 }
 
-/* ── Background artwork / gradient ───────────────────── */
+/* ── Ambient session glow (playing / preparing / paused) ─ */
+.player-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.65s var(--app-ease-standard);
+  background: radial-gradient(
+    ellipse 70% 45% at 50% 32%,
+    rgba(74, 222, 128, 0.14) 0%,
+    rgba(0, 0, 0, 0) 68%
+  );
+}
+
+.player-wrap--playing .player-ambient {
+  opacity: 1;
+  animation: player-ambient-breathe 4.2s ease-in-out infinite;
+}
+
+.player-wrap--preparing .player-ambient {
+  opacity: 0.55;
+  background: radial-gradient(
+    ellipse 70% 45% at 50% 32%,
+    rgba(56, 189, 248, 0.16) 0%,
+    rgba(0, 0, 0, 0) 68%
+  );
+}
+
+.player-wrap--paused .player-ambient {
+  opacity: 0.35;
+  background: radial-gradient(
+    ellipse 70% 45% at 50% 32%,
+    rgba(251, 191, 36, 0.12) 0%,
+    rgba(0, 0, 0, 0) 68%
+  );
+}
+
+@keyframes player-ambient-breathe {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ── Background underlay + artwork ───────────────────── */
+.player-bg-underlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transition: background 0.5s var(--app-ease-standard);
+}
+
 .player-bg {
   position: absolute;
   inset: 0;
   z-index: 0;
   transform-origin: center center;
-  animation: player-bg-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: opacity, transform;
+  animation: player-bg-enter 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity;
 }
 
 @keyframes player-bg-enter {
   from {
     opacity: 0;
-    transform: scale(1.06);
+    transform: scale(1.02);
   }
   to {
     opacity: 1;
@@ -1011,7 +1130,7 @@ onUnmounted(() => {
 
 .player-bg--image {
   animation-name: player-bg-enter, player-bg-drift;
-  animation-duration: 0.55s, 18s;
+  animation-duration: 0.48s, 22s;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1), ease-in-out;
   animation-fill-mode: both, none;
   animation-iteration-count: 1, infinite;
@@ -1023,13 +1142,13 @@ onUnmounted(() => {
     transform: scale(1.03) translate(0, 0);
   }
   to {
-    transform: scale(1.05) translate(-0.6%, 0.4%);
+    transform: scale(1.045) translate(-0.35%, 0.25%);
   }
 }
 
 /* Gradient hero — no Ken Burns drift */
 .player-bg:not(.player-bg--image) {
-  animation: player-bg-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: player-bg-enter 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* ── Overlays ────────────────────────────────────────── */
@@ -1120,11 +1239,23 @@ onUnmounted(() => {
   min-height: 140px;
 }
 
+.player-center-fade-enter-active,
+.player-center-fade-leave-active {
+  transition:
+    opacity var(--app-motion-base) var(--app-ease-standard),
+    transform var(--app-motion-base) var(--app-ease-emphasized);
+}
+
+.player-center-fade-enter-from,
+.player-center-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
 .player-spinner-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
 .player-control-spinner {
@@ -1299,11 +1430,24 @@ onUnmounted(() => {
   border: 1px solid rgba(251, 191, 36, 0.28);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  animation: app-fade-in-kf var(--app-motion-base) var(--app-ease-standard) both;
+}
+
+.player-identity-fade-enter-active,
+.player-identity-fade-leave-active {
+  transition:
+    opacity var(--app-motion-base) var(--app-ease-standard),
+    transform var(--app-motion-base) var(--app-ease-emphasized);
+}
+
+.player-identity-fade-enter-from,
+.player-identity-fade-leave-to {
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
 }
 
 .player-identity {
   margin-bottom: 4px;
-  transition: opacity var(--app-motion-base) var(--app-ease-standard);
 }
 
 .player-identity--pending .player-title,
@@ -1356,6 +1500,23 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
+}
+
+.player-badge-enter-active,
+.player-badge-leave-active {
+  transition:
+    opacity var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-emphasized);
+}
+
+.player-badge-enter-from,
+.player-badge-leave-to {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.player-badge-move {
+  transition: transform var(--app-motion-base) var(--app-ease-standard);
 }
 
 .player-badge {
@@ -1473,6 +1634,19 @@ onUnmounted(() => {
 .player-menu-icon {
   font-size: 18px;
   margin-inline-end: 8px;
+}
+
+.player-status-text-enter-active,
+.player-status-text-leave-active {
+  transition:
+    opacity var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.player-status-text-enter-from,
+.player-status-text-leave-to {
+  opacity: 0;
+  transform: translate3d(0, 4px, 0);
 }
 
 .player-status-text {

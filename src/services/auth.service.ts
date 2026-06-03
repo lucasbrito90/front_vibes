@@ -100,6 +100,11 @@ export async function waitForFirebaseUser(
 export async function getRequiredIdToken(
   timeoutMs: number = DEFAULT_FIREBASE_AUTH_WAIT_MS,
 ): Promise<string> {
+  // Playwright E2E — router skips Firebase gate; vibe detail must still reach mocked API.
+  if (import.meta.env.VITE_E2E_MOCK_AUTH === 'true') {
+    return 'e2e-mock-id-token';
+  }
+
   const user = await waitForFirebaseUser(timeoutMs);
   if (!user) {
     throw new FirebaseAuthNotReadyError();

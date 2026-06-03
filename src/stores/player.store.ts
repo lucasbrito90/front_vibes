@@ -272,17 +272,30 @@ export const usePlayerStore = defineStore('player', () => {
 
   setMediaControlCallbacks({
     onPlay() {
-      log.debug('[MediaSession] remote play received');
+      log.debug('[MediaSession] remote play received', {
+        playbackState: playbackState.value,
+        hasActiveLayers: audioPlayerService.hasActiveLayers(),
+      });
       if (playbackState.value === 'preparing') return;
+      // Ignore stale lock-screen play after stop/idle (plugin may still show controls briefly).
+      if (playbackState.value === 'idle' || !audioPlayerService.hasActiveLayers()) return;
       if (playbackState.value === 'paused') resumePlayback();
     },
     onPause() {
-      log.debug('[MediaSession] remote pause received');
+      log.debug('[MediaSession] remote pause received', {
+        playbackState: playbackState.value,
+        hasActiveLayers: audioPlayerService.hasActiveLayers(),
+      });
       if (playbackState.value === 'preparing') return;
+      if (!audioPlayerService.hasActiveLayers()) return;
       if (playbackState.value === 'playing') pausePlayback();
     },
     onStop() {
-      log.debug('[MediaSession] remote stop received');
+      log.debug('[MediaSession] remote stop received', {
+        playbackState: playbackState.value,
+        hasActiveLayers: audioPlayerService.hasActiveLayers(),
+      });
+      // Full teardown: hide MiniPlayer, stop FGS, clear notification metadata.
       if (playbackState.value !== 'idle') stopPlayback();
     },
   });
