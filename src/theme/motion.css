@@ -32,6 +32,18 @@
     animation: none !important;
   }
 
+  .player-bg--image,
+  .player-wrap--playing .player-ambient,
+  .player-control-btn--preparing,
+  .player-status-dot--preparing,
+  .mini-player-dot--preparing {
+    animation: none !important;
+  }
+
+  .player-bg {
+    animation: player-bg-enter 0.001ms both !important;
+  }
+
   .app-pressable {
     transition: none !important;
   }

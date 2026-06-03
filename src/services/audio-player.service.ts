@@ -155,6 +155,14 @@ export function setNotificationArtworkUrl(url: string | null): void {
   log.debug('[Artwork] notification artwork URL updated', { hasArtwork: !!_notificationArtworkUrl });
 }
 
+/** Read-only notification context for native QA (no secrets). */
+export function getNotificationContext(): { vibeName: string; artworkUrl: string } {
+  return {
+    vibeName:   _notificationVibeName,
+    artworkUrl: _notificationArtworkUrl,
+  };
+}
+
 /**
  * Pinia sets the active vibe id before playPlan() so native preload can resolve
  * offline copies (file://) saved via AudioEngine.cacheVibeAudio().
@@ -229,9 +237,22 @@ if (_isNativePlatform) {
     // ── Remote media controls ─────────────────────────────────────────────
     if (reason.startsWith('remote')) {
       log.debug('[MediaSession] remote control event', { assetId, state, reason });
-      if (state === 'playing')  _onRemotePlay?.();
-      else if (state === 'paused')  _onRemotePause?.();
-      else if (state === 'stopped') _onRemoteStop?.();
+
+      // Plugin-only seek (±15s) — no queue; do not touch Pinia playbackState.
+      if (reason === 'remoteRewind' || reason === 'remoteFastForward') {
+        return;
+      }
+
+      // Route by reason (not state) so seek events with state=playing do not resume.
+      if (reason === 'remotePlay') {
+        _onRemotePlay?.();
+      } else if (reason === 'remotePause') {
+        _onRemotePause?.();
+      } else if (reason === 'remoteStop') {
+        _onRemoteStop?.();
+      } else {
+        log.debug('[MediaSession] unhandled remote reason (intentionally ignored)', { reason, state });
+      }
       return;
     }
 
@@ -251,17 +272,21 @@ if (_isNativePlatform) {
     }
 
     if (reason === 'audioFocusGain') {
-      // Focus returned. Plugin has already resumed native audio. Sync state,
-      // but only if WE paused due to transient focus — never auto-resume after a
-      // user-initiated pause, headset disconnect, or failed resume.
+      // Focus returned. Plugin may resume assets in its internal resumeList,
+      // including after a user-initiated pause (pause() always adds to resumeList).
+      // Sync Pinia only when we paused due to transient focus; otherwise re-assert
+      // native pause so notification/lock-screen stay aligned with MiniPlayer.
       const shouldAutoResume = _pausedByAudioFocus;
       log.debug('[AudioFocus] focus gained — resuming if focus-paused', {
         assetId,
         wasAutopaused: shouldAutoResume,
+        sessionPaused: _sessionPaused,
       });
       clearPausedByAudioFocus();
       if (shouldAutoResume) {
         _onRemotePlay?.();
+      } else if (_sessionPaused) {
+        _reassertNativePauseForMediaSession();
       }
       return;
     }
@@ -1544,6 +1569,31 @@ export interface ResumeAllResult {
   failedAssetIds?: string[];
   /** True when an HTMLAudioElement.play() rejected during resume. */
   htmlPlayFailed?: boolean;
+}
+
+/**
+ * Pause native assets only (no timer/HTML changes). Used after audioFocusGain when
+ * the user had paused the session but the plugin auto-resumed from resumeList.
+ */
+function _reassertNativePauseForMediaSession(): void {
+  if (!_sessionPaused || !_layers.size) return;
+
+  log.debug('[MediaSession] re-assert native pause after focus gain', {
+    layers: _layers.size,
+    nativeLayers: _nativeLayers.size,
+  });
+
+  for (const managed of _layers.values()) {
+    const layer = managed.layer;
+    if (!managed.isNative) continue;
+
+    const assetId = _nativeAssetId(managed.soundId);
+    const tickPlaying =
+      layer.playMode !== 'interval' || _nativeOnceCompleteCallbacks.has(assetId);
+    if (_nativeLayers.has(assetId) && tickPlaying) {
+      void NativeAudio.pause({ assetId }).catch((e) => _logNativeFailure('pause (focus reassert)', assetId, e));
+    }
+  }
 }
 
 function pauseAll(): void {

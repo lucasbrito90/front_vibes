@@ -19,9 +19,13 @@
             v-if="currentVibeArtworkUrl"
             :key="artworkKey"
             :src="currentVibeArtworkUrl"
-            class="mini-player-artwork-img app-artwork-fade-in"
+            class="mini-player-artwork-img"
+            :class="{ 'mini-player-artwork-img--loaded': artworkLoaded }"
             alt=""
             aria-hidden="true"
+            decoding="async"
+            @load="onArtworkLoad"
+            @error="onArtworkError"
           />
           <div
             v-else
@@ -40,7 +44,9 @@
         <p class="mini-player-name">{{ currentVibeName }}</p>
         <p class="mini-player-meta">
           <span class="mini-player-dot" :class="dotClass" />
-          {{ metaText }}
+          <Transition name="mini-player-meta" mode="out-in">
+            <span :key="metaTextKey" class="mini-player-meta-text">{{ metaText }}</span>
+          </Transition>
         </p>
       </div>
 
@@ -113,10 +119,27 @@ const {
 } = storeToRefs(store);
 
 const playPausePulse = ref(false);
+const artworkLoaded = ref(false);
 
 const artworkKey = computed(
   () => `${currentVibeId.value ?? 'none'}-${currentVibeArtworkUrl.value ?? 'none'}`,
 );
+
+const metaTextKey = computed(
+  () => `${playbackState.value}-${currentVibeId.value ?? 'none'}`,
+);
+
+watch(artworkKey, () => {
+  artworkLoaded.value = false;
+});
+
+function onArtworkLoad(): void {
+  artworkLoaded.value = true;
+}
+
+function onArtworkError(): void {
+  artworkLoaded.value = true;
+}
 
 // ── Visibility ────────────────────────────────────────────────────────────────
 
@@ -220,6 +243,9 @@ function navigateToPlayer(): void {
   position: fixed;
   left: 0;
   right: 0;
+  transition:
+    box-shadow var(--app-motion-base) var(--app-ease-standard),
+    border-color var(--app-motion-base) var(--app-ease-standard);
   /*
    * Sits directly above the tab bar.
    * --app-tab-bar-height (56px) is injected by TabsLayout so this value is
@@ -257,6 +283,7 @@ function navigateToPlayer(): void {
 }
 
 .mini-player--playing {
+  border-top-color: rgba(74, 222, 128, 0.14);
   box-shadow:
     0 -4px 24px rgba(0, 0, 0, 0.38),
     0 -1px 0 rgba(255, 255, 255, 0.06),
@@ -285,6 +312,12 @@ function navigateToPlayer(): void {
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 0;
+  transition: opacity var(--app-motion-base) var(--app-ease-standard);
+}
+
+.mini-player-artwork-img--loaded {
+  opacity: 1;
 }
 
 .mini-player-artwork-placeholder {
@@ -355,9 +388,28 @@ function navigateToPlayer(): void {
   gap: 6px;
   font-size: 11.5px;
   color: rgba(255, 255, 255, 0.52);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.mini-player-meta-text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.mini-player-meta-enter-active,
+.mini-player-meta-leave-active {
+  transition:
+    opacity var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.mini-player-meta-enter-from,
+.mini-player-meta-leave-to {
+  opacity: 0;
+  transform: translate3d(0, 3px, 0);
 }
 
 /* ── State dot ───────────────────────────────────────────── */
@@ -367,7 +419,10 @@ function navigateToPlayer(): void {
   height: 6px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.22);
-  transition: background 0.3s;
+  transition:
+    background var(--app-motion-base) var(--app-ease-standard),
+    box-shadow var(--app-motion-base) var(--app-ease-standard),
+    transform var(--app-motion-base) var(--app-ease-standard);
 }
 
 .mini-player-dot--playing {
@@ -383,6 +438,14 @@ function navigateToPlayer(): void {
 .mini-player-dot--preparing {
   background: #38bdf8;
   box-shadow: 0 0 5px rgba(56, 189, 248, 0.55);
+  animation: mini-player-dot-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes mini-player-dot-pulse {
+  50% {
+    opacity: 0.65;
+    transform: scale(0.9);
+  }
 }
 
 /* ── Controls ────────────────────────────────────────────── */
@@ -467,7 +530,7 @@ function navigateToPlayer(): void {
 
 .mini-player-slide-enter-from,
 .mini-player-slide-leave-to {
-  transform: translateY(100%);
+  transform: translate3d(0, 100%, 0);
   opacity: 0;
 }
 </style>

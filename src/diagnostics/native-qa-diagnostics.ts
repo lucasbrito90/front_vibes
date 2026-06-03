@@ -4,7 +4,10 @@
  */
 import { auth } from '@/services/firebase';
 import { getRequiredIdToken, laravelUser } from '@/services/auth.service';
-import { getPlaybackSessionSnapshot } from '@/services/audio-player.service';
+import {
+  getNotificationContext,
+  getPlaybackSessionSnapshot,
+} from '@/services/audio-player.service';
 import { usePlayerStore } from '@/stores/player.store';
 import { getOfflineManifestRemoteUrlsForVibe } from '@/services/audio-engine/offline-audio-storage';
 import { hasOfflineVibeSnapshot } from '@/services/offline-vibe-cache.service';
@@ -62,6 +65,11 @@ export function installNativeQaDiagnostics(): void {
     /** Audio engine session flags for pause/resume desync investigation. */
     getPlaybackEngineSnapshot(): ReturnType<typeof getPlaybackSessionSnapshot> {
       return getPlaybackSessionSnapshot();
+    },
+
+    /** Vibe title/artwork pushed into NativeAudio preload metadata (MediaSession). */
+    getNotificationContext(): ReturnType<typeof getNotificationContext> {
+      return getNotificationContext();
     },
 
     /** Combined Pinia + engine snapshot at a single instant (WDIO pause/resume QA). */
