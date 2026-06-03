@@ -18,6 +18,10 @@ export const PLAYBACK_LOGCAT_PATTERNS = [
   'pausePlayback',
   'audioFocus',
   'MediaSession',
+  'remotePlay',
+  'remotePause',
+  'remoteStop',
+  '[MediaSession]',
   'MainActivity',
   'audioBecomingNoisy',
   'Headset',
@@ -113,8 +117,11 @@ export function analyzePlaybackLogcat(raw: string): PlaybackLogcatAnalysis {
       nativePauseFailed = true;
       highlights.push(line);
     }
-    if (/playbackState|Notifying listeners for event playbackState/i.test(line)) {
+    if (/playbackState|Notifying listeners for event playbackState|remotePlay|remotePause|remoteStop/i.test(line)) {
       playbackStateEvents.push(line);
+    }
+    if (/\[MediaSession\]|remotePlay|remotePause|remoteStop/i.test(line)) {
+      highlights.push(line);
     }
     if (/Capacitor\/NativeAudio|NativeAudio:/i.test(line)) {
       nativeAudioLines.push(line);

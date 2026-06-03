@@ -501,6 +501,31 @@ Pinia store (currentVibeArtworkUrl)
 The `vibe.artwork_url` field in the API response is used as the primary source.
 Fallback chain: `artwork_url` → `thumbnail_url`.
 
+Metadata is set on each `NativeAudio.preload()` only — there is no runtime `updateMetadata` API.
+Pause/resume from the app or notification updates play/pause icons via the plugin patch (UI thread).
+
+### Lock-screen / notification transport controls
+
+| Control | Plugin reason | App (Pinia) behavior |
+|---------|---------------|----------------------|
+| Play | `remotePlay` | `resumePlayback()` if `paused` and session has layers; ignored if `idle` |
+| Pause | `remotePause` | `pausePlayback()` if `playing` |
+| Stop | `remoteStop` | `stopPlayback()` — clears vibe, stops FGS, hides MiniPlayer |
+| Rewind / Fast-forward (±15s) | `remoteRewind` / `remoteFastForward` | **Plugin only** — no Pinia sync (not meaningful for ambient loop/interval) |
+| Next / Previous | — | **Not exposed** by plugin MediaSession actions |
+
+Remote events are routed by `reason` (not `state`) so seek events with `state=playing` do not call `resumePlayback()`.
+
+After a **user-initiated pause**, Android `audioFocusGain` may still resume native audio via the plugin’s internal `resumeList`. The app re-asserts native pause when Pinia is paused and `pausedByAudioFocus` is false.
+
+Auto-resume on focus gain runs only when the session was paused by **transient** focus loss (`_pausedByAudioFocus`).
+
+### QA
+
+- Automated (partial): `npm run test:native-media-notification-qa:android` — background/foreground + MiniPlayer pause/resume/stop; manual checklist in `qa-android-native/output/media-notification-qa/manual-checklist.txt`
+- In-app transport: `npm run test:native-pause-resume-qa:android`
+- Logcat: `npm run capture:playback-logcat` or filter `NativeAudio`, `MediaSession`, `playbackState`
+
 ---
 
 ## Section 7 — Google Sign-In native
