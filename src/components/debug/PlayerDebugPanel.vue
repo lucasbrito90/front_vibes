@@ -331,6 +331,7 @@ import {
   truncateForDisplay,
 } from '@/utils/player-debug-diagnostics';
 import { clearLogBuffer, logBuffer } from '@/utils/player-debug';
+import { laravelApiUrl, laravelFetch } from '@/services/laravel-http';
 
 const isDev = import.meta.env.DEV;
 
@@ -369,7 +370,7 @@ async function pullBackendDebugMe(): Promise<void> {
   }
 
   try {
-    const res = await fetch(`${base}/api/debug/me`, {
+    const res = await laravelFetch(laravelApiUrl('/api/debug/me', base), {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',

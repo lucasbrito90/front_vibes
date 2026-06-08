@@ -8,6 +8,15 @@ vi.mock('@/services/auth.service', () => ({
   getRequiredIdToken: mockGetRequiredIdToken,
 }));
 
+vi.mock('@/services/laravel-http', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/laravel-http')>();
+  return {
+    ...actual,
+    laravelFetch: vi.fn((input: string | URL, init?: RequestInit) => fetch(input, init)),
+    laravelApiUrl: actual.laravelApiUrl,
+  };
+});
+
 import { vibeService } from '@/services/vibe.service';
 
 describe('vibe.service — protected requests', () => {
