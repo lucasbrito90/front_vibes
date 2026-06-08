@@ -1,7 +1,6 @@
 import { getRequiredIdToken } from './auth.service';
+import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel-http';
 import type { VibeSound } from './vibe-sound.service';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export interface Vibe {
   id: number;
@@ -61,7 +60,7 @@ async function protectedAuthHeaders(): Promise<HeadersInit> {
   };
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.message ?? `Request failed: ${res.status}`);
@@ -70,7 +69,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 async function getVibes(): Promise<Vibe[]> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes`, {
+  const res = await laravelFetch(laravelApiUrl('/api/vibes'), {
     headers: await protectedAuthHeaders(),
   });
   const body = await handleResponse<{ data: Vibe[] }>(res);
@@ -78,7 +77,7 @@ async function getVibes(): Promise<Vibe[]> {
 }
 
 async function getVibe(id: number): Promise<Vibe> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${id}`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${id}`), {
     headers: await protectedAuthHeaders(),
   });
   const body = await handleResponse<{ data: Vibe }>(res);
@@ -86,7 +85,7 @@ async function getVibe(id: number): Promise<Vibe> {
 }
 
 async function createVibe(payload: VibePayload): Promise<Vibe> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes`, {
+  const res = await laravelFetch(laravelApiUrl('/api/vibes'), {
     method: 'POST',
     headers: await protectedAuthHeaders(),
     body: JSON.stringify(payload),
@@ -96,7 +95,7 @@ async function createVibe(payload: VibePayload): Promise<Vibe> {
 }
 
 async function updateVibe(id: number, payload: Partial<VibePayload>): Promise<Vibe> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${id}`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${id}`), {
     method: 'PATCH',
     headers: await protectedAuthHeaders(),
     body: JSON.stringify(payload),
@@ -106,7 +105,7 @@ async function updateVibe(id: number, payload: Partial<VibePayload>): Promise<Vi
 }
 
 async function deleteVibe(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${id}`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${id}`), {
     method: 'DELETE',
     headers: await protectedAuthHeaders(),
   });
