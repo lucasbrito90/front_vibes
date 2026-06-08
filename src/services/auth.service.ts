@@ -15,6 +15,7 @@ import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { auth } from './firebase';
+import { laravelApiUrl, laravelFetch, requireApiBase } from './laravel-http';
 
 /** Stored Firebase ID token for native/offline-adjacent flows (mirrored by useAuth). */
 export const FIREBASE_TOKEN_PREFS_KEY = 'firebase_id_token';
@@ -44,8 +45,6 @@ export class LaravelSyncError extends Error {
 
 /** Laravel profile returned by the last successful `/api/auth/sync`. */
 export const laravelUser = shallowRef<LaravelUser | null>(null);
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 /** Firebase UID for which `laravelUser` was populated this session. */
 let syncedFirebaseUid: string | null = null;
@@ -139,20 +138,26 @@ async function abortFirebaseSessionAfterFailedSync(): Promise<void> {
 }
 
 async function syncUserWithBackend(idToken: string, firebaseUid: string): Promise<LaravelUser> {
-  const base = API_BASE_URL?.trim();
-  if (!base) {
-    logDev('Laravel sync: VITE_API_BASE_URL is not set');
-    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('VITE_API_BASE_URL missing'));
+  const token = idToken.trim();
+  if (!token) {
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('No ID token'));
   }
 
-  const url = `${base.replace(/\/$/, '')}/api/auth/sync`;
-
-  let response: Response;
   try {
-    response = await fetch(url, {
+    requireApiBase();
+  } catch (err) {
+    logDev('Laravel sync: VITE_API_BASE_URL is not set');
+    throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, err);
+  }
+
+  const url = laravelApiUrl('/api/auth/sync');
+
+  let response: Awaited<ReturnType<typeof laravelFetch>>;
+  try {
+    response = await laravelFetch(url, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${idToken}`,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/json',
       },
     });
@@ -200,7 +205,7 @@ export async function ensureLaravelUserSynced(user: User): Promise<LaravelUser> 
     return laravelUser.value;
   }
 
-  const idToken = await user.getIdToken();
+  const idToken = await user.getIdToken(true);
   if (!idToken) {
     throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('No ID token'));
   }
@@ -216,7 +221,7 @@ async function getIdToken(user?: User | null): Promise<string | null> {
 
 async function finalizeFirebaseLogin(credential: UserCredential): Promise<UserCredential> {
   try {
-    const idToken = await getIdToken(credential.user);
+    const idToken = await credential.user.getIdToken(true);
     if (!idToken) {
       throw new LaravelSyncError(LARAVEL_SYNC_FAILURE_MESSAGE, new Error('No ID token'));
     }

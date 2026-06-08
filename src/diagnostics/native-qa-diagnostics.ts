@@ -5,6 +5,13 @@
 import { auth } from '@/services/firebase';
 import { getRequiredIdToken, laravelUser } from '@/services/auth.service';
 import {
+  laravelApiUrl,
+  laravelFetch,
+  normalizedApiBase,
+  resolveLaravelHttpTransport,
+  type LaravelHttpResponse,
+} from '@/services/laravel-http';
+import {
   getNotificationContext,
   getPlaybackSessionSnapshot,
 } from '@/services/audio-player.service';
@@ -23,16 +30,13 @@ export function nativeQaDiagnosticsGloballyAvailable(): boolean {
   );
 }
 
-function normalizedApiBase(): string {
-  return String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
-}
-
 /** Called once at bootstrap; no-op unless {@link nativeQaDiagnosticsGloballyAvailable} passes. */
 export function installNativeQaDiagnostics(): void {
   if (!nativeQaDiagnosticsGloballyAvailable()) return;
 
   (globalThis as Record<string, unknown>)[NATIVE_QA_GLOBAL_KEY] = {
     apiBaseUrl: normalizedApiBase(),
+    laravelHttpTransport: resolveLaravelHttpTransport(),
 
     getFirebaseEmail(): string | null {
       return auth.currentUser?.email ?? null;
@@ -146,9 +150,9 @@ export function installNativeQaDiagnostics(): void {
         return { ok: false, status: 0, body: { reason: 'firebase_token_unavailable' } };
       }
 
-      let response: Response;
+      let response: LaravelHttpResponse;
       try {
-        response = await fetch(`${base}/api/debug/me`, {
+        response = await laravelFetch(laravelApiUrl('/api/debug/me', base), {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
@@ -187,9 +191,9 @@ export function installNativeQaDiagnostics(): void {
         return { ok: false, status: 0, count: null, body: { reason: 'firebase_token_unavailable' } };
       }
 
-      let response: Response;
+      let response: LaravelHttpResponse;
       try {
-        response = await fetch(`${base}/api/vibes`, {
+        response = await laravelFetch(laravelApiUrl('/api/vibes', base), {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',

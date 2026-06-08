@@ -1,7 +1,6 @@
 import { authService } from '@/services/auth.service';
+import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from '@/services/laravel-http';
 import type { CoverBundle } from '@/types/cover-bundle';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = await authService.getIdToken();
@@ -11,7 +10,7 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.message ?? `Request failed: ${res.status}`);
@@ -45,7 +44,7 @@ function normalizeCoverBundle(raw: Record<string, unknown>): CoverBundle {
 
 /** Active bundles only (default Laravel list — no include_inactive). */
 export async function listCoverBundles(): Promise<CoverBundle[]> {
-  const res = await fetch(`${API_BASE_URL}/api/cover-bundles`, {
+  const res = await laravelFetch(laravelApiUrl('/api/cover-bundles'), {
     headers: await authHeaders(),
   });
   const body = await handleResponse<{ data: unknown[] }>(res);

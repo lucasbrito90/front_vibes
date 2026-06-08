@@ -1,11 +1,10 @@
 import { normalizeSoundFileUrlFromApi } from '@/utils/sound-file-url';
 
 import { authService } from './auth.service';
+import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel-http';
 import type { Vibe } from './vibe.service';
 import type { PlayMode, VibeSound } from './vibe-sound.service';
 import type { PresetCoverBundle, PresetVibe, PresetVibeSoundLayer } from '@/types/preset-vibe';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = await authService.getIdToken();
@@ -16,7 +15,7 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.message ?? `Request failed: ${res.status}`);
@@ -147,7 +146,7 @@ function normalizeImportedVibe(raw: Record<string, unknown>): Vibe {
 }
 
 async function listPresetVibes(): Promise<PresetVibe[]> {
-  const res = await fetch(`${API_BASE_URL}/api/preset-vibes`, {
+  const res = await laravelFetch(laravelApiUrl('/api/preset-vibes'), {
     headers: await authHeaders(),
   });
   const body = await handleResponse<{ data: unknown[] }>(res);
@@ -157,7 +156,7 @@ async function listPresetVibes(): Promise<PresetVibe[]> {
 }
 
 async function getPresetVibe(id: number): Promise<PresetVibe> {
-  const res = await fetch(`${API_BASE_URL}/api/preset-vibes/${id}`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/preset-vibes/${id}`), {
     headers: await authHeaders(),
   });
   const body = await handleResponse<{ data: unknown }>(res);
@@ -167,7 +166,7 @@ async function getPresetVibe(id: number): Promise<PresetVibe> {
 
 /** POST import — returns new user-owned vibe (`VibeResource`, may include embedded `sounds`). */
 async function importPresetVibe(id: number): Promise<Vibe> {
-  const res = await fetch(`${API_BASE_URL}/api/preset-vibes/${id}/import`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/preset-vibes/${id}/import`), {
     method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify({}),
