@@ -32,6 +32,11 @@
           <span>{{ SCHEDULE_OFFLINE_VIEW_MESSAGE }}</span>
         </div>
 
+        <div v-if="notificationsDenied && !offline" class="schedules-offline-banner" role="status">
+          <ion-icon :icon="notificationsOffOutline" />
+          <span>{{ NOTIFICATION_PERMISSION_DENIED_MESSAGE }}</span>
+        </div>
+
         <AppLoadingState
           v-if="listLoading && !schedules.length"
           class="schedules-state-slot"
@@ -157,6 +162,7 @@ import {
   chevronBackOutline,
   cloudOfflineOutline,
   globeOutline,
+  notificationsOffOutline,
   pencilOutline,
   repeatOutline,
   timeOutline,
@@ -178,6 +184,10 @@ import {
   SCHEDULE_OFFLINE_EMPTY_MESSAGE,
   SCHEDULE_OFFLINE_VIEW_MESSAGE,
 } from '@/services/schedule-mirror.service';
+import {
+  NOTIFICATION_PERMISSION_DENIED_MESSAGE,
+  scheduleNotificationService,
+} from '@/services/schedule-notification.service';
 import { formatNextRun, recurrenceSummary } from '@/utils/schedule-format';
 
 const router = useRouter();
@@ -185,6 +195,7 @@ const { schedules, listLoading, listError, fetchSchedules, deleteSchedule } = us
 const { vibes, fetchVibes } = useVibes();
 
 const offline = ref(isDeviceOffline());
+const notificationsDenied = ref(false);
 const showToast = ref(false);
 const toastMessage = ref('');
 
@@ -217,8 +228,24 @@ onIonViewWillEnter(() => {
   void fetchSchedules();
   if (!offline.value) {
     void fetchVibes();
+    void checkAndRequestNotificationPermission();
   }
 });
+
+async function checkAndRequestNotificationPermission(): Promise<void> {
+  const current = await scheduleNotificationService.checkPermission();
+  if (current === 'granted') {
+    notificationsDenied.value = false;
+    return;
+  }
+  if (current === 'prompt') {
+    const granted = await scheduleNotificationService.requestPermission();
+    notificationsDenied.value = !granted;
+    return;
+  }
+  // 'denied' — permission was already explicitly denied by the user
+  notificationsDenied.value = true;
+}
 
 function vibeNameFor(vibeId: number): string {
   const vibe = vibes.value.find((v) => v.id === vibeId);

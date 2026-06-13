@@ -10,6 +10,7 @@ import {
 } from '@/services/auth.service';
 import { auth } from '@/services/firebase';
 import { scheduleMirrorService } from '@/services/schedule-mirror.service';
+import { scheduleNotificationService } from '@/services/schedule-notification.service';
 
 const currentUser = ref<User | null>(authService.getCurrentUser());
 const loading = ref(false);
@@ -159,6 +160,11 @@ async function logout(): Promise<void> {
     currentUser.value = null;
     try {
       await scheduleMirrorService.clearMirror();
+    } catch {
+      /* non-fatal — avoid blocking logout */
+    }
+    try {
+      await scheduleNotificationService.cancelAll();
     } catch {
       /* non-fatal — avoid blocking logout */
     }
