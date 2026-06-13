@@ -8,9 +8,10 @@ import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel
  * `laravelFetch` transport as `vibe.service.ts`. The backend is authoritative for
  * `next_run_at`, ownership, recurrence math, and timezone expansion (ADR-009).
  *
- * Hard boundaries for this phase (Scheduler spec / ADR-011):
+ * Hard boundaries (Scheduler spec / ADR-011):
  * - Online only. Create / update / delete are blocked while the device is offline.
- * - No SQLite mirror, no local notifications, no FCM — those are later phases.
+ * - SQLite mirror (read-only offline) lives in `schedule-mirror.service.ts`.
+ * - No local notifications, no FCM — those are later phases.
  * - `monthly` recurrence is reserved in the type but NOT selectable in the MVP.
  */
 

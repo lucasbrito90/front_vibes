@@ -9,7 +9,12 @@
         </ion-buttons>
         <ion-title>Schedules</ion-title>
         <ion-buttons slot="end">
-          <ion-button fill="clear" aria-label="New schedule" @click="goCreate">
+          <ion-button
+            fill="clear"
+            aria-label="New schedule"
+            :disabled="offline"
+            @click="goCreate"
+          >
             <ion-icon :icon="addOutline" />
           </ion-button>
         </ion-buttons>
@@ -24,7 +29,7 @@
       <div class="schedules-content page-shell">
         <div v-if="offline" class="schedules-offline-banner" role="status">
           <ion-icon :icon="cloudOfflineOutline" />
-          <span>You're offline. {{ SCHEDULE_OFFLINE_MUTATION_MESSAGE }}</span>
+          <span>{{ SCHEDULE_OFFLINE_VIEW_MESSAGE }}</span>
         </div>
 
         <AppLoadingState
@@ -49,9 +54,13 @@
           class="schedules-state-slot"
           variant="card"
           :icon="alarmOutline"
-          title="No schedules yet"
-          description="Create a schedule to be reminded when a vibe should start."
-          action-label="New schedule"
+          :title="offline ? 'No cached schedules' : 'No schedules yet'"
+          :description="
+            offline
+              ? SCHEDULE_OFFLINE_EMPTY_MESSAGE
+              : 'Create a schedule to be reminded when a vibe should start.'
+          "
+          :action-label="offline ? undefined : 'New schedule'"
           @action="goCreate"
         />
 
@@ -165,6 +174,10 @@ import {
   isDeviceOffline,
   type Schedule,
 } from '@/services/schedule.service';
+import {
+  SCHEDULE_OFFLINE_EMPTY_MESSAGE,
+  SCHEDULE_OFFLINE_VIEW_MESSAGE,
+} from '@/services/schedule-mirror.service';
 import { formatNextRun, recurrenceSummary } from '@/utils/schedule-format';
 
 const router = useRouter();
@@ -180,19 +193,29 @@ function updateOnlineState(): void {
 }
 
 onMounted(() => {
-  window.addEventListener('online', updateOnlineState);
-  window.addEventListener('offline', updateOnlineState);
+  window.addEventListener('online', onNetworkChange);
+  window.addEventListener('offline', onNetworkChange);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('online', updateOnlineState);
-  window.removeEventListener('offline', updateOnlineState);
+  window.removeEventListener('online', onNetworkChange);
+  window.removeEventListener('offline', onNetworkChange);
 });
 
-onIonViewWillEnter(() => {
+function onNetworkChange(): void {
   updateOnlineState();
   if (!offline.value) {
     void fetchSchedules();
+    void fetchVibes();
+  } else {
+    void fetchSchedules();
+  }
+}
+
+onIonViewWillEnter(() => {
+  updateOnlineState();
+  void fetchSchedules();
+  if (!offline.value) {
     void fetchVibes();
   }
 });
@@ -231,6 +254,8 @@ async function onRefresh(event: RefresherCustomEvent): Promise<void> {
   if (!offline.value) {
     await fetchSchedules();
     await fetchVibes();
+  } else {
+    await fetchSchedules();
   }
   await event.target.complete();
 }
