@@ -100,6 +100,25 @@
           </div>
         </section>
 
+        <!-- Scheduler -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Scheduler</h2>
+          <div class="app-surface-card settings-card">
+            <button type="button" class="settings-tile" @click="goSchedules">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap">
+                  <ion-icon :icon="alarmOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Schedules</span>
+                  <span class="settings-tile-sub">Set when a vibe should start. Managed online.</span>
+                </div>
+              </div>
+              <ion-icon :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+        </section>
+
         <!-- Appearance -->
         <section class="settings-block">
           <h2 class="settings-heading">Appearance</h2>
@@ -207,6 +226,7 @@ import {
   onIonViewWillEnter,
 } from '@ionic/vue';
 import {
+  alarmOutline,
   chevronForwardOutline,
   cloudDownloadOutline,
   cloudOfflineOutline,
@@ -214,6 +234,7 @@ import {
   musicalNotesOutline,
   trashOutline,
 } from 'ionicons/icons';
+import { useRouter } from 'vue-router';
 import { usePlayerStore } from '@/stores/player.store';
 import { audioEngine } from '@/services/audio-engine';
 import { useAuth } from '@/composables/useAuth';
@@ -222,8 +243,13 @@ import type { OfflineVibeSnapshot } from '@/services/offline-vibe-cache.service'
 import { getOfflineVibeSnapshots, removeDownloadedVibe } from '@/services/offline-downloads.service';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 
+const router = useRouter();
 const playerStore = usePlayerStore();
 const { logout } = useAuth();
+
+function goSchedules(): void {
+  router.push('/schedules');
+}
 
 const isClearingCache = ref(false);
 const showConfirm     = ref(false);

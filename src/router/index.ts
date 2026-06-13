@@ -108,6 +108,21 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, hideMiniPlayer: true },
       },
       {
+        path: 'schedules',
+        component: () => import('@/views/SchedulesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'schedules/new',
+        component: () => import('@/views/ScheduleFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'schedules/:id/edit',
+        component: () => import('@/views/ScheduleFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'presets',
         component: () => import('@/views/PresetVibesPage.vue'),
         meta: { requiresAuth: true },
