@@ -6,6 +6,7 @@ import {
   type SchedulePayload,
 } from '@/services/schedule.service';
 import { scheduleMirrorService } from '@/services/schedule-mirror.service';
+import { scheduleNotificationService } from '@/services/schedule-notification.service';
 
 /**
  * Module-level reactive state for the Scheduler MVP, mirroring the `useVibes` pattern
@@ -43,6 +44,16 @@ async function refreshLastSyncedAt(): Promise<void> {
   lastSyncedAt.value = await scheduleMirrorService.getLastSyncedAt();
 }
 
+async function safeRebuildNotifications(currentSchedules: Schedule[]): Promise<void> {
+  try {
+    await scheduleNotificationService.rebuildFromMirror(currentSchedules);
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('[useSchedules] Notification rebuild failed:', err);
+    }
+  }
+}
+
 async function fetchSchedules(): Promise<void> {
   const gen = ++listFetchGen;
   listLoading.value = true;
@@ -74,6 +85,7 @@ async function fetchSchedules(): Promise<void> {
       }
     }
 
+    await safeRebuildNotifications(data);
     listError.value = null;
   } catch (err) {
     if (gen !== listFetchGen) return;
@@ -156,6 +168,7 @@ async function createSchedule(payload: SchedulePayload): Promise<Schedule | null
         console.warn('[useSchedules] Create succeeded but mirror upsert failed:', mirrorErr);
       }
     }
+    await safeRebuildNotifications(schedules.value);
     return schedule;
   } catch (err) {
     handleError(err);
@@ -186,6 +199,7 @@ async function updateSchedule(
       }
     }
 
+    await safeRebuildNotifications(schedules.value);
     return updated;
   } catch (err) {
     handleError(err);
@@ -210,6 +224,7 @@ async function deleteSchedule(id: number): Promise<boolean> {
       }
     }
 
+    await safeRebuildNotifications(schedules.value);
     return true;
   } catch (err) {
     handleError(err);
