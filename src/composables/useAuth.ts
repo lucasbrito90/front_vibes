@@ -9,6 +9,7 @@ import {
   laravelUser,
 } from '@/services/auth.service';
 import { auth } from '@/services/firebase';
+import { scheduleMirrorService } from '@/services/schedule-mirror.service';
 
 const currentUser = ref<User | null>(authService.getCurrentUser());
 const loading = ref(false);
@@ -156,6 +157,11 @@ async function logout(): Promise<void> {
   try {
     await authService.logout();
     currentUser.value = null;
+    try {
+      await scheduleMirrorService.clearMirror();
+    } catch {
+      /* non-fatal — avoid blocking logout */
+    }
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;

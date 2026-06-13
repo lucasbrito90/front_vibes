@@ -268,6 +268,13 @@ onUnmounted(() => {
 
 onIonViewWillEnter(async () => {
   updateOnlineState();
+
+  if (isEdit.value && offline.value) {
+    notify(SCHEDULE_OFFLINE_MUTATION_MESSAGE);
+    await router.replace('/schedules');
+    return;
+  }
+
   void fetchVibes();
 
   if (isEdit.value && scheduleId.value !== null) {
