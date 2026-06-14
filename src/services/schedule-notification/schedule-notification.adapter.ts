@@ -9,6 +9,13 @@ export interface ScheduleNotificationExtra {
   schedule_id: number;
   vibe_id: number;
   schedule_name: string;
+  /**
+   * ADR-010 occurrence key (`{schedule_id}:{scheduled_for_unix}`) for the
+   * notification's target execution. Used by Phase 11 ack endpoint.
+   * Optional for backward-compatibility with notifications scheduled before
+   * Phase 11 was deployed.
+   */
+  occurrence_key?: string;
 }
 
 export interface NotificationToSchedule {
