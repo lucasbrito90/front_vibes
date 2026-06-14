@@ -42,7 +42,7 @@ export class CapacitorScheduleNotificationAdapter implements ScheduleNotificatio
         schedule: { at: n.scheduleAt },
         extra: n.extra,
         channelId: n.channelId,
-        smallIcon: 'ic_stat_audio',
+        smallIcon: 'ic_stat_ixora',
         iconColor: '#6200EE',
       })),
     });
