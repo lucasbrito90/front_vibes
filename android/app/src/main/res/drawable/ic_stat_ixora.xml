@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome status-bar icon for Android notification.
+  Lotus/vibes logo simplified for small sizes.
+  Android notification icons should be white on transparent background.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,2.2c-2.05,2.45 -3.05,4.85 -3.05,7.2c0,2.25 1.05,4.15 3.05,5.85c2,-1.7 3.05,-3.6 3.05,-5.85c0,-2.35 -1,-4.75 -3.05,-7.2z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M8.85,6.1c-2.8,0.85 -5.05,2.35 -6.45,4.35c2.05,0.05 4.05,0.75 5.95,2.25c-0.85,-2.05 -0.75,-4.25 0.5,-6.6z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M15.15,6.1c2.8,0.85 5.05,2.35 6.45,4.35c-2.05,0.05 -4.05,0.75 -5.95,2.25c0.85,-2.05 0.75,-4.25 -0.5,-6.6z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M7.95,12.35c-2.45,-0.55 -4.75,-0.15 -6.75,1.05c1.75,1.2 3.9,1.8 6.45,1.75c1.15,-0.02 2.25,-0.23 3.3,-0.65c-0.95,-0.55 -1.95,-1.25 -3,-2.15z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M16.05,12.35c2.45,-0.55 4.75,-0.15 6.75,1.05c-1.75,1.2 -3.9,1.8 -6.45,1.75c-1.15,-0.02 -2.25,-0.23 -3.3,-0.65c0.95,-0.55 1.95,-1.25 3,-2.15z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,14.75c-2.9,0 -5.45,0.95 -7.45,2.75c2.2,0.95 4.65,1.35 7.45,1.35s5.25,-0.4 7.45,-1.35c-2,-1.8 -4.55,-2.75 -7.45,-2.75z" />
+
+</vector>
