@@ -149,6 +149,8 @@ async function rebuildFromMirror(schedules: Schedule[]): Promise<void> {
       schedule_id: s.id,
       vibe_id: s.vibe_id,
       schedule_name: s.name,
+      // Phase 11: embed occurrence_key so tap handler can ack the execution.
+      occurrence_key: `${s.id}:${Math.floor(new Date(s.next_run_at!).getTime() / 1000)}`,
     },
   }));
 
