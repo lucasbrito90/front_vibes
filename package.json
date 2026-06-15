@@ -21,6 +21,7 @@
     "test:native-offline-qa:android": "wdio run wdio.android.offline-qa.conf.ts",
     "test:native-pause-resume-qa:android": "wdio run wdio.android.pause-resume-qa.conf.ts",
     "test:native-media-notification-qa:android": "wdio run wdio.android.media-notification-qa.conf.ts",
+    "test:native-scheduler-e2e:android": "wdio run wdio.android.scheduler-e2e.conf.ts",
     "capture:playback-logcat": "bash scripts/capture-playback-logcat.sh",
     "android:apk:debug": "cd android && ./gradlew assembleDebug",
     "appium:setup": "appium driver install uiautomator2",
