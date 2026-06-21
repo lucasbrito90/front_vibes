@@ -84,6 +84,9 @@
                 <button class="vibe-action-btn" @click.stop="router.push(`/vibes/${vibe.id}/sounds`)" aria-label="Manage sounds">
                   <ion-icon :icon="musicalNotesOutline" />
                 </button>
+                <button class="vibe-action-btn" @click.stop="router.push(`/vibes/${vibe.id}/device-actions`)" aria-label="Device actions">
+                  <ion-icon :icon="bulbOutline" />
+                </button>
                 <button class="vibe-action-btn" @click.stop="goEdit(vibe.id)" aria-label="Edit vibe">
                   <ion-icon :icon="pencilOutline" />
                 </button>
@@ -122,7 +125,7 @@ import {
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
-import { addOutline, cloudOfflineOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, bulbOutline, cloudOfflineOutline, musicalNotesOutline, pencilOutline, trashOutline } from 'ionicons/icons';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
