@@ -123,6 +123,26 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true },
       },
       {
+        path: 'devices',
+        component: () => import('@/views/DevicesPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'devices/providers/new',
+        component: () => import('@/views/ProviderConnectionFormPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'devices/providers/:id',
+        component: () => import('@/views/ProviderConnectionDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'devices/:id',
+        component: () => import('@/views/DeviceDetailPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'presets',
         component: () => import('@/views/PresetVibesPage.vue'),
         meta: { requiresAuth: true },

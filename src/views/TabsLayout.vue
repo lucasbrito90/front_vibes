@@ -33,6 +33,11 @@
           <ion-label>Presets</ion-label>
         </ion-tab-button>
 
+        <ion-tab-button tab="devices" href="/devices" class="app-tab-btn">
+          <ion-icon :icon="hardwareChipOutline" class="app-tab-icon" />
+          <ion-label>Devices</ion-label>
+        </ion-tab-button>
+
         <ion-tab-button tab="settings" href="/settings" class="app-tab-btn">
           <ion-icon :icon="settingsOutline" class="app-tab-icon" />
           <ion-label>Settings</ion-label>
@@ -52,7 +57,13 @@ import {
   IonPage,
   IonRouterOutlet,
 } from '@ionic/vue';
-import { homeOutline, albumsOutline, musicalNotesOutline, settingsOutline } from 'ionicons/icons';
+import {
+  homeOutline,
+  albumsOutline,
+  musicalNotesOutline,
+  settingsOutline,
+  hardwareChipOutline,
+} from 'ionicons/icons';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
