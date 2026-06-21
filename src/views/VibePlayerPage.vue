@@ -313,6 +313,7 @@ import {
   type VibeExecutionLayer,
 } from '@/services/player-engine.service';
 import { createLogger } from '@/utils/player-debug';
+import { dispatchVibeSmartHomeActions } from '@/services/smart-home-dispatch.service';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -748,6 +749,9 @@ async function togglePlayback(): Promise<void> {
     );
     return;
   }
+
+  // Fire-and-forget Smart Home dispatch — failure must never block audio.
+  dispatchVibeSmartHomeActions(vibeId.value).catch(() => {});
 
   if (playableCount < totalLayers) {
     await showPlaybackToast('Some sounds could not be played');
