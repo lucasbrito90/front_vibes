@@ -1,6 +1,7 @@
-import { authService } from './auth.service';
+import { normalizeSoundFileUrlFromApi } from '@/utils/sound-file-url';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { authService } from './auth.service';
+import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel-http';
 
 export interface Sound {
   id: number;
@@ -21,7 +22,7 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.message ?? `Request failed: ${res.status}`);
@@ -30,11 +31,15 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 async function getSounds(): Promise<Sound[]> {
-  const res = await fetch(`${API_BASE_URL}/api/sounds`, {
+  const res = await laravelFetch(laravelApiUrl('/api/sounds'), {
     headers: await authHeaders(),
   });
-  const body = await handleResponse<{ data: Sound[] }>(res);
-  return body.data;
+  const body = await handleResponse<{ data: (Sound & { audio_url?: string | null })[] }>(res);
+
+  return body.data.map((row) => ({
+    ...row,
+    file_url: normalizeSoundFileUrlFromApi(row),
+  }));
 }
 
 export const soundService = { getSounds };

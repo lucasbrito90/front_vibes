@@ -18,6 +18,8 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom'
+    environment: 'jsdom',
+    passWithNoTests: true,
+    exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**', 'tests/smoke/**', 'qa-android-native/**'],
   }
 })

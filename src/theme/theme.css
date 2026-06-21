@@ -86,7 +86,7 @@ ion-button[data-variant='primary'] {
 
 ion-button.btn-outline,
 ion-button[data-variant='outline'] {
-  --background: #ffffff;
+  --background: var(--app-color-bg);
   --color: var(--app-color-text-primary);
   --border-color: var(--app-color-border);
   --border-style: solid;
@@ -118,7 +118,7 @@ ion-card {
   border-radius: var(--app-radius-md);
   background: var(--app-color-surface);
   color: var(--app-color-text-primary);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--app-shadow-card);
 }
 
 /* Minimal spacing utilities for layout composition. */

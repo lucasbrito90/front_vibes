@@ -1,7 +1,10 @@
 # Specifies intentionally untracked files to ignore when using Git
 # http://git-scm.com/docs/gitignore
 
+.env
+.env.*
 *~
+*.env
 *.sw[mnpcod]
 .tmp
 *.tmp
@@ -27,6 +30,17 @@ npm-debug.log*
 /coverage
 /dist
 /node_modules
+/playwright-report
+/test-results
+/blob-report
+/playwright/.cache
+/wdio-logs
+
+# Native Android QA harness — local device run artifacts only
+/qa-android-native/output/
 /platforms
 /plugins
 /www
+
+# Backup files created by ionic capacitor run --live-reload
+*.orig

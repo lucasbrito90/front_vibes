@@ -1,0 +1,151 @@
+/**
+ * Global motion tokens + lightweight utilities (CSS-only).
+ * Prefer transform + opacity. Import before layout.css so artwork hooks can
+ * share keyframe names and durations.
+ */
+
+:root {
+  --app-motion-fast: 140ms;
+  --app-motion-base: 240ms;
+  --app-motion-slow: 360ms;
+  --app-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --app-ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --app-motion-stagger-step: 48ms;
+}
+
+/* ── Reduced motion: collapse durations (no global `*` reset) ─────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --app-motion-fast: 0.001ms;
+    --app-motion-base: 0.001ms;
+    --app-motion-slow: 0.001ms;
+    --app-motion-stagger-step: 0.001ms;
+  }
+
+  .app-soft-pulse {
+    animation: none !important;
+  }
+
+  /* Player preparing halo — infinite; disable when user prefers reduced motion */
+  .player-spinner-wrap--preparing {
+    animation: none !important;
+  }
+
+  .player-bg--image,
+  .player-wrap--playing .player-ambient,
+  .player-control-btn--preparing,
+  .player-status-dot--preparing,
+  .mini-player-dot--preparing {
+    animation: none !important;
+  }
+
+  .player-bg {
+    animation: player-bg-enter 0.001ms both !important;
+  }
+
+  .app-pressable {
+    transition: none !important;
+  }
+
+  .app-pressable:active {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ── Keyframes (shared where noted in layout.css) ─────────────────────────── */
+
+@keyframes app-fade-in-kf {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-slide-up-kf {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes app-scale-in-kf {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes app-card-enter-kf {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes app-soft-pulse-kf {
+  50% {
+    opacity: 0.86;
+  }
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────────── */
+
+.app-fade-in {
+  animation: app-fade-in-kf var(--app-motion-base) var(--app-ease-standard) both;
+}
+
+.app-slide-up {
+  animation: app-slide-up-kf var(--app-motion-base) var(--app-ease-emphasized) both;
+}
+
+.app-scale-in {
+  animation: app-scale-in-kf var(--app-motion-base) var(--app-ease-emphasized) both;
+}
+
+.app-card-enter {
+  animation: app-card-enter-kf var(--app-motion-slow) var(--app-ease-emphasized) both;
+}
+
+.app-soft-pulse {
+  animation: app-soft-pulse-kf 2.8s var(--app-ease-standard) infinite;
+}
+
+.app-pressable {
+  transition:
+    transform var(--app-motion-fast) var(--app-ease-standard),
+    opacity var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.app-pressable:active {
+  transform: scale(0.98);
+  opacity: 0.94;
+}
+
+/* Optional stagger hooks for sequential entrances */
+.app-motion-delay-1 {
+  animation-delay: var(--app-motion-stagger-step);
+}
+
+.app-motion-delay-2 {
+  animation-delay: calc(var(--app-motion-stagger-step) * 2);
+}
+
+.app-motion-delay-3 {
+  animation-delay: calc(var(--app-motion-stagger-step) * 3);
+}

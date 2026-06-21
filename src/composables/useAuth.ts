@@ -1,11 +1,16 @@
-import { computed, ref } from 'vue';
+import { computed, readonly, ref } from 'vue';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
 import { Preferences } from '@capacitor/preferences';
-import { authService } from '@/services/auth.service';
+import {
+  authService,
+  FIREBASE_TOKEN_PREFS_KEY,
+  LaravelSyncError,
+  laravelUser,
+} from '@/services/auth.service';
 import { auth } from '@/services/firebase';
-
-const TOKEN_KEY = 'firebase_id_token';
+import { scheduleMirrorService } from '@/services/schedule-mirror.service';
+import { scheduleNotificationService } from '@/services/schedule-notification.service';
 
 const currentUser = ref<User | null>(authService.getCurrentUser());
 const loading = ref(false);
@@ -17,14 +22,36 @@ onAuthStateChanged(auth, (user) => {
 
 async function persistToken(token: string | null): Promise<void> {
   if (!token) {
-    await Preferences.remove({ key: TOKEN_KEY });
+    await Preferences.remove({ key: FIREBASE_TOKEN_PREFS_KEY });
     return;
   }
 
-  await Preferences.set({ key: TOKEN_KEY, value: token });
+  await Preferences.set({ key: FIREBASE_TOKEN_PREFS_KEY, value: token });
 }
 
 function toFriendlyAuthError(err: unknown): string {
+  if (err instanceof LaravelSyncError) {
+    return err.message;
+  }
+
+  if (err instanceof Error) {
+    const msg = err.message ?? '';
+    if (
+      msg.includes('SIGN_IN_CANCELLED') ||
+      msg.includes('12501') ||
+      msg.includes('canceled') ||
+      msg.includes('cancelled')
+    ) {
+      return 'Sign-in was cancelled.';
+    }
+    if (msg.includes('NETWORK_ERROR') || msg.includes('7:')) {
+      return 'Network error. Check your connection and try again.';
+    }
+    if (msg.includes('ID token')) {
+      return 'Google Sign-In configuration error. Please contact support.';
+    }
+  }
+
   if (!(err instanceof FirebaseError)) {
     return 'Something went wrong. Please try again.';
   }
@@ -41,7 +68,7 @@ function toFriendlyAuthError(err: unknown): string {
     case 'auth/weak-password':
       return 'Password is too weak. Use at least 6 characters.';
     case 'auth/popup-closed-by-user':
-      return 'Login popup was closed before finishing.';
+      return 'Sign-in was cancelled.';
     case 'auth/too-many-requests':
       return 'Too many attempts. Please wait a few minutes and try again.';
     case 'auth/network-request-failed':
@@ -85,12 +112,16 @@ async function loginWithEmail(email: string, password: string): Promise<void> {
   }
 }
 
-async function signUpWithEmail(email: string, password: string): Promise<void> {
+async function signUpWithEmail(
+  email: string,
+  password: string,
+  displayName?: string,
+): Promise<void> {
   loading.value = true;
   error.value = null;
 
   try {
-    const credential = await authService.signUpWithEmail(email, password);
+    const credential = await authService.signUpWithEmail(email, password, displayName);
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
@@ -127,7 +158,16 @@ async function logout(): Promise<void> {
   try {
     await authService.logout();
     currentUser.value = null;
-    await persistToken(null);
+    try {
+      await scheduleMirrorService.clearMirror();
+    } catch {
+      /* non-fatal — avoid blocking logout */
+    }
+    try {
+      await scheduleNotificationService.cancelAll();
+    } catch {
+      /* non-fatal — avoid blocking logout */
+    }
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -145,6 +185,7 @@ const isAuthenticated = computed(() => Boolean(currentUser.value));
 export function useAuth() {
   return {
     currentUser,
+    laravelUser: readonly(laravelUser),
     isAuthenticated,
     loading,
     error,

@@ -1,16 +1,16 @@
 <template>
   <ion-page class="auth-page">
     <ion-content class="auth-content">
-      <div class="auth-screen auth-entry-screen">
+      <div class="auth-screen auth-entry-screen app-fade-in">
         <section class="auth-entry-hero">
           <img
             class="auth-entry-hero-image"
             src="https://www.figma.com/api/mcp/asset/139068fd-60aa-45ea-a41f-059245c61f1a"
-            alt="Clarity hero"
+            alt="Ixora ambient hero"
           />
           <div class="auth-entry-hero-overlay">
-            <h1>CLARITY</h1>
-            <p>Your reset begins here.</p>
+            <h1>IXORA</h1>
+            <p>Layer ambient sound. Find your vibe.</p>
           </div>
         </section>
 
@@ -33,31 +33,40 @@
             </span>
           </ion-button>
 
-          <ion-button class="auth-submit auth-entry-email-button" expand="block" @click="router.push('/sign-in')">
-            <ion-icon :icon="mailOutline" />
+          <ion-button class="auth-submit auth-entry-email-button" expand="block" router-link="/sign-in">
+            <span class="auth-entry-email-inner">
+              <ion-icon :icon="mailOutline" />
+              Continue with email
+            </span>
           </ion-button>
         </div>
 
         <p class="auth-entry-footer">
           Not a member?
-          <router-link to="/sign-up">Sign Up</router-link>
+          <router-link to="/sign-up">Sign up</router-link>
         </p>
+
+        <ion-text v-if="error" class="auth-error">{{ error }}</ion-text>
       </div>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonButton, IonContent, IonIcon, IonPage } from '@ionic/vue';
+import { IonButton, IonContent, IonIcon, IonPage, IonText } from '@ionic/vue';
 import { logoApple, mailOutline } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
-const { loginWithGoogle } = useAuth();
+const { loginWithGoogle, error } = useAuth();
 
 async function handleGoogleLogin() {
-  await loginWithGoogle();
-  await router.replace('/home');
+  try {
+    await loginWithGoogle();
+    await router.replace('/home');
+  } catch {
+    /* error surfaced via useAuth */
+  }
 }
 </script>

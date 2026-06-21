@@ -1,0 +1,36 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import type { Capabilities, Options } from '@wdio/types';
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const appiumBin = path.join(rootDir, 'node_modules', '.bin', 'appium');
+
+const apkPath =
+  process.env.ANDROID_APK_PATH
+  ?? path.join(rootDir, 'android/app/build/outputs/apk/debug/app-debug.apk');
+
+export const config: Options.Testrunner & Capabilities.WithRequestedTestrunnerCapabilities = {
+  runner: 'local',
+  specs: [
+    './qa-android-native/pause-resume-instrumentation.spec.ts',
+    './qa-android-native/headset-noisy-qa.spec.ts',
+  ],
+  maxInstances: 1,
+  capabilities: [{
+    platformName: 'Android',
+    'appium:automationName': 'UiAutomator2',
+    'appium:deviceName': process.env.ANDROID_DEVICE_NAME ?? 'Android',
+    'appium:app': apkPath,
+    'appium:appPackage': process.env.ANDROID_APP_PACKAGE ?? 'io.ionic.starter',
+    'appium:appActivity': process.env.ANDROID_APP_ACTIVITY ?? '.MainActivity',
+    'appium:autoGrantPermissions': true,
+    'appium:newCommandTimeout': 300,
+    'appium:chromedriverAutodownload': true,
+  } as Capabilities.RequestedStandaloneCapabilities],
+  services: [['appium', { command: appiumBin, args: { relaxedSecurity: true } }]],
+  framework: 'mocha',
+  reporters: ['spec'],
+  mochaOpts: { ui: 'bdd', timeout: 600_000 },
+  logLevel: 'info',
+};

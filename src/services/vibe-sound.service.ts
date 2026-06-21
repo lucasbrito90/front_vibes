@@ -1,12 +1,14 @@
-import { authService } from './auth.service';
+import { normalizeSoundFileUrlFromApi } from '@/utils/sound-file-url';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { authService } from './auth.service';
+import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel-http';
 
 export type PlayMode = 'loop' | 'once' | 'interval';
 
 export interface VibeSound {
   id: number;
   name: string;
+  /** Canonical audio URL from API (`file_url`). See {@link normalizeVibeSoundFromApi}. */
   file_url: string;
   thumbnail_url: string | null;
   category: string;
@@ -56,7 +58,7 @@ async function authHeaders(): Promise<HeadersInit> {
   };
 }
 
-async function handleResponse<T>(res: Response): Promise<T> {
+async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.message ?? `Request failed: ${res.status}`);
@@ -64,22 +66,29 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return res.json();
 }
 
+/** Maps API row → `VibeSound`, collapsing legacy `audio_url` into `file_url`. */
+function normalizeVibeSoundFromApi(row: VibeSound & { audio_url?: string | null }): VibeSound {
+  return { ...row, file_url: normalizeSoundFileUrlFromApi(row) };
+}
+
 async function getVibeSounds(vibeId: number): Promise<VibeSound[]> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${vibeId}/sounds`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${vibeId}/sounds`), {
     headers: await authHeaders(),
   });
-  const body = await handleResponse<{ data: VibeSound[] }>(res);
-  return body.data;
+  const body = await handleResponse<{ data: (VibeSound & { audio_url?: string | null })[] }>(res);
+
+  return body.data.map(normalizeVibeSoundFromApi);
 }
 
 async function attachSoundToVibe(vibeId: number, payload: AttachSoundPayload): Promise<VibeSound> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${vibeId}/sounds`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${vibeId}/sounds`), {
     method: 'POST',
     headers: await authHeaders(),
     body: JSON.stringify(payload),
   });
-  const body = await handleResponse<{ data: VibeSound }>(res);
-  return body.data;
+  const body = await handleResponse<{ data: VibeSound & { audio_url?: string | null } }>(res);
+
+  return normalizeVibeSoundFromApi(body.data);
 }
 
 async function updateVibeSound(
@@ -87,17 +96,18 @@ async function updateVibeSound(
   soundId: number,
   payload: UpdateVibeSoundPayload,
 ): Promise<VibeSound> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${vibeId}/sounds/${soundId}`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${vibeId}/sounds/${soundId}`), {
     method: 'PATCH',
     headers: await authHeaders(),
     body: JSON.stringify(payload),
   });
-  const body = await handleResponse<{ data: VibeSound }>(res);
-  return body.data;
+  const body = await handleResponse<{ data: VibeSound & { audio_url?: string | null } }>(res);
+
+  return normalizeVibeSoundFromApi(body.data);
 }
 
 async function removeSoundFromVibe(vibeId: number, soundId: number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/vibes/${vibeId}/sounds/${soundId}`, {
+  const res = await laravelFetch(laravelApiUrl(`/api/vibes/${vibeId}/sounds/${soundId}`), {
     method: 'DELETE',
     headers: await authHeaders(),
   });

@@ -1,68 +1,611 @@
 <template>
-  <ion-page>
+  <ion-page class="tab-page">
     <ion-header class="ion-no-border">
-      <ion-toolbar class="settings-toolbar">
-        <ion-title class="settings-title">Settings</ion-title>
+      <ion-toolbar class="tab-toolbar">
+        <ion-title>Settings</ion-title>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" class="settings-content">
-      <div class="settings-placeholder">
-        <ion-icon :icon="settingsOutline" class="settings-icon" />
-        <p class="settings-placeholder-title">Settings</p>
-        <p class="settings-placeholder-sub">Coming soon</p>
+    <ion-content :fullscreen="true" class="settings-ion-content">
+      <div class="page-shell page-content settings-wrap app-fade-in">
+        <!-- Audio -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Audio</h2>
+          <div class="app-surface-card settings-card">
+            <button
+              type="button"
+              class="settings-tile"
+              :disabled="!cacheInfo.hasCacheSupport || isClearingCache || isPlaybackActive"
+              @click="handleClearCacheTap"
+            >
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap">
+                  <ion-icon :icon="musicalNotesOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Clear streaming cache</span>
+                  <span class="settings-tile-sub">{{ cacheSubtitle }}</span>
+                </div>
+              </div>
+              <ion-spinner v-if="isClearingCache" name="crescent" class="settings-tile-spinner" />
+              <ion-icon v-else :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+          <p class="settings-hint">
+            Clears ExoPlayer’s temporary disk cache (about 100 MB). Offline files you downloaded from the player menu are kept until you remove them or reinstall the app.
+          </p>
+        </section>
+
+        <!-- Offline -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Offline</h2>
+          <div class="app-surface-card settings-card settings-card--static">
+            <div class="settings-tile settings-tile--static">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap settings-icon-wrap--muted">
+                  <ion-icon :icon="cloudDownloadOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Downloaded vibes</span>
+                  <span class="settings-tile-sub">
+                    Use <strong>Download for offline</strong> in the player menu (⋮). Metadata is saved so you can reopen the vibe without the network.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Downloads -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Downloads</h2>
+          <p class="settings-hint settings-hint--tight">
+            Downloaded vibes are available without internet.
+          </p>
+          <div
+            v-if="!offlineDownloadList.length"
+            class="app-surface-card settings-card settings-card--static settings-downloads-empty-wrap"
+          >
+            <AppEmptyState
+              variant="compact"
+              :icon="cloudOfflineOutline"
+              title="No offline downloads yet"
+              description="Use Download for offline from the player menu (⋮) when you're online."
+            />
+          </div>
+          <div v-else class="app-surface-card settings-card settings-card--static settings-downloads-card">
+            <div
+              v-for="snap in offlineDownloadList"
+              :key="snap.vibeId"
+              class="settings-download-row"
+            >
+              <div class="settings-download-info">
+                <ion-icon :icon="cloudOfflineOutline" class="settings-download-leading-icon" />
+                <div class="settings-download-text">
+                  <span class="settings-tile-title">{{ snap.vibe.name }}</span>
+                  <span class="settings-tile-sub">{{ formatOfflineSavedAt(snap.downloadedAt) }}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="settings-download-remove"
+                :disabled="removingVibeId === snap.vibeId"
+                :aria-label="`Remove offline download for ${snap.vibe.name}`"
+                @click="confirmRemoveOfflineDownload(snap.vibeId, snap.vibe.name)"
+              >
+                <ion-spinner v-if="removingVibeId === snap.vibeId" name="crescent" class="settings-download-spinner" />
+                <ion-icon v-else :icon="trashOutline" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scheduler -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Scheduler</h2>
+          <div class="app-surface-card settings-card">
+            <button type="button" class="settings-tile" @click="goSchedules">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap">
+                  <ion-icon :icon="alarmOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Schedules</span>
+                  <span class="settings-tile-sub">Set when a vibe should start. Managed online.</span>
+                </div>
+              </div>
+              <ion-icon :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+        </section>
+
+        <!-- Appearance -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Appearance</h2>
+          <div class="app-surface-card settings-card settings-card--static settings-appearance-card">
+            <ion-radio-group :value="themeMode" @ionChange="handleThemeChange">
+              <ion-item lines="full" class="settings-appearance-item">
+                <ion-label class="settings-appearance-label">
+                  <div class="settings-tile-title">System</div>
+                  <div class="settings-tile-sub">Match device light or dark mode</div>
+                </ion-label>
+                <ion-radio slot="end" value="system" />
+              </ion-item>
+              <ion-item lines="full" class="settings-appearance-item">
+                <ion-label class="settings-appearance-label">
+                  <div class="settings-tile-title">Light</div>
+                  <div class="settings-tile-sub">Always light appearance</div>
+                </ion-label>
+                <ion-radio slot="end" value="light" />
+              </ion-item>
+              <ion-item lines="none" class="settings-appearance-item">
+                <ion-label class="settings-appearance-label">
+                  <div class="settings-tile-title">Dark</div>
+                  <div class="settings-tile-sub">Always dark appearance</div>
+                </ion-label>
+                <ion-radio slot="end" value="dark" />
+              </ion-item>
+            </ion-radio-group>
+          </div>
+        </section>
+
+        <!-- Account -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Account</h2>
+          <div class="app-surface-card settings-card">
+            <button type="button" class="settings-tile settings-tile--danger" @click="handleSignOut">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap settings-icon-wrap--danger">
+                  <ion-icon :icon="logOutOutline" />
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Sign out</span>
+                  <span class="settings-tile-sub">Leave this device</span>
+                </div>
+              </div>
+              <ion-icon :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+        </section>
+
+        <!-- App -->
+        <section class="settings-block">
+          <h2 class="settings-heading">App</h2>
+          <div class="app-surface-card settings-card settings-card--static">
+            <div class="settings-tile settings-tile--static">
+              <div class="settings-tile-left">
+                <div class="settings-icon-wrap settings-icon-wrap--brand">
+                  <span class="settings-brand-mark">I</span>
+                </div>
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">Ixora</span>
+                  <span class="settings-tile-sub">Ambient layers for focus, rest, and calm.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
+
+      <ion-alert
+        :is-open="showConfirm"
+        header="Clear streaming cache?"
+        message="Cached streamed audio will be deleted. Offline downloads are not removed."
+        :buttons="confirmButtons"
+        @didDismiss="showConfirm = false"
+      />
+
+      <ion-toast
+        :is-open="showToast"
+        :message="toastMessage"
+        :duration="3000"
+        position="bottom"
+        @didDismiss="showToast = false"
+      />
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
-import { IonContent, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
-import { settingsOutline } from 'ionicons/icons';
+import { ref, computed } from 'vue';
+import {
+  IonAlert,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonPage,
+  IonRadio,
+  IonRadioGroup,
+  IonSpinner,
+  IonTitle,
+  IonToast,
+  IonToolbar,
+  alertController,
+  onIonViewWillEnter,
+} from '@ionic/vue';
+import {
+  alarmOutline,
+  chevronForwardOutline,
+  cloudDownloadOutline,
+  cloudOfflineOutline,
+  logOutOutline,
+  musicalNotesOutline,
+  trashOutline,
+} from 'ionicons/icons';
+import { useRouter } from 'vue-router';
+import { usePlayerStore } from '@/stores/player.store';
+import { audioEngine } from '@/services/audio-engine';
+import { useAuth } from '@/composables/useAuth';
+import { themeMode, setThemeMode, type ThemeMode } from '@/composables/useThemeMode';
+import type { OfflineVibeSnapshot } from '@/services/offline-vibe-cache.service';
+import { getOfflineVibeSnapshots, removeDownloadedVibe } from '@/services/offline-downloads.service';
+import AppEmptyState from '@/components/ui/AppEmptyState.vue';
+
+const router = useRouter();
+const playerStore = usePlayerStore();
+const { logout } = useAuth();
+
+function goSchedules(): void {
+  router.push('/schedules');
+}
+
+const isClearingCache = ref(false);
+const showConfirm     = ref(false);
+const showToast       = ref(false);
+const toastMessage    = ref('');
+
+const cacheInfo = audioEngine.getCacheInfo();
+
+const cacheSubtitle = computed(() => {
+  if (!cacheInfo.hasCacheSupport) return 'Not available on this platform';
+  const mb = cacheInfo.maxSizeBytes ? Math.round(cacheInfo.maxSizeBytes / (1024 * 1024)) : 0;
+  return `Up to ${mb} MB · ${isClearingCache.value ? 'Clearing…' : 'Tap to free space'}`;
+});
+
+const isPlaybackActive = computed(() => playerStore.playbackState !== 'idle');
+
+const offlineDownloadList = ref<OfflineVibeSnapshot[]>([]);
+const removingVibeId = ref<number | null>(null);
+
+async function loadOfflineDownloadsList(): Promise<void> {
+  offlineDownloadList.value = await getOfflineVibeSnapshots();
+}
+
+onIonViewWillEnter(() => {
+  void loadOfflineDownloadsList();
+});
+
+function formatOfflineSavedAt(ts: number): string {
+  try {
+    return new Date(ts).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return '';
+  }
+}
+
+async function confirmRemoveOfflineDownload(id: number, name: string): Promise<void> {
+  const alert = await alertController.create({
+    header: 'Remove offline download?',
+    message: `Delete saved audio for “${name}” from this device? You can download again when online.`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Remove',
+        role: 'destructive',
+        handler: () => { void removeOfflineRow(id); },
+      },
+    ],
+  });
+  await alert.present();
+}
+
+async function removeOfflineRow(vibeId: number): Promise<void> {
+  removingVibeId.value = vibeId;
+  try {
+    await removeDownloadedVibe(vibeId);
+    await loadOfflineDownloadsList();
+    showToastMessage('Offline download removed.');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Could not remove download.';
+    showToastMessage(msg);
+  } finally {
+    removingVibeId.value = null;
+  }
+}
+
+const confirmButtons = [
+  { text: 'Cancel', role: 'cancel' },
+  {
+    text: 'Clear',
+    role: 'destructive',
+    handler: () => { void doClearCache(); },
+  },
+];
+
+function handleClearCacheTap(): void {
+  if (!cacheInfo.hasCacheSupport || isClearingCache.value) return;
+  if (isPlaybackActive.value) {
+    showToastMessage('Stop playback before clearing cache.');
+    return;
+  }
+  showConfirm.value = true;
+}
+
+async function doClearCache(): Promise<void> {
+  isClearingCache.value = true;
+  try {
+    await playerStore.clearAudioCache();
+    showToastMessage('Streaming cache cleared.');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    showToastMessage(`Could not clear cache: ${msg}`);
+  } finally {
+    isClearingCache.value = false;
+  }
+}
+
+function showToastMessage(msg: string): void {
+  toastMessage.value = msg;
+  showToast.value    = true;
+}
+
+async function handleThemeChange(ev: CustomEvent<{ value: string }>): Promise<void> {
+  const v = ev.detail?.value;
+  if (v === 'system' || v === 'light' || v === 'dark') await setThemeMode(v as ThemeMode);
+}
+
+async function handleSignOut(): Promise<void> {
+  try {
+    await logout();
+    window.location.replace('/sign-in-sign-up');
+  } catch {
+    showToastMessage('Could not sign out. Try again.');
+  }
+}
 </script>
 
 <style scoped>
-.settings-toolbar {
-  --background: var(--app-color-bg, #0f172a);
-  --border-style: none;
-  padding-top: 4px;
+.settings-ion-content {
+  --background: var(--app-color-surface-subtle);
 }
 
-.settings-title {
-  font-size: var(--app-font-size-h6, 18px);
-  font-weight: var(--app-font-weight-bold, 700);
-  color: var(--app-color-text-primary, #f1f5f9);
+.settings-wrap {
+  padding-top: var(--app-space-2);
 }
 
-.settings-content {
-  --background: var(--app-color-bg, #0f172a);
+.settings-block + .settings-block {
+  margin-top: var(--app-space-7);
 }
 
-.settings-placeholder {
+.settings-heading {
+  margin: 0 0 var(--app-space-3);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--app-color-text-muted);
+}
+
+.settings-card--static {
+  box-shadow: var(--app-shadow-soft);
+}
+
+.settings-tile {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-4);
+  width: 100%;
+  padding: var(--app-space-4) var(--app-space-5);
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
+}
+
+.settings-tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.settings-tile:not(:disabled):active {
+  background: rgba(29, 172, 146, 0.06);
+  transform: scale(0.995);
+}
+
+.settings-tile--static {
+  cursor: default;
+}
+
+.settings-tile--static:active {
+  background: transparent;
+}
+
+.settings-tile--danger:not(:disabled):active {
+  background: rgba(247, 85, 85, 0.08);
+  transform: scale(0.995);
+}
+
+.settings-tile-left {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-4);
+  min-width: 0;
+}
+
+.settings-icon-wrap {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-primary-100);
+  color: var(--app-color-primary-600);
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 80px 24px;
-  text-align: center;
+  font-size: 20px;
 }
 
-.settings-icon {
-  font-size: 48px;
-  color: rgba(148, 163, 184, 0.35);
+.settings-icon-wrap--muted {
+  background: var(--app-color-surface-subtle);
+  color: var(--app-color-text-secondary);
 }
 
-.settings-placeholder-title {
-  font-size: var(--app-font-size-h6, 18px);
-  font-weight: var(--app-font-weight-semibold, 600);
-  color: var(--app-color-text-primary, #f1f5f9);
-  margin: 0;
+.settings-icon-wrap--danger {
+  background: rgba(247, 85, 85, 0.12);
+  color: var(--ion-color-danger);
 }
 
-.settings-placeholder-sub {
-  font-size: var(--app-font-size-body-md, 14px);
-  color: var(--app-color-text-secondary, #94a3b8);
-  margin: 0;
+.settings-icon-wrap--brand {
+  background: var(--app-gradient-primary);
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.settings-brand-mark {
+  line-height: 1;
+}
+
+.settings-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-tile-title {
+  font-size: var(--app-font-size-body-md);
+  font-weight: 600;
+  color: var(--app-color-text-primary);
+}
+
+.settings-tile-sub {
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-secondary);
+  line-height: 1.45;
+}
+
+.settings-tile-chevron {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--app-color-text-muted);
+}
+
+.settings-tile-spinner {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: var(--app-color-primary-500);
+}
+
+.settings-hint {
+  margin: var(--app-space-3) 0 0;
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-muted);
+  line-height: 1.5;
+}
+
+.settings-hint--tight {
+  margin-top: 0;
+}
+
+.settings-downloads-empty-wrap {
+  margin-top: var(--app-space-3);
+}
+
+.settings-downloads-card {
+  margin-top: var(--app-space-3);
+}
+
+.settings-download-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-4);
+  padding: var(--app-space-4) var(--app-space-5);
+  border-bottom: 1px solid var(--app-color-border);
+}
+
+.settings-download-row:last-child {
+  border-bottom: none;
+}
+
+.settings-download-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--app-space-3);
+  min-width: 0;
+}
+
+.settings-download-leading-icon {
+  flex-shrink: 0;
+  font-size: 22px;
+  color: var(--app-color-primary-500);
+  margin-top: 2px;
+}
+
+.settings-download-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-download-remove {
+  transition:
+    background var(--app-motion-fast) var(--app-ease-standard),
+    transform var(--app-motion-fast) var(--app-ease-standard);
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-color-border);
+  background: var(--app-color-surface-subtle);
+  color: var(--app-color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.settings-download-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-download-remove:active:not(:disabled) {
+  background: rgba(247, 85, 85, 0.12);
+  color: var(--ion-color-danger);
+  border-color: rgba(247, 85, 85, 0.35);
+  transform: scale(0.94);
+}
+
+.settings-download-spinner {
+  width: 20px;
+  height: 20px;
+  color: var(--app-color-primary-500);
+}
+
+.settings-appearance-card ion-radio-group {
+  width: 100%;
+}
+
+.settings-appearance-item {
+  --background: transparent;
+  --padding-start: var(--app-space-5);
+  --padding-end: var(--app-space-5);
+  --inner-padding-end: 0;
+  --min-height: 72px;
+}
+
+.settings-appearance-label {
+  margin: 12px 0;
 }
 </style>

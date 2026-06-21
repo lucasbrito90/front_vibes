@@ -1,15 +1,20 @@
 <template>
   <ion-page class="auth-page">
-    <ion-content class="auth-content" :fullscreen="true">
-      <div class="auth-screen auth-screen-forgot">
-        <ion-button class="auth-icon-button" fill="clear" @click="router.push('/sign-in')">
-          <ion-icon class="auth-back-button" :icon="chevronBackOutline" />
-        </ion-button>
+    <ion-header class="auth-header ion-no-border">
+      <ion-toolbar class="auth-toolbar">
+        <ion-buttons slot="start">
+          <ion-button class="auth-icon-button" fill="clear" @click="router.push('/sign-in')">
+            <ion-icon class="auth-back-button" :icon="chevronBackOutline" />
+          </ion-button>
+        </ion-buttons>
+        <ion-title class="auth-toolbar-title">Reset password</ion-title>
+      </ion-toolbar>
+    </ion-header>
 
-        <h1 class="auth-title auth-forgot-title">Forgotten Password</h1>
-        <p class="auth-subtitle auth-forgot-subtitle">
-          Please enter an email address that you used to create account with so we can send you an email to reset your
-          password.
+    <ion-content class="auth-content">
+      <div class="auth-screen auth-flow-body auth-screen-forgot app-slide-up">
+        <p class="auth-subtitle auth-flow-lead">
+          Enter your email and we’ll send a link to reset your password.
         </p>
 
         <form class="auth-form auth-forgot-form" @submit.prevent="handleSendResetEmail">
@@ -38,7 +43,19 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { IonButton, IonContent, IonIcon, IonInput, IonItem, IonPage, IonText } from '@ionic/vue';
+import {
+  IonButton,
+  IonButtons,
+  IonContent,
+  IonHeader,
+  IonIcon,
+  IonInput,
+  IonItem,
+  IonPage,
+  IonText,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/vue';
 import { chevronBackOutline } from 'ionicons/icons';
 import { useAuth } from '@/composables/useAuth';
 

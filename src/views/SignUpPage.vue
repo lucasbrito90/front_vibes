@@ -1,18 +1,21 @@
 <template>
   <ion-page class="auth-page">
-    <ion-header class="auth-header">
+    <ion-header class="auth-header ion-no-border">
       <ion-toolbar class="auth-toolbar">
         <ion-buttons slot="start">
           <ion-button class="auth-icon-button" fill="clear" @click="router.push('/sign-in')">
             <ion-icon class="auth-back-button" :icon="chevronBackOutline" />
           </ion-button>
         </ion-buttons>
-        <ion-title class="auth-toolbar-title">Sign Up</ion-title>
+        <ion-title class="auth-toolbar-title">Sign up</ion-title>
       </ion-toolbar>
     </ion-header>
 
     <ion-content class="auth-content">
-      <div class="auth-screen auth-screen-signup">
+      <div class="auth-screen auth-flow-body auth-screen-signup app-slide-up">
+        <p class="auth-subtitle auth-flow-lead">
+          Create your Ixora account to save and layer vibes.
+        </p>
 
         <div class="auth-social-group">
           <ion-button class="auth-social-button" fill="clear" disabled>
@@ -75,7 +78,7 @@
 
         <p class="auth-footer">
           Already have an account?
-          <router-link to="/sign-in">Sign In</router-link>
+          <router-link to="/sign-in">Sign in</router-link>
         </p>
       </div>
     </ion-content>
@@ -98,13 +101,12 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { chevronBackOutline, eyeOffOutline, logoApple } from 'ionicons/icons';
-import { updateProfile } from 'firebase/auth';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 
 const router = useRouter();
 
-const { signUpWithEmail, loginWithGoogle, loading, error, currentUser } = useAuth();
+const { signUpWithEmail, loginWithGoogle, loading, error } = useAuth();
 
 const name = ref('');
 const email = ref('');
@@ -116,21 +118,17 @@ async function handleGoogleLogin() {
     await loginWithGoogle();
     window.location.replace('/home');
   } catch {
-    // error.value is already set inside loginWithGoogle via useAuth
+    /* error surfaced via useAuth */
   }
 }
 
 async function handleEmailSignUp() {
   try {
-    await signUpWithEmail(email.value, password.value);
-
-    if (currentUser.value && name.value) {
-      updateProfile(currentUser.value, { displayName: name.value }).catch(() => {});
-    }
+    await signUpWithEmail(email.value, password.value, name.value || undefined);
 
     window.location.replace('/home');
   } catch {
-    // error.value is already set inside signUpWithEmail via useAuth
+    /* error surfaced via useAuth */
   }
 }
 </script>
