@@ -108,6 +108,11 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, hideMiniPlayer: true },
       },
       {
+        path: 'vibes/:id/device-actions',
+        component: () => import('@/views/VibeDeviceActionsPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
         path: 'schedules',
         component: () => import('@/views/SchedulesPage.vue'),
         meta: { requiresAuth: true },
