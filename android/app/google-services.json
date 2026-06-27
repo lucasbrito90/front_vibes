@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:443152571832:android:d26bee2d49451392d8034d",
         "android_client_info": {
-          "package_name": "io.ionic.starter"
+          "package_name": "app.ixora.ixora"
         }
       },
       "oauth_client": [
