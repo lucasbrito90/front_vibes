@@ -11,6 +11,7 @@ import { useAppLifecycleAudio } from '@/composables/useAppLifecycleAudio';
 import { useScheduleNotificationHandler } from '@/composables/useScheduleNotificationHandler';
 import { initAudioFocusService } from '@/services/audio-focus.service';
 import { scheduleNotificationService } from '@/services/schedule-notification.service';
+import { pushTokenService } from '@/services/push-token.service';
 
 /*
  * Register the Capacitor appStateChange listener for the full app lifetime.
@@ -37,4 +38,12 @@ void scheduleNotificationService.initialize();
  * Play manually (no auto-play, per ADR-011).
  */
 useScheduleNotificationHandler();
+
+/*
+ * Register the FCM token-rotation listener exactly once at app startup.
+ * When Firebase rotates the device token, the listener calls
+ * POST /api/push-tokens/refresh to keep the backend record current.
+ * No-op on web / non-native platforms.
+ */
+pushTokenService.initPushTokenRefreshListener();
 </script>

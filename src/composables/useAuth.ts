@@ -11,6 +11,7 @@ import {
 import { auth } from '@/services/firebase';
 import { scheduleMirrorService } from '@/services/schedule-mirror.service';
 import { scheduleNotificationService } from '@/services/schedule-notification.service';
+import { pushTokenService } from '@/services/push-token.service';
 
 const currentUser = ref<User | null>(authService.getCurrentUser());
 const loading = ref(false);
@@ -87,6 +88,8 @@ async function loginWithGoogle(): Promise<void> {
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
+    // Fire-and-forget — push registration must not block login or navigation.
+    void pushTokenService.registerCurrentDevicePushToken();
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -104,6 +107,8 @@ async function loginWithEmail(email: string, password: string): Promise<void> {
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
+    // Fire-and-forget — push registration must not block login or navigation.
+    void pushTokenService.registerCurrentDevicePushToken();
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -125,6 +130,8 @@ async function signUpWithEmail(
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
+    // Fire-and-forget — push registration must not block login or navigation.
+    void pushTokenService.registerCurrentDevicePushToken();
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -158,6 +165,11 @@ async function logout(): Promise<void> {
   try {
     await authService.logout();
     currentUser.value = null;
+    try {
+      await pushTokenService.deactivateCurrentDevicePushToken();
+    } catch {
+      /* non-fatal — avoid blocking logout */
+    }
     try {
       await scheduleMirrorService.clearMirror();
     } catch {
