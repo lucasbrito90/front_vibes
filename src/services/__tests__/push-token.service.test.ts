@@ -209,6 +209,8 @@ describe('refreshPushToken', () => {
     const [, init] = mockLaravelFetch.mock.calls[0];
     const body = JSON.parse(init.body as string) as Record<string, unknown>;
     expect(body).not.toHaveProperty('old_token');
+    expect(body.token).toBe(FAKE_TOKEN);
+    expect(body).not.toHaveProperty('new_token');
   });
 
   it('returns the updated push token response', async () => {

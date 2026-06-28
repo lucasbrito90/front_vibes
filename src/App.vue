@@ -6,12 +6,14 @@
 
 <script setup lang="ts">
 import { IonApp, IonRouterOutlet } from '@ionic/vue';
+import { useRouter } from 'vue-router';
 
 import { useAppLifecycleAudio } from '@/composables/useAppLifecycleAudio';
 import { useScheduleNotificationHandler } from '@/composables/useScheduleNotificationHandler';
 import { initAudioFocusService } from '@/services/audio-focus.service';
 import { scheduleNotificationService } from '@/services/schedule-notification.service';
 import { pushTokenService } from '@/services/push-token.service';
+import { pushNotificationHandlerService } from '@/services/push-notification-handler.service';
 
 /*
  * Register the Capacitor appStateChange listener for the full app lifetime.
@@ -46,4 +48,12 @@ useScheduleNotificationHandler();
  * No-op on web / non-native platforms.
  */
 pushTokenService.initPushTokenRefreshListener();
+
+/*
+ * Register the FCM notification tap handler exactly once at app startup.
+ * When a push notification is tapped (foreground, background, or cold start),
+ * the handler routes by data.type to the matching screen. No-op on web /
+ * non-native platforms. Idempotent — only the first call registers the listener.
+ */
+pushNotificationHandlerService.initPushNotificationTapHandler(useRouter());
 </script>
