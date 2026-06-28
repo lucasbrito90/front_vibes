@@ -107,10 +107,18 @@ export async function registerPushToken(payload: PushTokenPayload): Promise<Push
 export async function refreshPushToken(
   payload: RefreshPushTokenPayload,
 ): Promise<PushTokenResponse> {
+  // API contract uses `token` for the new FCM value (spec.md §5 refresh).
+  const { new_token, old_token, ...rest } = payload;
+  const body = {
+    ...rest,
+    token: new_token,
+    ...(old_token !== undefined ? { old_token } : {}),
+  };
+
   const res = await laravelFetch(laravelApiUrl('/api/push-tokens/refresh'), {
     method: 'POST',
     headers: await authHeaders(),
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
