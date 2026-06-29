@@ -271,6 +271,17 @@ describe('registerCurrentDevicePushToken', () => {
     expect(mockLaravelFetch).not.toHaveBeenCalled();
   });
 
+  it('logs FCM unavailable info when not on native platform', async () => {
+    setNative(false);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    await registerCurrentDevicePushToken();
+
+    const output = infoSpy.mock.calls.flat().join(' ');
+    expect(output).toContain('[push-token]');
+    expect(output).toContain('FCM unavailable');
+  });
+
   it('is a no-op when permission is denied', async () => {
     setNative(true);
     mockRequestFcmPermission.mockResolvedValue(false);
@@ -281,6 +292,18 @@ describe('registerCurrentDevicePushToken', () => {
     expect(mockLaravelFetch).not.toHaveBeenCalled();
   });
 
+  it('logs permission not granted info when permission is denied', async () => {
+    setNative(true);
+    mockRequestFcmPermission.mockResolvedValue(false);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    await registerCurrentDevicePushToken();
+
+    const output = infoSpy.mock.calls.flat().join(' ');
+    expect(output).toContain('[push-token]');
+    expect(output).toContain('permission not granted');
+  });
+
   it('is a no-op when getFcmToken returns null', async () => {
     setNative(true);
     mockRequestFcmPermission.mockResolvedValue(true);
@@ -289,6 +312,19 @@ describe('registerCurrentDevicePushToken', () => {
     await registerCurrentDevicePushToken();
 
     expect(mockLaravelFetch).not.toHaveBeenCalled();
+  });
+
+  it('logs FCM token unavailable info when token is null', async () => {
+    setNative(true);
+    mockRequestFcmPermission.mockResolvedValue(true);
+    mockGetFcmToken.mockResolvedValue(null);
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    await registerCurrentDevicePushToken();
+
+    const output = infoSpy.mock.calls.flat().join(' ');
+    expect(output).toContain('[push-token]');
+    expect(output).toContain('token unavailable');
   });
 
   it('calls POST /api/push-tokens with Firebase Bearer token on success', async () => {
@@ -373,6 +409,48 @@ describe('registerCurrentDevicePushToken', () => {
     const allWarnOutput = warnSpy.mock.calls.flat().join(' ');
     expect(allWarnOutput).toContain('[push-token]');
     expect(allWarnOutput).not.toContain(FAKE_TOKEN);
+  });
+
+  it('logs Registering device token before calling POST', async () => {
+    setNative(true);
+    mockRequestFcmPermission.mockResolvedValue(true);
+    mockGetFcmToken.mockResolvedValue(FAKE_TOKEN);
+    mockLaravelFetch.mockResolvedValue(makeOkResponse(FAKE_PUSH_TOKEN_RESPONSE));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    await registerCurrentDevicePushToken();
+
+    const infoOutput = infoSpy.mock.calls.flat().join(' ');
+    expect(infoOutput).toContain('[push-token]');
+    expect(infoOutput).toContain('Registering device token');
+  });
+
+  it('logs Registered push token with id and preview on success', async () => {
+    setNative(true);
+    mockRequestFcmPermission.mockResolvedValue(true);
+    mockGetFcmToken.mockResolvedValue(FAKE_TOKEN);
+    mockLaravelFetch.mockResolvedValue(makeOkResponse(FAKE_PUSH_TOKEN_RESPONSE));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    await registerCurrentDevicePushToken();
+
+    const infoOutput = infoSpy.mock.calls.flat().join(' ');
+    expect(infoOutput).toContain('Registered push token');
+    expect(infoOutput).toContain(String(FAKE_PUSH_TOKEN_RESPONSE.id));
+    expect(infoOutput).toContain(FAKE_TOKEN_PREVIEW);
+  });
+
+  it('does not log full token in success log', async () => {
+    setNative(true);
+    mockRequestFcmPermission.mockResolvedValue(true);
+    mockGetFcmToken.mockResolvedValue(FAKE_TOKEN);
+    mockLaravelFetch.mockResolvedValue(makeOkResponse(FAKE_PUSH_TOKEN_RESPONSE));
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    await registerCurrentDevicePushToken();
+
+    const allOutput = infoSpy.mock.calls.flat().join(' ');
+    expect(allOutput).not.toContain(FAKE_TOKEN);
   });
 });
 

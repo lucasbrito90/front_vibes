@@ -144,6 +144,17 @@ describe('requestFcmPermission', () => {
 
     await expect(requestFcmPermission()).resolves.toBe(false);
   });
+
+  it('logs a warning when plugin throws (without exposing the error detail as a token)', async () => {
+    setNative(true);
+    mockRequestPermissions.mockRejectedValue(new Error('Plugin error'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await requestFcmPermission();
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0][0]).toContain('[FCM]');
+  });
 });
 
 // ── getFcmToken ───────────────────────────────────────────────────────────────
@@ -182,6 +193,17 @@ describe('getFcmToken', () => {
     mockGetToken.mockRejectedValue(new Error('FCM unavailable'));
 
     await expect(getFcmToken()).resolves.toBeNull();
+  });
+
+  it('logs a warning when getToken plugin throws', async () => {
+    setNative(true);
+    mockGetToken.mockRejectedValue(new Error('FCM unavailable'));
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await getFcmToken();
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0][0]).toContain('[FCM]');
   });
 });
 

@@ -116,7 +116,7 @@ const showPassword = ref(false);
 async function handleGoogleLogin() {
   try {
     await loginWithGoogle();
-    window.location.replace('/home');
+    await router.replace('/home');
   } catch {
     /* error surfaced via useAuth */
   }
@@ -126,7 +126,7 @@ async function handleEmailSignUp() {
   try {
     await signUpWithEmail(email.value, password.value, name.value || undefined);
 
-    window.location.replace('/home');
+    await router.replace('/home');
   } catch {
     /* error surfaced via useAuth */
   }

@@ -67,6 +67,7 @@ export async function requestFcmPermission(): Promise<boolean> {
     const { receive } = await FirebaseMessaging.requestPermissions();
     return receive === 'granted';
   } catch {
+    console.warn('[FCM] requestPermissions threw; treating as denied');
     return false;
   }
 }
@@ -93,6 +94,7 @@ export async function getFcmToken(): Promise<string | null> {
     const { token } = await FirebaseMessaging.getToken();
     return token ?? null;
   } catch {
+    console.warn('[FCM] getToken threw; treating as null');
     return null;
   }
 }
