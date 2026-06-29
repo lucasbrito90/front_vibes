@@ -115,7 +115,7 @@ function goBack(): void {
 async function handleGoogleLogin() {
   try {
     await loginWithGoogle();
-    window.location.replace('/home');
+    await router.replace('/home');
   } catch {
     /* error surfaced via useAuth */
   }
@@ -124,7 +124,7 @@ async function handleGoogleLogin() {
 async function handleEmailLogin() {
   try {
     await loginWithEmail(email.value, password.value);
-    window.location.replace('/home');
+    await router.replace('/home');
   } catch {
     /* error surfaced via useAuth */
   }
