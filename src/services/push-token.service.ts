@@ -180,14 +180,24 @@ async function clearPushTokenPrefs(): Promise<void> {
  * or navigation (ADR-018, spec §7).
  */
 export async function registerCurrentDevicePushToken(): Promise<void> {
-  if (!isFcmAvailable()) return;
+  if (!isFcmAvailable()) {
+    console.info('[push-token] FCM unavailable; skipping registration');
+    return;
+  }
 
   const granted = await requestFcmPermission();
-  if (!granted) return;
+  if (!granted) {
+    console.info('[push-token] Notification permission not granted; skipping registration');
+    return;
+  }
 
   const token = await getFcmToken();
-  if (!token) return;
+  if (!token) {
+    console.info('[push-token] FCM token unavailable; skipping registration');
+    return;
+  }
 
+  console.info('[push-token] Registering device token');
   try {
     const data = await registerPushToken({
       token,
@@ -195,6 +205,8 @@ export async function registerCurrentDevicePushToken(): Promise<void> {
       provider: 'fcm',
     });
     await savePushTokenPrefs(data.id, data.token_preview);
+    // Log id and backend preview only — full token is never printed (ADR-021).
+    console.info('[push-token] Registered push token', data.id, data.token_preview);
   } catch (err) {
     // Non-fatal: push registration must not block login or navigation.
     console.warn(
