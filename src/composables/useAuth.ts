@@ -17,8 +17,36 @@ const currentUser = ref<User | null>(authService.getCurrentUser());
 const loading = ref(false);
 const error = ref<string | null>(null);
 
+// Guards against registering the same device more than once per authenticated
+// session. Reset to null on logout so the next login triggers registration again.
+// Also used to skip the onAuthStateChanged callback when the login functions
+// already awaited registration (prevents duplicate calls on fresh login).
+let _lastPushRegistrationUid: string | null = null;
+
+async function registerPushTokenAfterAuth(): Promise<void> {
+  try {
+    await pushTokenService.registerCurrentDevicePushToken();
+  } catch {
+    // non-fatal — push registration must never block or fail authentication
+  }
+}
+
 onAuthStateChanged(auth, (user) => {
   currentUser.value = user;
+
+  if (!user) {
+    _lastPushRegistrationUid = null;
+    return;
+  }
+
+  // Session restore (cold start / reload): login functions set the uid guard
+  // before calling registerPushTokenAfterAuth, so this branch only fires when
+  // the session is already authenticated but no registration has occurred yet
+  // (e.g. after a hard reload where onAuthStateChanged is the only auth event).
+  if (user.uid !== _lastPushRegistrationUid) {
+    _lastPushRegistrationUid = user.uid;
+    void registerPushTokenAfterAuth();
+  }
 });
 
 async function persistToken(token: string | null): Promise<void> {
@@ -88,8 +116,10 @@ async function loginWithGoogle(): Promise<void> {
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
-    // Fire-and-forget — push registration must not block login or navigation.
-    void pushTokenService.registerCurrentDevicePushToken();
+    // Set the guard before awaiting so onAuthStateChanged (which may fire
+    // concurrently) does not issue a duplicate registration for the same uid.
+    _lastPushRegistrationUid = credential.user.uid;
+    await registerPushTokenAfterAuth();
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -107,8 +137,8 @@ async function loginWithEmail(email: string, password: string): Promise<void> {
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
-    // Fire-and-forget — push registration must not block login or navigation.
-    void pushTokenService.registerCurrentDevicePushToken();
+    _lastPushRegistrationUid = credential.user.uid;
+    await registerPushTokenAfterAuth();
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -130,8 +160,8 @@ async function signUpWithEmail(
     currentUser.value = credential.user;
     const token = await authService.getIdToken(credential.user);
     await persistToken(token);
-    // Fire-and-forget — push registration must not block login or navigation.
-    void pushTokenService.registerCurrentDevicePushToken();
+    _lastPushRegistrationUid = credential.user.uid;
+    await registerPushTokenAfterAuth();
   } catch (err) {
     error.value = toFriendlyAuthError(err);
     throw err;
@@ -165,6 +195,7 @@ async function logout(): Promise<void> {
   try {
     await authService.logout();
     currentUser.value = null;
+    _lastPushRegistrationUid = null;
     try {
       await pushTokenService.deactivateCurrentDevicePushToken();
     } catch {
@@ -193,6 +224,11 @@ function getCurrentUser(): User | null {
 }
 
 const isAuthenticated = computed(() => Boolean(currentUser.value));
+
+/** Vitest only — reset the push registration uid guard between tests. */
+export function _resetPushRegistrationForTest(): void {
+  _lastPushRegistrationUid = null;
+}
 
 export function useAuth() {
   return {
