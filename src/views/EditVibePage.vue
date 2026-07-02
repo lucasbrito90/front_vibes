@@ -81,6 +81,16 @@
             <ion-toggle v-model="form.is_active" slot="end" :disabled="loading" />
           </ion-item>
 
+          <div
+            v-if="selectedVibe"
+            class="vibe-detail-summary"
+            role="group"
+            aria-label="Automation summary"
+          >
+            <span class="vibe-detail-summary__label">Schedules</span>
+            <span class="vibe-detail-summary__value">{{ activeSchedulesText }}</span>
+          </div>
+
           <p v-if="error" class="auth-error">{{ error }}</p>
 
           <ion-button
@@ -122,6 +132,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import CoverBundlePickerModal from '@/components/CoverBundlePickerModal.vue';
 import { useVibes } from '@/composables/useVibes';
+import { activeSchedulesSummary } from '@/utils/automation-summary';
 import type { CoverBundle } from '@/types/cover-bundle';
 import { applyCoverBundleToFormFields } from '@/utils/cover-bundle-apply';
 import {
@@ -171,6 +182,9 @@ const playerThumbStyle = computed(() => ({
 }));
 
 const artworkPreviewSrc = computed(() => getVibeArtworkUrl(vibeDraftPreview.value) ?? '');
+
+/** Read-only automation summary — `Active schedules: X` or `No active schedules`. */
+const activeSchedulesText = computed(() => activeSchedulesSummary(selectedVibe.value));
 
 onMounted(async () => {
   await fetchVibe(Number(route.params.id));
@@ -268,5 +282,31 @@ async function handleSubmit() {
   font-size: var(--app-font-size-caption);
   color: var(--app-color-text-tertiary);
   line-height: 1.35;
+}
+
+.vibe-detail-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+  margin: var(--app-space-4) var(--app-space-4) 0;
+  padding: var(--app-space-3) var(--app-space-4);
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-surface-subtle);
+  border: 1px solid var(--app-color-border);
+}
+
+.vibe-detail-summary__label {
+  font-size: var(--app-font-size-caption);
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--app-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vibe-detail-summary__value {
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-primary);
+  text-align: right;
 }
 </style>

@@ -38,6 +38,13 @@ export interface Vibe {
   sounds_count?: number;
   /** Present when the API embeds layers (e.g. preset import response). */
   sounds?: VibeSound[];
+
+  // ── Phase 5A read-model enrichment (optional for backward compatibility) ──
+  /** Number of enabled schedules that reference this vibe. */
+  active_schedules_count?: number;
+  /** Convenience flag — true when at least one enabled schedule references this vibe. */
+  has_active_schedule?: boolean;
+
   created_at: string;
   updated_at: string;
 }
