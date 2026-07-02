@@ -35,6 +35,22 @@
             <span>{{ SCHEDULE_OFFLINE_MUTATION_MESSAGE }}</span>
           </div>
 
+          <div
+            v-if="isEdit && loadedSchedule"
+            class="schedule-detail-summary"
+            role="group"
+            aria-label="Schedule details"
+          >
+            <div class="schedule-detail-summary__row">
+              <span class="schedule-detail-summary__label">Vibe</span>
+              <span class="schedule-detail-summary__value">{{ detailVibeName }}</span>
+            </div>
+            <div class="schedule-detail-summary__row">
+              <span class="schedule-detail-summary__label">Automation</span>
+              <span class="schedule-detail-summary__value">{{ detailAutomationStatus }}</span>
+            </div>
+          </div>
+
           <ion-item class="auth-item" lines="none">
             <ion-input
               v-model="form.name"
@@ -184,8 +200,13 @@ import {
   SELECTABLE_RECURRENCE_TYPES,
   isDeviceOffline,
   type RecurrenceType,
+  type Schedule,
   type SchedulePayload,
 } from '@/services/schedule.service';
+import {
+  resolveScheduleVibeName,
+  scheduleAutomationStatusLabel,
+} from '@/utils/automation-summary';
 import {
   WEEKDAY_OPTIONS,
   isWeeklyConfigValid,
@@ -228,6 +249,18 @@ const formError = ref<string | null>(null);
 const offline = ref(isDeviceOffline());
 const showToast = ref(false);
 const toastMessage = ref('');
+
+/** The loaded schedule in edit mode — used for the read-only details summary. */
+const loadedSchedule = ref<Schedule | null>(null);
+
+const detailVibeName = computed(() => {
+  const fallback = vibes.value.find((v) => v.id === loadedSchedule.value?.vibe_id)?.name;
+  return resolveScheduleVibeName(loadedSchedule.value, fallback);
+});
+
+const detailAutomationStatus = computed(() =>
+  scheduleAutomationStatusLabel(loadedSchedule.value),
+);
 
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
@@ -286,6 +319,8 @@ onIonViewWillEnter(async () => {
       router.back();
       return;
     }
+
+    loadedSchedule.value = schedule;
 
     form.name = schedule.name;
     form.vibe_id = schedule.vibe_id;
@@ -385,6 +420,38 @@ async function handleSubmit(): Promise<void> {
   flex-shrink: 0;
   font-size: 18px;
   color: var(--app-color-text-muted);
+}
+
+.schedule-detail-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
+  margin-bottom: var(--app-space-4);
+  padding: var(--app-space-3) var(--app-space-4);
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-surface-subtle);
+  border: 1px solid var(--app-color-border);
+}
+
+.schedule-detail-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-3);
+}
+
+.schedule-detail-summary__label {
+  font-size: var(--app-font-size-caption);
+  font-weight: var(--app-font-weight-semibold);
+  color: var(--app-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schedule-detail-summary__value {
+  font-size: var(--app-font-size-body-sm);
+  color: var(--app-color-text-primary);
+  text-align: right;
 }
 
 .schedule-datetime {

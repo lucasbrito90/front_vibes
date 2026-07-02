@@ -78,7 +78,7 @@
             <div class="schedule-card-head">
               <div class="schedule-card-title-wrap">
                 <h2 class="schedule-card-name">{{ schedule.name }}</h2>
-                <span class="schedule-card-vibe">{{ vibeNameFor(schedule.vibe_id) }}</span>
+                <span class="schedule-card-vibe">{{ scheduleVibeName(schedule) }}</span>
               </div>
               <span
                 class="schedule-card-status"
@@ -86,6 +86,13 @@
               >
                 {{ schedule.is_enabled ? 'Enabled' : 'Disabled' }}
               </span>
+            </div>
+
+            <div
+              v-if="automationBadgeFor(schedule)"
+              class="schedule-card-tags"
+            >
+              <span class="schedule-automation-badge">{{ automationBadgeFor(schedule) }}</span>
             </div>
 
             <dl class="schedule-card-meta">
@@ -188,6 +195,10 @@ import {
   NOTIFICATION_PERMISSION_DENIED_MESSAGE,
   scheduleNotificationService,
 } from '@/services/schedule-notification.service';
+import {
+  resolveScheduleVibeName,
+  scheduleAutomationBadgeLabel,
+} from '@/utils/automation-summary';
 import { formatNextRun, recurrenceSummary } from '@/utils/schedule-format';
 
 const router = useRouter();
@@ -250,6 +261,16 @@ async function checkAndRequestNotificationPermission(): Promise<void> {
 function vibeNameFor(vibeId: number): string {
   const vibe = vibes.value.find((v) => v.id === vibeId);
   return vibe?.name ?? `Vibe #${vibeId}`;
+}
+
+/** Prefer the API-provided vibe name; fall back to the locally loaded vibe list. */
+function scheduleVibeName(schedule: Schedule): string {
+  return resolveScheduleVibeName(schedule, vibeNameFor(schedule.vibe_id));
+}
+
+/** Automation badge wording, or null when the vibe has no device actions. */
+function automationBadgeFor(schedule: Schedule): string | null {
+  return scheduleAutomationBadgeLabel(schedule);
 }
 
 function notify(message: string): void {
@@ -396,6 +417,24 @@ async function runDelete(id: number): Promise<void> {
 .schedule-card-status.is-disabled {
   background: var(--app-color-surface-subtle);
   color: var(--app-color-text-muted);
+}
+
+.schedule-card-tags {
+  margin-top: var(--app-space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-2);
+}
+
+.schedule-automation-badge {
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: var(--app-font-weight-semibold);
+  letter-spacing: 0.02em;
+  background: var(--app-color-primary-100);
+  color: var(--app-color-primary-600);
+  border: 1px solid var(--app-color-primary-500);
 }
 
 .schedule-card-meta {
