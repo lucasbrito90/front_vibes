@@ -63,13 +63,21 @@
               >
                 {{ vibe.is_active ? 'Active' : 'Inactive' }}
               </div>
-              <div
-                v-if="offlineVibeIds.includes(vibe.id)"
-                class="vibe-card-badge vibe-card-badge--offline"
-                aria-label="Available offline"
-              >
-                <ion-icon :icon="cloudOfflineOutline" />
-                <span>Offline</span>
+              <div class="vibe-card-badge-group">
+                <div
+                  v-if="vibeAutomationBadgeLabel(vibe)"
+                  class="vibe-card-badge vibe-card-badge--automation"
+                >
+                  {{ vibeAutomationBadgeLabel(vibe) }}
+                </div>
+                <div
+                  v-if="offlineVibeIds.includes(vibe.id)"
+                  class="vibe-card-badge vibe-card-badge--offline"
+                  aria-label="Available offline"
+                >
+                  <ion-icon :icon="cloudOfflineOutline" />
+                  <span>Offline</span>
+                </div>
               </div>
             </div>
 
@@ -130,6 +138,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
 import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
+import { vibeAutomationBadgeLabel } from '@/utils/automation-summary';
 import { getVibeCardBackgroundStyle, getVibeCardImageUrl } from '@/utils/artwork';
 
 const router = useRouter();
@@ -299,12 +308,24 @@ async function handleDelete(id: number) {
   white-space: nowrap;
 }
 
+.vibe-card-badge-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .vibe-card-badge--offline {
   gap: 4px;
   padding: 0 8px 0 6px;
   background: rgba(15, 23, 42, 0.42);
   border: 1px solid rgba(148, 163, 184, 0.38);
   color: rgba(255, 255, 255, 0.94);
+}
+
+.vibe-card-badge--automation {
+  background: rgba(59, 130, 246, 0.28);
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  color: #bfdbfe;
 }
 
 .vibe-card-badge--offline ion-icon {

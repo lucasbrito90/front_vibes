@@ -53,6 +53,14 @@ export interface Schedule {
   last_run_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+
+  // ── Phase 5A read-model enrichment (optional for backward compatibility) ──
+  /** Name of the linked vibe, surfaced by the API to avoid an extra request. */
+  vibe_name?: string | null;
+  /** Number of Smart Home device actions on the linked vibe. */
+  device_actions_count?: number;
+  /** Convenience flag — true when the linked vibe has any device action. */
+  has_device_actions?: boolean;
 }
 
 export interface SchedulePayload {
