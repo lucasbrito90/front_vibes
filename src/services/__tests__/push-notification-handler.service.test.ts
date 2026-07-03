@@ -309,6 +309,23 @@ describe('safe logging', () => {
   });
 });
 
+// ── UX alignment (Phase 6B) ─────────────────────────────────────────────────────
+
+describe('UX alignment (Phase 6B)', () => {
+  it('routes all four failure types to list screens — not the vibe player', () => {
+    for (const route of Object.values(ROUTE_BY_NOTIFICATION_TYPE)) {
+      expect(route).not.toMatch(/\/vibes\/\d+\/player/);
+      expect(route.startsWith('/')).toBe(true);
+    }
+  });
+
+  it('keeps schedule failures separate from Smart Home failure destinations', () => {
+    expect(ROUTE_BY_NOTIFICATION_TYPE.schedule_execution_failed).toBe('/schedules');
+    expect(ROUTE_BY_NOTIFICATION_TYPE.smart_home_action_failed).toBe('/devices');
+    expect(ROUTE_BY_NOTIFICATION_TYPE.smart_home_provider_unreachable).toBe('/devices');
+  });
+});
+
 // ── Public service object ──────────────────────────────────────────────────────
 
 describe('public service object', () => {
