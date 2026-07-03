@@ -13,13 +13,21 @@
 
     <ion-content>
       <div class="auth-screen">
-        <div v-if="loading && !selectedVibe" class="vibes-state">
-          <ion-spinner name="crescent" />
-        </div>
+        <AppLoadingState
+          v-if="loading && !selectedVibe"
+          compact
+          title="Loading vibe…"
+          description="Getting this vibe’s details and schedules."
+        />
 
-        <div v-else-if="error && !selectedVibe" class="vibes-state">
-          <p class="vibes-error">{{ error }}</p>
-        </div>
+        <AppErrorState
+          v-else-if="error && !selectedVibe"
+          compact
+          title="Couldn’t load vibe"
+          :description="error ?? ''"
+          retry-label="Retry"
+          @retry="reload"
+        />
 
         <form v-else class="auth-form" @submit.prevent="handleSubmit">
           <ion-item class="auth-item" lines="none">
@@ -134,6 +142,8 @@ import {
 import { alarmOutline, chevronBackOutline } from 'ionicons/icons';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import CoverBundlePickerModal from '@/components/CoverBundlePickerModal.vue';
 import { useVibes } from '@/composables/useVibes';
 import { activeSchedulesSummary } from '@/utils/automation-summary';
@@ -187,7 +197,7 @@ const playerThumbStyle = computed(() => ({
 
 const artworkPreviewSrc = computed(() => getVibeArtworkUrl(vibeDraftPreview.value) ?? '');
 
-/** Read-only automation summary — `Active schedules: X` or `No active schedules`. */
+/** Read-only automation summary — clearer, pluralized schedule count line. */
 const activeSchedulesText = computed(() => activeSchedulesSummary(selectedVibe.value));
 
 onMounted(async () => {
@@ -196,6 +206,11 @@ onMounted(async () => {
     router.back();
   }
 });
+
+/** Retry a failed detail load without leaving the page. */
+async function reload(): Promise<void> {
+  await fetchVibe(Number(route.params.id));
+}
 
 watch(selectedVibe, (vibe) => {
   if (vibe) {
@@ -229,22 +244,6 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.vibes-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--app-space-4);
-  padding: var(--app-space-12) var(--app-space-6);
-  text-align: center;
-}
-
-.vibes-error {
-  font-size: var(--app-font-size-body-md);
-  color: var(--ion-color-danger);
-  margin: 0;
-}
-
 .vibe-cover-block__label {
   margin: 0 0 var(--app-space-2);
   font-size: var(--app-font-size-caption);

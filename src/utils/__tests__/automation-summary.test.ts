@@ -5,8 +5,8 @@ import type { Vibe } from '@/services/vibe.service';
 import {
   AUTOMATION_ACTIVE_LABEL,
   AUTOMATION_ENABLED_LABEL,
-  NO_ACTIVE_SCHEDULES_LABEL,
   NO_SMART_HOME_ACTIONS_LABEL,
+  VIBE_NOT_SCHEDULED_MESSAGE,
   activeSchedulesCount,
   activeSchedulesSummary,
   hasActiveSchedule,
@@ -192,16 +192,20 @@ describe('vibeAutomationBadgeLabel', () => {
 });
 
 describe('activeSchedulesSummary', () => {
-  it('renders the count summary when there are active schedules', () => {
-    expect(activeSchedulesSummary(makeVibe({ active_schedules_count: 1 }))).toBe('Active schedules: 1');
-    expect(activeSchedulesSummary(makeVibe({ active_schedules_count: 4 }))).toBe('Active schedules: 4');
+  it('keeps the count and uses clearer, pluralized wording', () => {
+    expect(activeSchedulesSummary(makeVibe({ active_schedules_count: 1 }))).toBe(
+      'Used by 1 active schedule',
+    );
+    expect(activeSchedulesSummary(makeVibe({ active_schedules_count: 4 }))).toBe(
+      'Used by 4 active schedules',
+    );
   });
 
-  it('renders the zero-schedules message when there are none', () => {
+  it('renders the not-scheduled message when there are none', () => {
     expect(activeSchedulesSummary(makeVibe({ active_schedules_count: 0 }))).toBe(
-      NO_ACTIVE_SCHEDULES_LABEL,
+      VIBE_NOT_SCHEDULED_MESSAGE,
     );
-    expect(activeSchedulesSummary(makeVibe())).toBe(NO_ACTIVE_SCHEDULES_LABEL);
-    expect(activeSchedulesSummary(null)).toBe(NO_ACTIVE_SCHEDULES_LABEL);
+    expect(activeSchedulesSummary(makeVibe())).toBe(VIBE_NOT_SCHEDULED_MESSAGE);
+    expect(activeSchedulesSummary(null)).toBe(VIBE_NOT_SCHEDULED_MESSAGE);
   });
 });
