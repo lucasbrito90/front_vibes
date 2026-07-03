@@ -92,7 +92,7 @@
               v-if="automationBadgeFor(schedule)"
               class="schedule-card-tags"
             >
-              <span class="schedule-automation-badge">{{ automationBadgeFor(schedule) }}</span>
+              <AppAutomationBadge :badge="automationBadgeFor(schedule)!" />
             </div>
 
             <dl class="schedule-card-meta">
@@ -177,6 +177,7 @@ import {
 } from 'ionicons/icons';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import AppAutomationBadge from '@/components/ui/AppAutomationBadge.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -196,8 +197,12 @@ import {
   scheduleNotificationService,
 } from '@/services/schedule-notification.service';
 import {
+  scheduleAutomationBadge,
+  type AutomationBadge,
+} from '@/utils/automation-badges';
+import {
+  hasDeviceActions,
   resolveScheduleVibeName,
-  scheduleAutomationBadgeLabel,
 } from '@/utils/automation-summary';
 import { formatNextRun, recurrenceSummary } from '@/utils/schedule-format';
 
@@ -268,9 +273,9 @@ function scheduleVibeName(schedule: Schedule): string {
   return resolveScheduleVibeName(schedule, vibeNameFor(schedule.vibe_id));
 }
 
-/** Automation badge wording, or null when the vibe has no device actions. */
-function automationBadgeFor(schedule: Schedule): string | null {
-  return scheduleAutomationBadgeLabel(schedule);
+/** Automation badge metadata, or null when the vibe has no device actions. */
+function automationBadgeFor(schedule: Schedule): AutomationBadge | null {
+  return scheduleAutomationBadge(hasDeviceActions(schedule));
 }
 
 function notify(message: string): void {
@@ -424,17 +429,6 @@ async function runDelete(id: number): Promise<void> {
   display: flex;
   flex-wrap: wrap;
   gap: var(--app-space-2);
-}
-
-.schedule-automation-badge {
-  padding: 2px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: var(--app-font-weight-semibold);
-  letter-spacing: 0.02em;
-  background: var(--app-color-primary-100);
-  color: var(--app-color-primary-600);
-  border: 1px solid var(--app-color-primary-500);
 }
 
 .schedule-card-meta {
