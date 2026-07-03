@@ -19,8 +19,11 @@ export const NO_SMART_HOME_ACTIONS_LABEL = 'No Smart Home Actions';
 /** Wording shown on a vibe that is referenced by at least one enabled schedule. */
 export const AUTOMATION_ACTIVE_LABEL = 'Automation Active';
 
-/** Wording shown in vibe details when there are no active schedules. */
+/** Short badge wording when a vibe has no active schedules. */
 export const NO_ACTIVE_SCHEDULES_LABEL = 'No active schedules';
+
+/** Clearer detail-screen wording when a vibe is not referenced by any schedule. */
+export const VIBE_NOT_SCHEDULED_MESSAGE = 'Not scheduled yet';
 
 type SchedulePart = Pick<Schedule, 'has_device_actions' | 'device_actions_count'>;
 type VibePart = Pick<Vibe, 'has_active_schedule' | 'active_schedules_count'>;
@@ -99,8 +102,15 @@ export function vibeAutomationBadgeLabel(vibe: VibePart | null | undefined): str
   return hasActiveSchedule(vibe) ? AUTOMATION_ACTIVE_LABEL : null;
 }
 
-/** Summary line for vibe details — `Active schedules: X` or `No active schedules`. */
+/**
+ * Summary line for vibe details. Keeps the exact same information (the active
+ * schedule count) but with clearer, pluralized wording:
+ * `Used by N active schedule(s)` or `Not scheduled yet`.
+ */
 export function activeSchedulesSummary(vibe: VibePart | null | undefined): string {
   const count = activeSchedulesCount(vibe);
-  return count > 0 ? `Active schedules: ${count}` : NO_ACTIVE_SCHEDULES_LABEL;
+  if (count <= 0) {
+    return VIBE_NOT_SCHEDULED_MESSAGE;
+  }
+  return `Used by ${count} active ${count === 1 ? 'schedule' : 'schedules'}`;
 }

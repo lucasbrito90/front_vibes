@@ -14,6 +14,7 @@
           class="vibes-state-slot"
           compact
           title="Loading your vibes…"
+          description="Fetching your ambient mixes and their schedules."
         />
 
         <AppErrorState

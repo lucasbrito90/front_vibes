@@ -42,6 +42,7 @@
           class="schedules-state-slot"
           compact
           title="Loading your schedules…"
+          description="Fetching your reminders and Smart Home automations."
         />
 
         <AppErrorState
@@ -63,7 +64,7 @@
           :description="
             offline
               ? SCHEDULE_OFFLINE_EMPTY_MESSAGE
-              : 'Create a schedule to be reminded when a vibe should start.'
+              : 'Schedule a vibe to start on time — any Smart Home actions it includes run too.'
           "
           :action-label="offline ? undefined : 'New schedule'"
           @action="goCreate"
