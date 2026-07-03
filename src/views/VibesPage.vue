@@ -64,12 +64,11 @@
                 {{ vibe.is_active ? 'Active' : 'Inactive' }}
               </div>
               <div class="vibe-card-badge-group">
-                <div
-                  v-if="vibeAutomationBadgeLabel(vibe)"
-                  class="vibe-card-badge vibe-card-badge--automation"
-                >
-                  {{ vibeAutomationBadgeLabel(vibe) }}
-                </div>
+                <AppAutomationBadge
+                  v-if="automationBadgeFor(vibe)"
+                  :badge="automationBadgeFor(vibe)!"
+                  class="vibe-card-badge-slot"
+                />
                 <div
                   v-if="offlineVibeIds.includes(vibe.id)"
                   class="vibe-card-badge vibe-card-badge--offline"
@@ -130,6 +129,7 @@ import {
   alertController,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import AppAutomationBadge from '@/components/ui/AppAutomationBadge.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -138,8 +138,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
 import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
-import { vibeAutomationBadgeLabel } from '@/utils/automation-summary';
+import { vibeAutomationBadge, type AutomationBadge } from '@/utils/automation-badges';
+import { hasActiveSchedule } from '@/utils/automation-summary';
 import { getVibeCardBackgroundStyle, getVibeCardImageUrl } from '@/utils/artwork';
+import type { Vibe } from '@/services/vibe.service';
 
 const router = useRouter();
 const { vibes, vibesListLoading, vibesListError, fetchVibes, deleteVibe } = useVibes();
@@ -159,6 +161,11 @@ function vibeNameMonogram(name: string): string {
   const t = name.trim();
   if (!t) return '?';
   return t.charAt(0).toUpperCase();
+}
+
+/** Automation badge metadata, or null when the vibe has no active schedule. */
+function automationBadgeFor(vibe: Vibe): AutomationBadge | null {
+  return vibeAutomationBadge(hasActiveSchedule(vibe));
 }
 
 function goCreate(): void {
@@ -314,18 +321,16 @@ async function handleDelete(id: number) {
   gap: 8px;
 }
 
+.vibe-card-badge-slot {
+  height: 24px;
+}
+
 .vibe-card-badge--offline {
   gap: 4px;
   padding: 0 8px 0 6px;
   background: rgba(15, 23, 42, 0.42);
   border: 1px solid rgba(148, 163, 184, 0.38);
   color: rgba(255, 255, 255, 0.94);
-}
-
-.vibe-card-badge--automation {
-  background: rgba(59, 130, 246, 0.28);
-  border: 1px solid rgba(96, 165, 250, 0.5);
-  color: #bfdbfe;
 }
 
 .vibe-card-badge--offline ion-icon {
