@@ -17,6 +17,7 @@
           v-if="isEdit && initialLoading"
           compact
           title="Loading schedule…"
+          description="Getting this schedule’s details."
         />
 
         <AppEmptyState
