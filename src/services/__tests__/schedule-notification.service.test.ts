@@ -156,6 +156,12 @@ describe('schedule-notification.service', () => {
     expect(mock.scheduled[0].extra.schedule_id).toBe(5);
     expect(mock.scheduled[0].extra.vibe_id).toBe(20);
     expect(mock.scheduled[0].channelId).toBe(SCHEDULE_NOTIFICATION_CHANNEL_ID);
+    expect(mock.scheduled[0].body).toBe('Time to start your scheduled vibe.');
+  });
+
+  it('uses local reminder copy distinct from push failure notifications', async () => {
+    await scheduleNotificationService.rebuildFromMirror([sampleSchedule()]);
+    expect(mock.scheduled[0]?.body).toBe('Time to start your scheduled vibe.');
   });
 
   it('rebuildFromMirror ignores disabled schedules', async () => {

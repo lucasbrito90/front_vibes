@@ -17,6 +17,7 @@
           v-if="isEdit && initialLoading"
           compact
           title="Loading schedule…"
+          description="Getting this schedule’s details."
         />
 
         <AppEmptyState
@@ -34,6 +35,21 @@
             <ion-icon :icon="cloudOfflineOutline" />
             <span>{{ SCHEDULE_OFFLINE_MUTATION_MESSAGE }}</span>
           </div>
+
+          <section
+            v-if="isEdit && loadedSchedule"
+            class="schedule-detail-summary"
+            aria-label="Schedule details"
+          >
+            <div class="schedule-detail-summary__row">
+              <span class="schedule-detail-summary__label">Vibe</span>
+              <span class="schedule-detail-summary__value">{{ detailVibeName }}</span>
+            </div>
+            <div class="schedule-detail-summary__row">
+              <span class="schedule-detail-summary__label">Automation</span>
+              <AppAutomationBadge :badge="detailAutomationBadge" size="md" />
+            </div>
+          </section>
 
           <ion-item class="auth-item" lines="none">
             <ion-input
@@ -175,6 +191,7 @@ import {
 } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AppAutomationBadge from '@/components/ui/AppAutomationBadge.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { useSchedules } from '@/composables/useSchedules';
@@ -184,8 +201,14 @@ import {
   SELECTABLE_RECURRENCE_TYPES,
   isDeviceOffline,
   type RecurrenceType,
+  type Schedule,
   type SchedulePayload,
 } from '@/services/schedule.service';
+import { scheduleAutomationBadge } from '@/utils/automation-badges';
+import {
+  hasDeviceActions,
+  resolveScheduleVibeName,
+} from '@/utils/automation-summary';
 import {
   WEEKDAY_OPTIONS,
   isWeeklyConfigValid,
@@ -228,6 +251,18 @@ const formError = ref<string | null>(null);
 const offline = ref(isDeviceOffline());
 const showToast = ref(false);
 const toastMessage = ref('');
+
+/** The loaded schedule in edit mode — used for the read-only details summary. */
+const loadedSchedule = ref<Schedule | null>(null);
+
+const detailVibeName = computed(() => {
+  const fallback = vibes.value.find((v) => v.id === loadedSchedule.value?.vibe_id)?.name;
+  return resolveScheduleVibeName(loadedSchedule.value, fallback);
+});
+
+const detailAutomationBadge = computed(() =>
+  scheduleAutomationBadge(hasDeviceActions(loadedSchedule.value), { includeEmpty: true })!,
+);
 
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
@@ -286,6 +321,8 @@ onIonViewWillEnter(async () => {
       router.back();
       return;
     }
+
+    loadedSchedule.value = schedule;
 
     form.name = schedule.name;
     form.vibe_id = schedule.vibe_id;
@@ -385,6 +422,44 @@ async function handleSubmit(): Promise<void> {
   flex-shrink: 0;
   font-size: 18px;
   color: var(--app-color-text-muted);
+}
+
+.schedule-detail-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-3);
+  margin-bottom: var(--app-space-5);
+  padding: var(--app-space-4);
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-surface-subtle);
+  border: 1px solid var(--app-color-border);
+}
+
+.schedule-detail-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-4);
+  min-height: 28px;
+}
+
+.schedule-detail-summary__label {
+  font-size: var(--app-font-size-body-sm);
+  font-weight: var(--app-font-weight-medium);
+  color: var(--app-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schedule-detail-summary__value {
+  font-size: var(--app-font-size-body-md);
+  font-weight: var(--app-font-weight-medium);
+  color: var(--app-color-text-primary);
+  text-align: right;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .schedule-datetime {

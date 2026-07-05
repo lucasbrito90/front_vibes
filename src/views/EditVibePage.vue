@@ -13,13 +13,21 @@
 
     <ion-content>
       <div class="auth-screen">
-        <div v-if="loading && !selectedVibe" class="vibes-state">
-          <ion-spinner name="crescent" />
-        </div>
+        <AppLoadingState
+          v-if="loading && !selectedVibe"
+          compact
+          title="Loading vibe…"
+          description="Getting this vibe’s details and schedules."
+        />
 
-        <div v-else-if="error && !selectedVibe" class="vibes-state">
-          <p class="vibes-error">{{ error }}</p>
-        </div>
+        <AppErrorState
+          v-else-if="error && !selectedVibe"
+          compact
+          title="Couldn’t load vibe"
+          :description="error ?? ''"
+          retry-label="Retry"
+          @retry="reload"
+        />
 
         <form v-else class="auth-form" @submit.prevent="handleSubmit">
           <ion-item class="auth-item" lines="none">
@@ -81,6 +89,20 @@
             <ion-toggle v-model="form.is_active" slot="end" :disabled="loading" />
           </ion-item>
 
+          <section
+            v-if="selectedVibe"
+            class="vibe-detail-summary"
+            aria-label="Automation summary"
+          >
+            <span class="vibe-detail-summary__icon-wrap" aria-hidden="true">
+              <ion-icon :icon="alarmOutline" />
+            </span>
+            <div class="vibe-detail-summary__text">
+              <span class="vibe-detail-summary__label">Schedules</span>
+              <span class="vibe-detail-summary__value">{{ activeSchedulesText }}</span>
+            </div>
+          </section>
+
           <p v-if="error" class="auth-error">{{ error }}</p>
 
           <ion-button
@@ -117,11 +139,14 @@ import {
   IonToggle,
   IonToolbar,
 } from '@ionic/vue';
-import { chevronBackOutline } from 'ionicons/icons';
+import { alarmOutline, chevronBackOutline } from 'ionicons/icons';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import AppErrorState from '@/components/ui/AppErrorState.vue';
+import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import CoverBundlePickerModal from '@/components/CoverBundlePickerModal.vue';
 import { useVibes } from '@/composables/useVibes';
+import { activeSchedulesSummary } from '@/utils/automation-summary';
 import type { CoverBundle } from '@/types/cover-bundle';
 import { applyCoverBundleToFormFields } from '@/utils/cover-bundle-apply';
 import {
@@ -172,12 +197,20 @@ const playerThumbStyle = computed(() => ({
 
 const artworkPreviewSrc = computed(() => getVibeArtworkUrl(vibeDraftPreview.value) ?? '');
 
+/** Read-only automation summary — clearer, pluralized schedule count line. */
+const activeSchedulesText = computed(() => activeSchedulesSummary(selectedVibe.value));
+
 onMounted(async () => {
   await fetchVibe(Number(route.params.id));
   if (error.value) {
     router.back();
   }
 });
+
+/** Retry a failed detail load without leaving the page. */
+async function reload(): Promise<void> {
+  await fetchVibe(Number(route.params.id));
+}
 
 watch(selectedVibe, (vibe) => {
   if (vibe) {
@@ -211,22 +244,6 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.vibes-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--app-space-4);
-  padding: var(--app-space-12) var(--app-space-6);
-  text-align: center;
-}
-
-.vibes-error {
-  font-size: var(--app-font-size-body-md);
-  color: var(--ion-color-danger);
-  margin: 0;
-}
-
 .vibe-cover-block__label {
   margin: 0 0 var(--app-space-2);
   font-size: var(--app-font-size-caption);
@@ -268,5 +285,50 @@ async function handleSubmit() {
   font-size: var(--app-font-size-caption);
   color: var(--app-color-text-tertiary);
   line-height: 1.35;
+}
+
+.vibe-detail-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  margin: var(--app-space-5) var(--app-space-4) 0;
+  padding: var(--app-space-4);
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-surface-subtle);
+  border: 1px solid var(--app-color-border);
+}
+
+.vibe-detail-summary__icon-wrap {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--app-radius-sm);
+  background: var(--app-color-primary-100);
+  color: var(--app-color-primary-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.vibe-detail-summary__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vibe-detail-summary__label {
+  font-size: var(--app-font-size-body-sm);
+  font-weight: var(--app-font-weight-medium);
+  color: var(--app-color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vibe-detail-summary__value {
+  font-size: var(--app-font-size-body-md);
+  font-weight: var(--app-font-weight-medium);
+  color: var(--app-color-text-primary);
 }
 </style>

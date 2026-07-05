@@ -42,6 +42,7 @@
           class="schedules-state-slot"
           compact
           title="Loading your schedules…"
+          description="Fetching your reminders and Smart Home automations."
         />
 
         <AppErrorState
@@ -63,7 +64,7 @@
           :description="
             offline
               ? SCHEDULE_OFFLINE_EMPTY_MESSAGE
-              : 'Create a schedule to be reminded when a vibe should start.'
+              : 'Schedule a vibe to start on time — any Smart Home actions it includes run too.'
           "
           :action-label="offline ? undefined : 'New schedule'"
           @action="goCreate"
@@ -78,7 +79,7 @@
             <div class="schedule-card-head">
               <div class="schedule-card-title-wrap">
                 <h2 class="schedule-card-name">{{ schedule.name }}</h2>
-                <span class="schedule-card-vibe">{{ vibeNameFor(schedule.vibe_id) }}</span>
+                <span class="schedule-card-vibe">{{ scheduleVibeName(schedule) }}</span>
               </div>
               <span
                 class="schedule-card-status"
@@ -86,6 +87,13 @@
               >
                 {{ schedule.is_enabled ? 'Enabled' : 'Disabled' }}
               </span>
+            </div>
+
+            <div
+              v-if="automationBadgeFor(schedule)"
+              class="schedule-card-tags"
+            >
+              <AppAutomationBadge :badge="automationBadgeFor(schedule)!" />
             </div>
 
             <dl class="schedule-card-meta">
@@ -170,6 +178,7 @@ import {
 } from 'ionicons/icons';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import AppAutomationBadge from '@/components/ui/AppAutomationBadge.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -188,6 +197,14 @@ import {
   NOTIFICATION_PERMISSION_DENIED_MESSAGE,
   scheduleNotificationService,
 } from '@/services/schedule-notification.service';
+import {
+  scheduleAutomationBadge,
+  type AutomationBadge,
+} from '@/utils/automation-badges';
+import {
+  hasDeviceActions,
+  resolveScheduleVibeName,
+} from '@/utils/automation-summary';
 import { formatNextRun, recurrenceSummary } from '@/utils/schedule-format';
 
 const router = useRouter();
@@ -250,6 +267,16 @@ async function checkAndRequestNotificationPermission(): Promise<void> {
 function vibeNameFor(vibeId: number): string {
   const vibe = vibes.value.find((v) => v.id === vibeId);
   return vibe?.name ?? `Vibe #${vibeId}`;
+}
+
+/** Prefer the API-provided vibe name; fall back to the locally loaded vibe list. */
+function scheduleVibeName(schedule: Schedule): string {
+  return resolveScheduleVibeName(schedule, vibeNameFor(schedule.vibe_id));
+}
+
+/** Automation badge metadata, or null when the vibe has no device actions. */
+function automationBadgeFor(schedule: Schedule): AutomationBadge | null {
+  return scheduleAutomationBadge(hasDeviceActions(schedule));
 }
 
 function notify(message: string): void {
@@ -396,6 +423,13 @@ async function runDelete(id: number): Promise<void> {
 .schedule-card-status.is-disabled {
   background: var(--app-color-surface-subtle);
   color: var(--app-color-text-muted);
+}
+
+.schedule-card-tags {
+  margin-top: var(--app-space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--app-space-2);
 }
 
 .schedule-card-meta {

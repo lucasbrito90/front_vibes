@@ -14,6 +14,7 @@
           class="vibes-state-slot"
           compact
           title="Loading your vibes…"
+          description="Fetching your ambient mixes and their schedules."
         />
 
         <AppErrorState
@@ -63,13 +64,20 @@
               >
                 {{ vibe.is_active ? 'Active' : 'Inactive' }}
               </div>
-              <div
-                v-if="offlineVibeIds.includes(vibe.id)"
-                class="vibe-card-badge vibe-card-badge--offline"
-                aria-label="Available offline"
-              >
-                <ion-icon :icon="cloudOfflineOutline" />
-                <span>Offline</span>
+              <div class="vibe-card-badge-group">
+                <AppAutomationBadge
+                  v-if="automationBadgeFor(vibe)"
+                  :badge="automationBadgeFor(vibe)!"
+                  class="vibe-card-badge-slot"
+                />
+                <div
+                  v-if="offlineVibeIds.includes(vibe.id)"
+                  class="vibe-card-badge vibe-card-badge--offline"
+                  aria-label="Available offline"
+                >
+                  <ion-icon :icon="cloudOfflineOutline" />
+                  <span>Offline</span>
+                </div>
               </div>
             </div>
 
@@ -122,6 +130,7 @@ import {
   alertController,
   onIonViewWillEnter,
 } from '@ionic/vue';
+import AppAutomationBadge from '@/components/ui/AppAutomationBadge.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -130,7 +139,10 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useVibes } from '@/composables/useVibes';
 import { getDownloadedVibeIds } from '@/services/offline-downloads.service';
+import { vibeAutomationBadge, type AutomationBadge } from '@/utils/automation-badges';
+import { hasActiveSchedule } from '@/utils/automation-summary';
 import { getVibeCardBackgroundStyle, getVibeCardImageUrl } from '@/utils/artwork';
+import type { Vibe } from '@/services/vibe.service';
 
 const router = useRouter();
 const { vibes, vibesListLoading, vibesListError, fetchVibes, deleteVibe } = useVibes();
@@ -150,6 +162,11 @@ function vibeNameMonogram(name: string): string {
   const t = name.trim();
   if (!t) return '?';
   return t.charAt(0).toUpperCase();
+}
+
+/** Automation badge metadata, or null when the vibe has no active schedule. */
+function automationBadgeFor(vibe: Vibe): AutomationBadge | null {
+  return vibeAutomationBadge(hasActiveSchedule(vibe));
 }
 
 function goCreate(): void {
@@ -297,6 +314,16 @@ async function handleDelete(id: number) {
   font-weight: 600;
   letter-spacing: 0.4px;
   white-space: nowrap;
+}
+
+.vibe-card-badge-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.vibe-card-badge-slot {
+  height: 24px;
 }
 
 .vibe-card-badge--offline {
