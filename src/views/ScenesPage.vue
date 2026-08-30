@@ -51,6 +51,10 @@
             </div>
 
             <div class="scene-card-actions">
+              <ion-button fill="outline" size="small" @click="goActions(scene.id)">
+                <ion-icon slot="start" :icon="listOutline" />
+                Actions
+              </ion-button>
               <ion-button fill="outline" size="small" @click="goEdit(scene.id)">
                 <ion-icon slot="start" :icon="pencilOutline" />
                 Edit
@@ -87,7 +91,7 @@ import {
   alertController,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import { addOutline, layersOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import { addOutline, layersOutline, listOutline, pencilOutline, trashOutline } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
@@ -108,6 +112,10 @@ function goCreate(): void {
 
 function goEdit(id: number): void {
   router.push(`/scenes/${id}/edit`);
+}
+
+function goActions(id: number): void {
+  router.push(`/scenes/${id}/actions`);
 }
 
 async function handleDelete(scene: Scene): Promise<void> {
