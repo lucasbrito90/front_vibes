@@ -8,6 +8,7 @@ import { createLogger } from '@/utils/player-debug';
 import { syncStatusBarWithRoute } from '@/composables/useStatusBarStyle';
 import { shouldSkipLaravelSyncForOfflinePlayer } from '@/router/offline-player-guard';
 import { endCurrentScreenSpan, startScreenSpan } from '@/telemetry/otel';
+import { routeTemplateToScreenName } from '@/router/screen-name';
 
 const log = createLogger('Router');
 
@@ -28,6 +29,13 @@ declare module 'vue-router' {
      * `dark` → light icons on dark backgrounds (immersive player).
      */
     statusBarTheme?: 'light' | 'dark';
+    /**
+     * Stable, low-cardinality screen name used for telemetry span naming
+     * (`screen.{screenName}` — ADR-029). Explicit per-route so it never
+     * depends on parsing the resolved URL, which would leak dynamic IDs
+     * for routes like `devices/:id` or `presets/:id`.
+     */
+    screenName?: string;
   }
 }
 
@@ -36,27 +44,27 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/sign-in-sign-up',
     component: () => import('@/views/SignInSignUpPage.vue'),
-    meta: { publicOnly: true },
+    meta: { publicOnly: true, screenName: 'SignInSignUpPage' },
   },
   {
     path: '/sign-in',
     component: () => import('@/views/SignInPage.vue'),
-    meta: { publicOnly: true },
+    meta: { publicOnly: true, screenName: 'SignInPage' },
   },
   {
     path: '/sign-up',
     component: () => import('@/views/SignUpPage.vue'),
-    meta: { publicOnly: true },
+    meta: { publicOnly: true, screenName: 'SignUpPage' },
   },
   {
     path: '/forgot-password',
     component: () => import('@/views/ForgotPasswordPage.vue'),
-    meta: { publicOnly: true },
+    meta: { publicOnly: true, screenName: 'ForgotPasswordPage' },
   },
   {
     path: '/reset-password-success',
     component: () => import('@/views/ResetPasswordSuccessPage.vue'),
-    meta: { publicOnly: true },
+    meta: { publicOnly: true, screenName: 'ResetPasswordSuccessPage' },
   },
 
   // ── Full-screen authenticated routes (no tab bar) ────────────────────────
@@ -71,7 +79,7 @@ const routes: Array<RouteRecordRaw> = [
      * page whenever audio is playing. It will reappear (with slide-up animation)
      * when the user navigates back to a tab route such as /vibes.
      */
-    meta: { requiresAuth: true, hideMiniPlayer: true, statusBarTheme: 'dark' },
+    meta: { requiresAuth: true, hideMiniPlayer: true, statusBarTheme: 'dark', screenName: 'VibePlayerPage' },
   },
 
   // ── Authenticated routes (tab bar visible) ────────────────────────────────
@@ -86,82 +94,82 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'home',
         component: () => import('@/views/HomePage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'HomePage' },
       },
       {
         path: 'vibes',
         component: () => import('@/views/VibesPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'VibesPage' },
       },
       {
         path: 'vibes/create',
         component: () => import('@/views/CreateVibePage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'CreateVibePage' },
       },
       {
         path: 'vibes/:id/edit',
         component: () => import('@/views/EditVibePage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'EditVibePage' },
       },
       {
         path: 'vibes/:id/sounds',
         component: () => import('@/views/VibeSoundsPage.vue'),
-        meta: { requiresAuth: true, hideMiniPlayer: true },
+        meta: { requiresAuth: true, hideMiniPlayer: true, screenName: 'VibeSoundsPage' },
       },
       {
         path: 'vibes/:id/device-actions',
         component: () => import('@/views/VibeDeviceActionsPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'VibeDeviceActionsPage' },
       },
       {
         path: 'schedules',
         component: () => import('@/views/SchedulesPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'SchedulesPage' },
       },
       {
         path: 'schedules/new',
         component: () => import('@/views/ScheduleFormPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'ScheduleCreatePage' },
       },
       {
         path: 'schedules/:id/edit',
         component: () => import('@/views/ScheduleFormPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'ScheduleEditPage' },
       },
       {
         path: 'devices',
         component: () => import('@/views/DevicesPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'DevicesPage' },
       },
       {
         path: 'devices/providers/new',
         component: () => import('@/views/ProviderConnectionFormPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'ProviderConnectionCreatePage' },
       },
       {
         path: 'devices/providers/:id',
         component: () => import('@/views/ProviderConnectionDetailPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'ProviderConnectionDetailPage' },
       },
       {
         path: 'devices/:id',
         component: () => import('@/views/DeviceDetailPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'DeviceDetailPage' },
       },
       {
         path: 'presets',
         component: () => import('@/views/PresetVibesPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'PresetVibesPage' },
       },
       {
         path: 'presets/:id',
         component: () => import('@/views/PresetVibeDetailPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'PresetVibeDetailPage' },
       },
       {
         path: 'settings',
         component: () => import('@/views/SettingsPage.vue'),
-        meta: { requiresAuth: true },
+        meta: { requiresAuth: true, screenName: 'SettingsPage' },
       },
     ],
   },
@@ -250,33 +258,12 @@ router.afterEach((to, from) => {
   void syncStatusBarWithRoute(to);
 
   // Start a new screen span for the incoming route.
-  // Use the route name when available; fall back to path segments (no dynamic IDs).
-  // Example: '/schedules' → 'SchedulesPage', '/vibes/:id/edit' → 'EditVibePage' (no ID).
-  const screenName = _routeToScreenName(to.name as string | undefined, to.path);
+  // meta.screenName is the source of truth (explicit per route, see routes above).
+  // The fallback never reads `to.path` (resolved — would leak dynamic IDs like
+  // the numeric :id in `/devices/:id`); it derives from the route's own path
+  // *template*, which still contains the literal ":id" placeholder.
+  const screenName = to.meta.screenName ?? routeTemplateToScreenName(to.matched);
   startScreenSpan(screenName);
 });
-
-/**
- * Derives a stable, low-cardinality screen name from a route for telemetry.
- *
- * Rules (ADR-029 §"Span naming"):
- *  - Prefer the route component name (e.g. "SchedulesPage").
- *  - Never include dynamic IDs from the resolved URL path.
- *  - Sanitize to PascalCase alphanumeric string.
- */
-function _routeToScreenName(routeName: string | undefined, path: string): string {
-  if (routeName && typeof routeName === 'string') {
-    // Strip dynamic segments like ":id" from named routes just in case
-    return routeName.replace(/[^a-zA-Z0-9]/g, '');
-  }
-
-  // Map common paths to readable names — no dynamic segments (IDs stripped by route template)
-  const segment = path.split('/').filter(Boolean).pop() ?? 'root';
-  // Convert kebab-case to PascalCase
-  return segment
-    .split('-')
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join('') + 'Page';
-}
 
 export default router;
