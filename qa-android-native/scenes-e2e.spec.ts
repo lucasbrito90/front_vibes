@@ -7,7 +7,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { browser, driver } from '@wdio/globals';
+import { browser } from '@wdio/globals';
 
 import { signInWithEmailPassword } from '../tests/smoke/android/helpers/auth.js';
 import { navigateAppRouteSpa, switchToWebView } from '../tests/smoke/android/helpers/webview.js';
@@ -269,12 +269,12 @@ describe('Scenes CRUD (v1.3.0-T06) — Android device E2E (staging)', () => {
     }
 
     await waitForScenesPage();
-    await browser.execute((id) => {
+    await browser.execute(() => {
       const cards = Array.from(document.querySelectorAll('.scene-card'));
       const card = cards.find((c) => c.textContent?.includes('edited'));
       const del = card?.querySelector('ion-button[color="danger"]') as HTMLElement | null;
       del?.click();
-    }, sceneId);
+    });
 
     await browser.$('button=Delete').waitForClickable({ timeout: 10_000 });
     await browser.$('button=Delete').click();
