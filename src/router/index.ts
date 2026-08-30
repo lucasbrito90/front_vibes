@@ -137,6 +137,21 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, screenName: 'ScheduleEditPage' },
       },
       {
+        path: 'scenes',
+        component: () => import('@/views/ScenesPage.vue'),
+        meta: { requiresAuth: true, screenName: 'ScenesPage' },
+      },
+      {
+        path: 'scenes/create',
+        component: () => import('@/views/CreateScenePage.vue'),
+        meta: { requiresAuth: true, screenName: 'CreateScenePage' },
+      },
+      {
+        path: 'scenes/:id/edit',
+        component: () => import('@/views/EditScenePage.vue'),
+        meta: { requiresAuth: true, screenName: 'EditScenePage' },
+      },
+      {
         path: 'devices',
         component: () => import('@/views/DevicesPage.vue'),
         meta: { requiresAuth: true, screenName: 'DevicesPage' },
