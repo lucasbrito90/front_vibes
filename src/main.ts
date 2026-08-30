@@ -1,8 +1,16 @@
+// ── Telemetry bootstrap — must run before any other app code ─────────────────
+// initTelemetry() is a no-op when VITE_OTEL_ENDPOINT is unset (kill switch).
+// It never throws — telemetry failures are always silent per ADR-029.
+import { initTelemetry, flushTelemetry, emitErrorLog, emitErrorSpan } from '@/telemetry/otel';
+initTelemetry();
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia';
 import App from './App.vue'
 import router from './router';
 import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 import { IonicVue } from '@ionic/vue';
@@ -75,6 +83,56 @@ const app = createApp(App)
   .use(IonicVue)
   .use(createPinia())
   .use(router);
+
+// ── Global error handlers ─────────────────────────────────────────────────────
+// None of these must ever throw or propagate — a broken handler must not crash
+// the app (ADR-029 §"Failure policy").
+
+app.config.errorHandler = (err, _instance, info) => {
+  try {
+    const message = err instanceof Error ? err.message : String(err);
+    emitErrorSpan('vue.component.error', message, { 'vue.lifecycle': info ?? 'unknown' });
+    emitErrorLog(message, { 'error.type': 'vue.component', 'vue.lifecycle': info ?? 'unknown' });
+  } catch {
+    /* silent — telemetry must not crash the app */
+  }
+};
+
+window.addEventListener('unhandledrejection', (event) => {
+  try {
+    const message =
+      event.reason instanceof Error
+        ? event.reason.message
+        : String(event.reason ?? 'Unhandled promise rejection');
+    emitErrorSpan('js.unhandled_rejection', message);
+    emitErrorLog(message, { 'error.type': 'unhandled_rejection' });
+  } catch {
+    /* silent */
+  }
+});
+
+window.onerror = (message, _source, _lineno, _colno, error) => {
+  try {
+    const msg = error?.message ?? String(message ?? 'Unknown error');
+    emitErrorSpan('js.uncaught_exception', msg);
+    emitErrorLog(msg, { 'error.type': 'uncaught_exception' });
+  } catch {
+    /* silent */
+  }
+  // Return false so the browser still logs the error to devtools
+  return false;
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Capacitor lifecycle — flush telemetry before app goes to background ───────
+// Android WebViews may suspend JS timers (including BatchSpanProcessor's scheduler)
+// when the app is backgrounded, causing buffered spans/logs to be dropped.
+void CapApp.addListener('appStateChange', ({ isActive }) => {
+  if (!isActive) {
+    void flushTelemetry();
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 router.isReady().then(async () => {
   await initThemeMode();

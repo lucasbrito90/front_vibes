@@ -7,6 +7,7 @@ import { authService, LARAVEL_SYNC_FAILURE_MESSAGE } from '@/services/auth.servi
 import { createLogger } from '@/utils/player-debug';
 import { syncStatusBarWithRoute } from '@/composables/useStatusBarStyle';
 import { shouldSkipLaravelSyncForOfflinePlayer } from '@/router/offline-player-guard';
+import { endCurrentScreenSpan, startScreenSpan } from '@/telemetry/otel';
 
 const log = createLogger('Router');
 
@@ -193,6 +194,10 @@ function waitForAuthState(): Promise<User | null> {
 }
 
 router.beforeEach(async (to) => {
+  // Close the previous screen span and record its duration before navigating.
+  // Safe no-op when telemetry is disabled or no span is active.
+  endCurrentScreenSpan();
+
   // Playwright E2E only — skip Firebase/Laravel gate; API is mocked in tests.
   if (import.meta.env.VITE_E2E_MOCK_AUTH === 'true' && to.meta.requiresAuth) {
     return true;
@@ -243,6 +248,35 @@ router.afterEach((to, from) => {
     hideMiniPlayer: !!to.meta.hideMiniPlayer,
   });
   void syncStatusBarWithRoute(to);
+
+  // Start a new screen span for the incoming route.
+  // Use the route name when available; fall back to path segments (no dynamic IDs).
+  // Example: '/schedules' → 'SchedulesPage', '/vibes/:id/edit' → 'EditVibePage' (no ID).
+  const screenName = _routeToScreenName(to.name as string | undefined, to.path);
+  startScreenSpan(screenName);
 });
+
+/**
+ * Derives a stable, low-cardinality screen name from a route for telemetry.
+ *
+ * Rules (ADR-029 §"Span naming"):
+ *  - Prefer the route component name (e.g. "SchedulesPage").
+ *  - Never include dynamic IDs from the resolved URL path.
+ *  - Sanitize to PascalCase alphanumeric string.
+ */
+function _routeToScreenName(routeName: string | undefined, path: string): string {
+  if (routeName && typeof routeName === 'string') {
+    // Strip dynamic segments like ":id" from named routes just in case
+    return routeName.replace(/[^a-zA-Z0-9]/g, '');
+  }
+
+  // Map common paths to readable names — no dynamic segments (IDs stripped by route template)
+  const segment = path.split('/').filter(Boolean).pop() ?? 'root';
+  // Convert kebab-case to PascalCase
+  return segment
+    .split('-')
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join('') + 'Page';
+}
 
 export default router;
