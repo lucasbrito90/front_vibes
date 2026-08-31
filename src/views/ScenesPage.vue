@@ -63,6 +63,17 @@
                 <ion-icon slot="start" :icon="trashOutline" />
                 Delete
               </ion-button>
+              <ion-button
+                fill="solid"
+                color="primary"
+                size="small"
+                :disabled="isExecuting(scene.id)"
+                @click="handleExecute(scene.id)"
+              >
+                <ion-spinner v-if="isExecuting(scene.id)" slot="start" name="crescent" />
+                <ion-icon v-else slot="start" :icon="playOutline" />
+                Execute
+              </ion-button>
             </div>
           </article>
         </div>
@@ -73,6 +84,14 @@
           <ion-icon :icon="addOutline" />
         </ion-fab-button>
       </ion-fab>
+
+      <ion-toast
+        :is-open="showToast"
+        :message="toastMessage"
+        :duration="2800"
+        position="bottom"
+        @didDismiss="showToast = false"
+      />
     </ion-content>
   </ion-page>
 </template>
@@ -86,23 +105,95 @@ import {
   IonHeader,
   IonIcon,
   IonPage,
+  IonSpinner,
   IonTitle,
+  IonToast,
   IonToolbar,
   alertController,
   onIonViewWillEnter,
 } from '@ionic/vue';
-import { addOutline, layersOutline, listOutline, pencilOutline, trashOutline } from 'ionicons/icons';
+import {
+  addOutline,
+  layersOutline,
+  listOutline,
+  pencilOutline,
+  playOutline,
+  trashOutline,
+} from 'ionicons/icons';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { useScenes } from '@/composables/useScenes';
+import {
+  DEVICE_OFFLINE_MUTATION_MESSAGE,
+  DeviceOfflineError,
+  isDeviceOffline,
+} from '@/services/provider-connection.service';
+import { sceneDispatchService } from '@/services/scene-dispatch.service';
 import type { Scene } from '@/services/scene.service';
 
 const router = useRouter();
 const { scenes, scenesListLoading, scenesListError, fetchScenes, deleteScene } = useScenes();
 
+const offline = ref(isDeviceOffline());
+const executingSceneIds = ref<Set<number>>(new Set());
+const showToast = ref(false);
+const toastMessage = ref('');
+
+function notify(message: string): void {
+  toastMessage.value = message;
+  showToast.value = true;
+}
+
+function updateOnlineState(): void {
+  offline.value = isDeviceOffline();
+}
+
+function blockedOffline(): boolean {
+  updateOnlineState();
+  if (offline.value) {
+    notify(DEVICE_OFFLINE_MUTATION_MESSAGE);
+    return true;
+  }
+  return false;
+}
+
+function isExecuting(sceneId: number): boolean {
+  return executingSceneIds.value.has(sceneId);
+}
+
+function setExecuting(sceneId: number, executing: boolean): void {
+  const next = new Set(executingSceneIds.value);
+  if (executing) {
+    next.add(sceneId);
+  } else {
+    next.delete(sceneId);
+  }
+  executingSceneIds.value = next;
+}
+
+function formatDispatchMessage(dispatched: number, skipped: number): string {
+  const dispatchedLabel = `${dispatched} action${dispatched === 1 ? '' : 's'} dispatched`;
+  if (skipped > 0) {
+    return `${dispatchedLabel}, ${skipped} skipped.`;
+  }
+  return `${dispatchedLabel}.`;
+}
+
+onMounted(() => {
+  window.addEventListener('online', updateOnlineState);
+  window.addEventListener('offline', updateOnlineState);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('online', updateOnlineState);
+  window.removeEventListener('offline', updateOnlineState);
+});
+
 onIonViewWillEnter(() => {
+  updateOnlineState();
   void fetchScenes();
 });
 
@@ -116,6 +207,24 @@ function goEdit(id: number): void {
 
 function goActions(id: number): void {
   router.push(`/scenes/${id}/actions`);
+}
+
+async function handleExecute(sceneId: number): Promise<void> {
+  if (blockedOffline() || isExecuting(sceneId)) return;
+
+  setExecuting(sceneId, true);
+  try {
+    const result = await sceneDispatchService.executeScene(sceneId);
+    notify(formatDispatchMessage(result.dispatched, result.skipped));
+  } catch (err) {
+    if (err instanceof DeviceOfflineError) {
+      notify(DEVICE_OFFLINE_MUTATION_MESSAGE);
+    } else {
+      notify(err instanceof Error ? err.message : 'Could not execute scene.');
+    }
+  } finally {
+    setExecuting(sceneId, false);
+  }
 }
 
 async function handleDelete(scene: Scene): Promise<void> {
