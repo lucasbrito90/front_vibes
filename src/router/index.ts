@@ -152,6 +152,11 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, screenName: 'EditScenePage' },
       },
       {
+        path: 'scenes/:id/actions',
+        component: () => import('@/views/SceneDeviceActionsPage.vue'),
+        meta: { requiresAuth: true, screenName: 'SceneDeviceActionsPage' },
+      },
+      {
         path: 'devices',
         component: () => import('@/views/DevicesPage.vue'),
         meta: { requiresAuth: true, screenName: 'DevicesPage' },
