@@ -1,4 +1,6 @@
-import type { ActionType, VibeDeviceActionPayload } from '@/services/vibe-device-action.service';
+import type { ActionType, SceneDeviceActionPayload } from '@/services/scene-device-action.service';
+
+export type { ActionType };
 
 /** MVP-allowed action types. Future types are intentionally not exposed in the UI. */
 export const ACTION_TYPES: readonly ActionType[] = ['turn_on', 'turn_off', 'toggle'] as const;
@@ -44,7 +46,7 @@ export type ActionValidationErrors = Partial<Record<ActionValidationField, strin
  * - action_type required + MVP only
  * - delay_seconds integer in [0, MAX_DELAY_SECONDS]
  */
-export function validateActionDraft(draft: VibeDeviceActionPayload): ActionValidationErrors {
+export function validateActionDraft(draft: SceneDeviceActionPayload): ActionValidationErrors {
   const errors: ActionValidationErrors = {};
 
   if (draft.device_id == null || !Number.isInteger(draft.device_id) || draft.device_id <= 0) {
@@ -68,6 +70,6 @@ export function validateActionDraft(draft: VibeDeviceActionPayload): ActionValid
 }
 
 /** True when the draft has no validation errors. */
-export function isValidActionDraft(draft: VibeDeviceActionPayload): boolean {
+export function isValidActionDraft(draft: SceneDeviceActionPayload): boolean {
   return Object.keys(validateActionDraft(draft)).length === 0;
 }
