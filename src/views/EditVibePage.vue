@@ -84,6 +84,37 @@
             </p>
           </div>
 
+          <ion-item class="auth-item" lines="none">
+            <ion-select
+              v-model="sceneSelectValue"
+              label="Smart Home scene"
+              label-placement="floating"
+              placeholder="None"
+              :disabled="loading || scenesListLoading"
+              interface="action-sheet"
+            >
+              <ion-select-option :value="NO_SCENE_SELECT_VALUE">None</ion-select-option>
+              <ion-select-option v-for="scene in scenes" :key="scene.id" :value="scene.id">
+                {{ scene.name }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+          <div
+            v-if="form.scene_id != null"
+            class="vibe-scene-link ion-padding-start ion-padding-end"
+          >
+            <ion-button
+              expand="block"
+              fill="clear"
+              type="button"
+              class="vibe-scene-link__btn"
+              :disabled="loading"
+              @click="router.push(`/scenes/${form.scene_id}/actions`)"
+            >
+              Manage scene actions
+            </ion-button>
+          </div>
+
           <ion-item class="auth-item vibe-toggle-item" lines="none">
             <ion-label>Active</ion-label>
             <ion-toggle v-model="form.is_active" slot="end" :disabled="loading" />
@@ -133,6 +164,8 @@ import {
   IonItem,
   IonLabel,
   IonPage,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonTextarea,
   IonTitle,
@@ -145,6 +178,7 @@ import { useRoute, useRouter } from 'vue-router';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import CoverBundlePickerModal from '@/components/CoverBundlePickerModal.vue';
+import { useScenes } from '@/composables/useScenes';
 import { useVibes } from '@/composables/useVibes';
 import { activeSchedulesSummary } from '@/utils/automation-summary';
 import type { CoverBundle } from '@/types/cover-bundle';
@@ -159,6 +193,10 @@ import { vibePreviewFromImageFields } from '@/utils/vibe-form-preview';
 const route = useRoute();
 const router = useRouter();
 const { loading, error, selectedVibe, fetchVibe, updateVibe } = useVibes();
+const { scenes, scenesListLoading, fetchScenes } = useScenes();
+
+/** IonSelect cannot bind null — map "None" to this sentinel. */
+const NO_SCENE_SELECT_VALUE = -1;
 
 const coverPickerOpen = ref(false);
 
@@ -169,6 +207,16 @@ const form = reactive({
   thumbnail_url: '',
   artwork_url: '',
   player_background_url: '',
+  scene_id: null as number | null,
+});
+
+const sceneSelectValue = computed({
+  get(): number {
+    return form.scene_id ?? NO_SCENE_SELECT_VALUE;
+  },
+  set(value: number) {
+    form.scene_id = value === NO_SCENE_SELECT_VALUE ? null : value;
+  },
 });
 
 const vibeDraftPreview = computed(() =>
@@ -201,6 +249,9 @@ const artworkPreviewSrc = computed(() => getVibeArtworkUrl(vibeDraftPreview.valu
 const activeSchedulesText = computed(() => activeSchedulesSummary(selectedVibe.value));
 
 onMounted(async () => {
+  if (!scenes.value.length) {
+    void fetchScenes();
+  }
   await fetchVibe(Number(route.params.id));
   if (error.value) {
     router.back();
@@ -220,6 +271,7 @@ watch(selectedVibe, (vibe) => {
     form.thumbnail_url = vibe.thumbnail_url ?? '';
     form.artwork_url = vibe.artwork_url ?? '';
     form.player_background_url = vibe.player_background_url ?? '';
+    form.scene_id = vibe.scene_id ?? null;
   }
 });
 
@@ -235,6 +287,7 @@ async function handleSubmit() {
     thumbnail_url: form.thumbnail_url.trim() || null,
     artwork_url: form.artwork_url.trim() || null,
     player_background_url: form.player_background_url.trim() || null,
+    scene_id: form.scene_id,
   });
 
   if (updated) {
@@ -330,5 +383,17 @@ async function handleSubmit() {
   font-size: var(--app-font-size-body-md);
   font-weight: var(--app-font-weight-medium);
   color: var(--app-color-text-primary);
+}
+
+.vibe-scene-link {
+  margin-top: calc(-1 * var(--app-space-2));
+  margin-bottom: var(--app-space-2);
+}
+
+.vibe-scene-link__btn {
+  margin: 0;
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: var(--app-font-size-body-sm);
 }
 </style>
