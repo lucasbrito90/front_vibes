@@ -8,16 +8,16 @@ const { mockList, mockCreate, mockUpdate, mockDelete, mockReorder } = vi.hoisted
   mockReorder: vi.fn(),
 }));
 
-vi.mock('@/services/vibe-device-action.service', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/services/vibe-device-action.service')>();
+vi.mock('@/services/scene-device-action.service', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/scene-device-action.service')>();
   return {
     ...actual,
-    vibeDeviceActionService: {
-      listVibeDeviceActions: mockList,
-      createVibeDeviceAction: mockCreate,
-      updateVibeDeviceAction: mockUpdate,
-      deleteVibeDeviceAction: mockDelete,
-      reorderVibeDeviceActions: mockReorder,
+    sceneDeviceActionService: {
+      listSceneDeviceActions: mockList,
+      createSceneDeviceAction: mockCreate,
+      updateSceneDeviceAction: mockUpdate,
+      deleteSceneDeviceAction: mockDelete,
+      reorderSceneDeviceActions: mockReorder,
     },
   };
 });
@@ -31,12 +31,12 @@ vi.mock('@/services/provider-connection.service', async (importOriginal) => {
 });
 
 import { DeviceOfflineError } from '@/services/provider-connection.service';
-import { useVibeDeviceActions } from '@/composables/useVibeDeviceActions';
-import type { VibeDeviceAction } from '@/services/vibe-device-action.service';
+import { useSceneDeviceActions } from '@/composables/useSceneDeviceActions';
+import type { SceneDeviceAction } from '@/services/scene-device-action.service';
 
-function action(partial: Partial<VibeDeviceAction> & { id: number }): VibeDeviceAction {
+function action(partial: Partial<SceneDeviceAction> & { id: number }): SceneDeviceAction {
   return {
-    vibe_id: 7,
+    scene_id: 7,
     device_id: 1,
     action_type: 'turn_on',
     parameters: null,
@@ -48,9 +48,9 @@ function action(partial: Partial<VibeDeviceAction> & { id: number }): VibeDevice
   };
 }
 
-describe('useVibeDeviceActions', () => {
+describe('useSceneDeviceActions', () => {
   beforeEach(() => {
-    const { list, clearError } = useVibeDeviceActions();
+    const { list, clearError } = useSceneDeviceActions();
     list.value = [];
     clearError();
     mockList.mockReset();
@@ -71,7 +71,7 @@ describe('useVibeDeviceActions', () => {
       action({ id: 2, sort_order: 1 }),
     ]);
 
-    const { fetchActions, list, hasActions } = useVibeDeviceActions();
+    const { fetchActions, list, hasActions } = useSceneDeviceActions();
     await fetchActions(7);
 
     expect(list.value.map((a) => a.id)).toEqual([1, 2, 3]);
@@ -79,7 +79,7 @@ describe('useVibeDeviceActions', () => {
   });
 
   it('keeps in-memory list and surfaces error when fetch fails offline', async () => {
-    const { list, fetchActions, error } = useVibeDeviceActions();
+    const { list, fetchActions, error } = useSceneDeviceActions();
     list.value = [action({ id: 5 })];
     mockList.mockRejectedValue(new Error('Network down'));
 
@@ -90,7 +90,7 @@ describe('useVibeDeviceActions', () => {
   });
 
   it('appends a created action and keeps order', async () => {
-    const { list, createAction } = useVibeDeviceActions();
+    const { list, createAction } = useSceneDeviceActions();
     list.value = [action({ id: 1, sort_order: 0 })];
     mockCreate.mockResolvedValue(action({ id: 2, sort_order: 1 }));
 
@@ -101,7 +101,7 @@ describe('useVibeDeviceActions', () => {
   });
 
   it('replaces an updated action in place', async () => {
-    const { list, updateAction } = useVibeDeviceActions();
+    const { list, updateAction } = useSceneDeviceActions();
     list.value = [action({ id: 1, action_type: 'turn_on' })];
     mockUpdate.mockResolvedValue(action({ id: 1, action_type: 'turn_off' }));
 
@@ -111,7 +111,7 @@ describe('useVibeDeviceActions', () => {
   });
 
   it('removes a deleted action from the list', async () => {
-    const { list, deleteAction } = useVibeDeviceActions();
+    const { list, deleteAction } = useSceneDeviceActions();
     list.value = [action({ id: 1 }), action({ id: 2 })];
     mockDelete.mockResolvedValue(undefined);
 
@@ -122,7 +122,7 @@ describe('useVibeDeviceActions', () => {
   });
 
   it('reorders using the backend response', async () => {
-    const { list, reorderActions } = useVibeDeviceActions();
+    const { list, reorderActions } = useSceneDeviceActions();
     list.value = [action({ id: 1, sort_order: 0 }), action({ id: 2, sort_order: 1 })];
     mockReorder.mockResolvedValue([
       action({ id: 2, sort_order: 0 }),
@@ -139,7 +139,7 @@ describe('useVibeDeviceActions', () => {
   it('returns null and surfaces message when create is blocked offline', async () => {
     mockCreate.mockRejectedValue(new DeviceOfflineError());
 
-    const { createAction, error } = useVibeDeviceActions();
+    const { createAction, error } = useSceneDeviceActions();
     const result = await createAction(7, { device_id: 1, action_type: 'turn_on' });
 
     expect(result).toBeNull();
@@ -149,14 +149,14 @@ describe('useVibeDeviceActions', () => {
   it('returns false when delete is blocked offline', async () => {
     mockDelete.mockRejectedValue(new DeviceOfflineError());
 
-    const { deleteAction } = useVibeDeviceActions();
+    const { deleteAction } = useSceneDeviceActions();
     expect(await deleteAction(7, 1)).toBe(false);
   });
 
   it('returns false when reorder is blocked offline', async () => {
     mockReorder.mockRejectedValue(new DeviceOfflineError());
 
-    const { reorderActions } = useVibeDeviceActions();
+    const { reorderActions } = useSceneDeviceActions();
     expect(await reorderActions(7, [1, 2])).toBe(false);
   });
 });

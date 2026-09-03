@@ -113,12 +113,12 @@ import {
 import { bulbOutline, cloudOfflineOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useDevices } from '@/composables/useDevices';
-import { useVibeDeviceActions } from '@/composables/useVibeDeviceActions';
+import { useSceneDeviceActions } from '@/composables/useSceneDeviceActions';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
 } from '@/services/provider-connection.service';
-import type { ActionType, VibeDeviceAction } from '@/services/vibe-device-action.service';
+import type { ActionType, SceneDeviceAction } from '@/services/scene-device-action.service';
 import { deviceStatusBadge } from '@/utils/device-status';
 import {
   actionTypeOptions,
@@ -127,13 +127,13 @@ import {
 } from '@/utils/device-action';
 
 const props = defineProps<{
-  vibeId: number;
+  sceneId: number;
   /** When provided, the modal edits this action; otherwise it creates a new one. */
-  action?: VibeDeviceAction | null;
+  action?: SceneDeviceAction | null;
 }>();
 
 const { devices, fetchDevices } = useDevices();
-const { createAction, updateAction, error, clearError } = useVibeDeviceActions();
+const { createAction, updateAction, error, clearError } = useSceneDeviceActions();
 
 const isEdit = computed(() => props.action != null);
 const actionOptions = actionTypeOptions();
@@ -198,8 +198,8 @@ async function handleSave(): Promise<void> {
   };
 
   const result = isEdit.value
-    ? await updateAction(props.vibeId, props.action!.id, payload)
-    : await createAction(props.vibeId, payload);
+    ? await updateAction(props.sceneId, props.action!.id, payload)
+    : await createAction(props.sceneId, payload);
 
   saving.value = false;
 

@@ -16,6 +16,7 @@ import { Preferences } from '@capacitor/preferences';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { auth } from './firebase';
 import { laravelApiUrl, laravelFetch, requireApiBase } from './laravel-http';
+import { setTelemetryUserId } from '@/telemetry/otel';
 
 /** Stored Firebase ID token for native/offline-adjacent flows (mirrored by useAuth). */
 export const FIREBASE_TOKEN_PREFS_KEY = 'firebase_id_token';
@@ -118,6 +119,8 @@ export async function getRequiredIdToken(
 function clearBackendSession(): void {
   syncedFirebaseUid = null;
   laravelUser.value = null;
+  // Clear user.id from telemetry context on logout (ADR-030).
+  setTelemetryUserId(null);
 }
 
 function logDev(...args: unknown[]): void {
@@ -193,6 +196,8 @@ async function syncUserWithBackend(idToken: string, firebaseUid: string): Promis
 
   laravelUser.value = data;
   syncedFirebaseUid = firebaseUid;
+  // Propagate the integer user.id (never firebase_uid/email) to telemetry (ADR-030).
+  setTelemetryUserId(data.id);
   return data;
 }
 

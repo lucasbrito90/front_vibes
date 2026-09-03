@@ -7,7 +7,7 @@
             <ion-icon :icon="chevronBackOutline" />
           </ion-button>
         </ion-buttons>
-        <ion-title>Device Actions</ion-title>
+        <ion-title>Scene Actions</ion-title>
       </ion-toolbar>
     </ion-header>
 
@@ -19,7 +19,7 @@
         </div>
 
         <p class="actions-intro">
-          Smart home actions run when this vibe plays. They are applied in order, top to bottom.
+          Smart home actions run when this scene is executed. They are applied in order, top to bottom.
         </p>
 
         <AppLoadingState
@@ -45,7 +45,7 @@
           variant="card"
           :icon="bulbOutline"
           title="No device actions yet"
-          description="Attach a smart home action — like turning a light on — to this vibe."
+          description="Attach a smart home action — like turning a light on — to this scene."
           action-label="Add action"
           @action="openAdd"
         />
@@ -159,19 +159,19 @@ import { useRoute, useRouter } from 'vue-router';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
-import { useVibeDeviceActions } from '@/composables/useVibeDeviceActions';
+import { useSceneDeviceActions } from '@/composables/useSceneDeviceActions';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
 } from '@/services/provider-connection.service';
-import type { VibeDeviceAction } from '@/services/vibe-device-action.service';
+import type { SceneDeviceAction } from '@/services/scene-device-action.service';
 import { deviceStatusBadge, type StatusBadge } from '@/utils/device-status';
 import { actionTypeLabel } from '@/utils/device-action';
-import VibeDeviceActionEditModal from '@/views/VibeDeviceActionEditModal.vue';
+import SceneDeviceActionEditModal from '@/views/SceneDeviceActionEditModal.vue';
 
 const route = useRoute();
 const router = useRouter();
-const vibeId = Number(route.params.id);
+const sceneId = Number(route.params.id);
 
 const {
   list,
@@ -180,13 +180,13 @@ const {
   fetchActions,
   deleteAction,
   reorderActions,
-} = useVibeDeviceActions();
+} = useSceneDeviceActions();
 
 const offline = ref(isDeviceOffline());
 const showToast = ref(false);
 const toastMessage = ref('');
 
-function badgeFor(action: VibeDeviceAction): StatusBadge {
+function badgeFor(action: SceneDeviceAction): StatusBadge {
   return deviceStatusBadge(action.device?.status ?? 'unknown');
 }
 
@@ -220,17 +220,17 @@ onUnmounted(() => {
 
 onIonViewWillEnter(() => {
   updateOnlineState();
-  void fetchActions(vibeId);
+  void fetchActions(sceneId);
 });
 
 async function reload(): Promise<void> {
-  await fetchActions(vibeId);
+  await fetchActions(sceneId);
 }
 
-async function presentModal(action: VibeDeviceAction | null): Promise<void> {
+async function presentModal(action: SceneDeviceAction | null): Promise<void> {
   const modal = await modalController.create({
-    component: VibeDeviceActionEditModal,
-    componentProps: { vibeId, action },
+    component: SceneDeviceActionEditModal,
+    componentProps: { sceneId, action },
   });
   modal.onDidDismiss().then(({ data }) => {
     if (data?.saved) {
@@ -245,14 +245,14 @@ async function openAdd(): Promise<void> {
   await presentModal(null);
 }
 
-async function openEdit(action: VibeDeviceAction): Promise<void> {
+async function openEdit(action: SceneDeviceAction): Promise<void> {
   if (blockedOffline()) return;
   await presentModal(action);
 }
 
 async function persistOrder(orderedIds: number[]): Promise<void> {
   if (blockedOffline()) return;
-  const ok = await reorderActions(vibeId, orderedIds);
+  const ok = await reorderActions(sceneId, orderedIds);
   if (!ok) {
     notify(error.value ?? 'Could not reorder actions.');
   }
@@ -272,12 +272,12 @@ async function moveDown(index: number): Promise<void> {
   await persistOrder(ids);
 }
 
-async function confirmDelete(action: VibeDeviceAction): Promise<void> {
+async function confirmDelete(action: SceneDeviceAction): Promise<void> {
   if (blockedOffline()) return;
 
   const alert = await alertController.create({
     header: 'Delete action',
-    message: `Remove "${actionTypeLabel(action.action_type)}" on ${action.device?.name ?? 'this device'} from this vibe?`,
+    message: `Remove "${actionTypeLabel(action.action_type)}" on ${action.device?.name ?? 'this device'} from this scene?`,
     buttons: [
       { text: 'Cancel', role: 'cancel' },
       {
@@ -294,7 +294,7 @@ async function confirmDelete(action: VibeDeviceAction): Promise<void> {
 
 async function runDelete(actionId: number): Promise<void> {
   if (blockedOffline()) return;
-  const ok = await deleteAction(vibeId, actionId);
+  const ok = await deleteAction(sceneId, actionId);
   notify(ok ? 'Action deleted.' : error.value ?? 'Could not delete action.');
 }
 </script>

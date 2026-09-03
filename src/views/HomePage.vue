@@ -63,6 +63,9 @@
             <ion-button expand="block" class="home-btn-primary app-pressable" router-link="/vibes">
               My Vibes
             </ion-button>
+            <ion-button expand="block" fill="outline" class="home-btn-outline app-pressable" router-link="/scenes">
+              Scenes
+            </ion-button>
             <ion-button expand="block" fill="outline" class="home-btn-outline app-pressable" router-link="/settings">
               Settings
             </ion-button>

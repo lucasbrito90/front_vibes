@@ -18,9 +18,9 @@ vi.mock('@/services/laravel-http', async (importOriginal) => {
 });
 
 import {
-  vibeDeviceActionService,
-  type VibeDeviceActionPayload,
-} from '@/services/vibe-device-action.service';
+  sceneDeviceActionService,
+  type SceneDeviceActionPayload,
+} from '@/services/scene-device-action.service';
 import { DeviceOfflineError } from '@/services/provider-connection.service';
 
 function setOnline(value: boolean): void {
@@ -30,13 +30,13 @@ function setOnline(value: boolean): void {
   });
 }
 
-const createPayload: VibeDeviceActionPayload = {
+const createPayload: SceneDeviceActionPayload = {
   device_id: 12,
   action_type: 'turn_on',
   delay_seconds: 30,
 };
 
-describe('vibe-device-action.service — protected requests', () => {
+describe('scene-device-action.service — protected requests', () => {
   beforeEach(() => {
     setOnline(true);
     mockGetRequiredIdToken.mockResolvedValue('mock-firebase-token');
@@ -59,7 +59,7 @@ describe('vibe-device-action.service — protected requests', () => {
     setOnline(true);
   });
 
-  it('sends a Firebase Bearer token before calling GET /api/vibes/:id/device-actions', async () => {
+  it('sends a Firebase Bearer token before calling GET /api/scenes/:id/actions', async () => {
     const seq: string[] = [];
     mockGetRequiredIdToken.mockImplementation(async () => {
       seq.push('token');
@@ -79,9 +79,9 @@ describe('vibe-device-action.service — protected requests', () => {
       } as unknown as Response;
     });
 
-    await vibeDeviceActionService.listVibeDeviceActions(7);
+    await sceneDeviceActionService.listSceneDeviceActions(7);
     expect(seq).toEqual(['token', 'fetch']);
-    expect(capturedUrl).toMatch(/\/api\/vibes\/7\/device-actions$/);
+    expect(capturedUrl).toMatch(/\/api\/scenes\/7\/actions$/);
   });
 
   it('POSTs the create payload to the collection URL', async () => {
@@ -99,9 +99,9 @@ describe('vibe-device-action.service — protected requests', () => {
       } as unknown as Response;
     });
 
-    await vibeDeviceActionService.createVibeDeviceAction(7, createPayload);
+    await sceneDeviceActionService.createSceneDeviceAction(7, createPayload);
     expect(capturedMethod).toBe('POST');
-    expect(capturedUrl).toMatch(/\/api\/vibes\/7\/device-actions$/);
+    expect(capturedUrl).toMatch(/\/api\/scenes\/7\/actions$/);
     expect(JSON.parse(capturedBody ?? '{}')).toMatchObject({
       device_id: 12,
       action_type: 'turn_on',
@@ -124,9 +124,9 @@ describe('vibe-device-action.service — protected requests', () => {
       } as unknown as Response;
     });
 
-    await vibeDeviceActionService.updateVibeDeviceAction(7, 3, { action_type: 'toggle' });
+    await sceneDeviceActionService.updateSceneDeviceAction(7, 3, { action_type: 'toggle' });
     expect(capturedMethod).toBe('PATCH');
-    expect(capturedUrl).toMatch(/\/api\/vibes\/7\/device-actions\/3$/);
+    expect(capturedUrl).toMatch(/\/api\/scenes\/7\/actions\/3$/);
     expect(JSON.parse(capturedBody ?? '{}')).toMatchObject({ action_type: 'toggle' });
   });
 
@@ -139,9 +139,9 @@ describe('vibe-device-action.service — protected requests', () => {
       return { ok: true, status: 204, json: async () => ({}) } as unknown as Response;
     });
 
-    await vibeDeviceActionService.deleteVibeDeviceAction(7, 9);
+    await sceneDeviceActionService.deleteSceneDeviceAction(7, 9);
     expect(capturedMethod).toBe('DELETE');
-    expect(capturedUrl).toMatch(/\/api\/vibes\/7\/device-actions\/9$/);
+    expect(capturedUrl).toMatch(/\/api\/scenes\/7\/actions\/9$/);
   });
 
   it('POSTs ordered_ids to the reorder endpoint URL', async () => {
@@ -159,39 +159,39 @@ describe('vibe-device-action.service — protected requests', () => {
       } as unknown as Response;
     });
 
-    await vibeDeviceActionService.reorderVibeDeviceActions(7, [3, 1, 2]);
+    await sceneDeviceActionService.reorderSceneDeviceActions(7, [3, 1, 2]);
     expect(capturedMethod).toBe('POST');
-    expect(capturedUrl).toMatch(/\/api\/vibes\/7\/device-actions\/reorder$/);
+    expect(capturedUrl).toMatch(/\/api\/scenes\/7\/actions\/reorder$/);
     expect(JSON.parse(capturedBody ?? '{}')).toEqual({ ordered_ids: [3, 1, 2] });
   });
 
-  it('blocks createVibeDeviceAction when offline and never calls fetch', async () => {
+  it('blocks createSceneDeviceAction when offline and never calls fetch', async () => {
     setOnline(false);
     await expect(
-      vibeDeviceActionService.createVibeDeviceAction(7, createPayload),
+      sceneDeviceActionService.createSceneDeviceAction(7, createPayload),
     ).rejects.toBeInstanceOf(DeviceOfflineError);
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('blocks updateVibeDeviceAction when offline and never calls fetch', async () => {
+  it('blocks updateSceneDeviceAction when offline and never calls fetch', async () => {
     setOnline(false);
     await expect(
-      vibeDeviceActionService.updateVibeDeviceAction(7, 1, { delay_seconds: 5 }),
+      sceneDeviceActionService.updateSceneDeviceAction(7, 1, { delay_seconds: 5 }),
     ).rejects.toBeInstanceOf(DeviceOfflineError);
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('blocks deleteVibeDeviceAction when offline and never calls fetch', async () => {
+  it('blocks deleteSceneDeviceAction when offline and never calls fetch', async () => {
     setOnline(false);
-    await expect(vibeDeviceActionService.deleteVibeDeviceAction(7, 1)).rejects.toBeInstanceOf(
+    await expect(sceneDeviceActionService.deleteSceneDeviceAction(7, 1)).rejects.toBeInstanceOf(
       DeviceOfflineError,
     );
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('blocks reorderVibeDeviceActions when offline and never calls fetch', async () => {
+  it('blocks reorderSceneDeviceActions when offline and never calls fetch', async () => {
     setOnline(false);
-    await expect(vibeDeviceActionService.reorderVibeDeviceActions(7, [1, 2])).rejects.toBeInstanceOf(
+    await expect(sceneDeviceActionService.reorderSceneDeviceActions(7, [1, 2])).rejects.toBeInstanceOf(
       DeviceOfflineError,
     );
     expect(fetch).not.toHaveBeenCalled();
@@ -199,7 +199,7 @@ describe('vibe-device-action.service — protected requests', () => {
 
   it('does not call fetch when the Firebase token cannot be resolved', async () => {
     mockGetRequiredIdToken.mockRejectedValueOnce(new Error('Firebase auth gate'));
-    await expect(vibeDeviceActionService.listVibeDeviceActions(7)).rejects.toThrow(
+    await expect(sceneDeviceActionService.listSceneDeviceActions(7)).rejects.toThrow(
       'Firebase auth gate',
     );
     expect(fetch).not.toHaveBeenCalled();

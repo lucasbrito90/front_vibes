@@ -7,17 +7,15 @@ import type { DeviceStatus } from './device.service';
 import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel-http';
 
 /**
- * Smart Home MVP — online-only vibe device action client (Phase 7B).
+ * Smart Home MVP — online-only scene action client.
  *
- * Talks to the Laravel `/api/vibes/{vibe}/device-actions` resource (backend
- * Phase 7A) using the same Firebase Bearer + `laravelFetch` transport as the
- * other Smart Home clients. The backend is authoritative for ownership,
- * validation, and `sort_order` persistence (ADR-015).
+ * Talks to the Laravel `/api/scenes/{scene}/actions` resource using the same
+ * Firebase Bearer + `laravelFetch` transport as the other Smart Home clients.
  *
  * Hard boundaries:
  * - Online only. Create / update / delete / reorder are blocked while offline.
  * - Mobile NEVER calls Home Assistant directly and NEVER executes actions —
- *   this is pure association metadata. Execution arrives in Phases 8–9.
+ *   this is pure association metadata.
  * - MVP action types only: turn_on, turn_off, toggle.
  */
 
@@ -25,7 +23,7 @@ import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel
 export type ActionType = 'turn_on' | 'turn_off' | 'toggle';
 
 /** Nested device summary returned alongside each action. */
-export interface VibeDeviceActionDevice {
+export interface SceneDeviceActionDevice {
   id: number;
   name: string;
   type: string | null;
@@ -34,10 +32,10 @@ export interface VibeDeviceActionDevice {
   provider_device_id: string;
 }
 
-/** A device action attached to a vibe, as returned by the API. */
-export interface VibeDeviceAction {
+/** A device action attached to a scene, as returned by the API. */
+export interface SceneDeviceAction {
   id: number;
-  vibe_id: number;
+  scene_id: number;
   device_id: number;
   action_type: ActionType | string;
   parameters: Record<string, unknown> | null;
@@ -45,11 +43,11 @@ export interface VibeDeviceAction {
   delay_seconds: number;
   created_at: string | null;
   updated_at: string | null;
-  device?: VibeDeviceActionDevice;
+  device?: SceneDeviceActionDevice;
 }
 
 /** Create / update payload. All fields optional on update (partial). */
-export interface VibeDeviceActionPayload {
+export interface SceneDeviceActionPayload {
   device_id?: number;
   action_type?: ActionType;
   parameters?: Record<string, unknown> | null;
@@ -80,50 +78,50 @@ async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-function basePath(vibeId: number): string {
-  return `/api/vibes/${vibeId}/device-actions`;
+function basePath(sceneId: number): string {
+  return `/api/scenes/${sceneId}/actions`;
 }
 
-async function listVibeDeviceActions(vibeId: number): Promise<VibeDeviceAction[]> {
-  const res = await laravelFetch(laravelApiUrl(basePath(vibeId)), {
+async function listSceneDeviceActions(sceneId: number): Promise<SceneDeviceAction[]> {
+  const res = await laravelFetch(laravelApiUrl(basePath(sceneId)), {
     headers: await protectedAuthHeaders(),
   });
-  const body = await handleResponse<{ data: VibeDeviceAction[] }>(res);
+  const body = await handleResponse<{ data: SceneDeviceAction[] }>(res);
   return body.data;
 }
 
-async function createVibeDeviceAction(
-  vibeId: number,
-  payload: VibeDeviceActionPayload,
-): Promise<VibeDeviceAction> {
+async function createSceneDeviceAction(
+  sceneId: number,
+  payload: SceneDeviceActionPayload,
+): Promise<SceneDeviceAction> {
   assertOnlineForMutation();
-  const res = await laravelFetch(laravelApiUrl(basePath(vibeId)), {
+  const res = await laravelFetch(laravelApiUrl(basePath(sceneId)), {
     method: 'POST',
     headers: await protectedAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  const body = await handleResponse<{ data: VibeDeviceAction }>(res);
+  const body = await handleResponse<{ data: SceneDeviceAction }>(res);
   return body.data;
 }
 
-async function updateVibeDeviceAction(
-  vibeId: number,
+async function updateSceneDeviceAction(
+  sceneId: number,
   actionId: number,
-  payload: VibeDeviceActionPayload,
-): Promise<VibeDeviceAction> {
+  payload: SceneDeviceActionPayload,
+): Promise<SceneDeviceAction> {
   assertOnlineForMutation();
-  const res = await laravelFetch(laravelApiUrl(`${basePath(vibeId)}/${actionId}`), {
+  const res = await laravelFetch(laravelApiUrl(`${basePath(sceneId)}/${actionId}`), {
     method: 'PATCH',
     headers: await protectedAuthHeaders(),
     body: JSON.stringify(payload),
   });
-  const body = await handleResponse<{ data: VibeDeviceAction }>(res);
+  const body = await handleResponse<{ data: SceneDeviceAction }>(res);
   return body.data;
 }
 
-async function deleteVibeDeviceAction(vibeId: number, actionId: number): Promise<void> {
+async function deleteSceneDeviceAction(sceneId: number, actionId: number): Promise<void> {
   assertOnlineForMutation();
-  const res = await laravelFetch(laravelApiUrl(`${basePath(vibeId)}/${actionId}`), {
+  const res = await laravelFetch(laravelApiUrl(`${basePath(sceneId)}/${actionId}`), {
     method: 'DELETE',
     headers: await protectedAuthHeaders(),
   });
@@ -133,24 +131,24 @@ async function deleteVibeDeviceAction(vibeId: number, actionId: number): Promise
   }
 }
 
-async function reorderVibeDeviceActions(
-  vibeId: number,
+async function reorderSceneDeviceActions(
+  sceneId: number,
   orderedIds: number[],
-): Promise<VibeDeviceAction[]> {
+): Promise<SceneDeviceAction[]> {
   assertOnlineForMutation();
-  const res = await laravelFetch(laravelApiUrl(`${basePath(vibeId)}/reorder`), {
+  const res = await laravelFetch(laravelApiUrl(`${basePath(sceneId)}/reorder`), {
     method: 'POST',
     headers: await protectedAuthHeaders(),
     body: JSON.stringify({ ordered_ids: orderedIds }),
   });
-  const body = await handleResponse<{ data: VibeDeviceAction[] }>(res);
+  const body = await handleResponse<{ data: SceneDeviceAction[] }>(res);
   return body.data;
 }
 
-export const vibeDeviceActionService = {
-  listVibeDeviceActions,
-  createVibeDeviceAction,
-  updateVibeDeviceAction,
-  deleteVibeDeviceAction,
-  reorderVibeDeviceActions,
+export const sceneDeviceActionService = {
+  listSceneDeviceActions,
+  createSceneDeviceAction,
+  updateSceneDeviceAction,
+  deleteSceneDeviceAction,
+  reorderSceneDeviceActions,
 };
