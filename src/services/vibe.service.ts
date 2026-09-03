@@ -45,6 +45,9 @@ export interface Vibe {
   /** Convenience flag — true when at least one enabled schedule references this vibe. */
   has_active_schedule?: boolean;
 
+  /** Linked Smart Home scene (nullable). Actions run via this scene on dispatch. */
+  scene_id?: number | null;
+
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +59,7 @@ export interface VibePayload {
   thumbnail_url?: string | null;
   artwork_url?: string | null;
   player_background_url?: string | null;
+  scene_id?: number | null;
 }
 
 async function protectedAuthHeaders(): Promise<HeadersInit> {
