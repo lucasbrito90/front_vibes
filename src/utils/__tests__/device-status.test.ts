@@ -3,6 +3,7 @@ import type { ProviderType } from '@/services/provider-connection.service';
 import {
   connectionStatusBadge,
   deviceStatusBadge,
+  deviceTypeInfo,
   providerLabel,
 } from '@/utils/device-status';
 
@@ -60,5 +61,48 @@ describe('device-status — badge mapping', () => {
   it('providerLabel: falls back to raw slug when providerTypes is undefined', () => {
     expect(providerLabel('home_assistant')).toBe('home_assistant');
     expect(providerLabel('custom')).toBe('custom');
+  });
+});
+
+describe('device-status — deviceTypeInfo', () => {
+  it('maps all five T15 device types to distinct icons and labels', () => {
+    const lighting = deviceTypeInfo('lighting');
+    const switchable = deviceTypeInfo('switchable');
+    const media = deviceTypeInfo('media');
+    const ventilation = deviceTypeInfo('ventilation');
+    const other = deviceTypeInfo('other');
+
+    expect(lighting.label).toBe('Lighting');
+    expect(switchable.label).toBe('Switch');
+    expect(media.label).toBe('Media');
+    expect(ventilation.label).toBe('Ventilation');
+    expect(other.label).toBe('other'); // raw slug for 'other' (generic)
+
+    // All icons must be non-empty strings (actual ionicon path data)
+    for (const info of [lighting, switchable, media, ventilation, other]) {
+      expect(typeof info.icon).toBe('string');
+      expect(info.icon.length).toBeGreaterThan(0);
+    }
+
+    // Distinct icons for the four meaningful types
+    const icons = [lighting.icon, switchable.icon, media.icon, ventilation.icon];
+    expect(new Set(icons).size).toBe(4);
+  });
+
+  it('falls back gracefully for null type', () => {
+    const info = deviceTypeInfo(null);
+    expect(info.label).toBe('Device');
+    expect(info.icon.length).toBeGreaterThan(0);
+  });
+
+  it('falls back gracefully for undefined type', () => {
+    const info = deviceTypeInfo(undefined);
+    expect(info.label).toBe('Device');
+  });
+
+  it('falls back gracefully for an unrecognised slug', () => {
+    const info = deviceTypeInfo('robot_vacuum');
+    expect(info.label).toBe('robot_vacuum'); // raw slug preserved
+    expect(info.icon.length).toBeGreaterThan(0);
   });
 });

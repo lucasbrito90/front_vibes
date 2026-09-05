@@ -30,6 +30,11 @@ export interface SceneDeviceActionDevice {
   provider: string;
   status: DeviceStatus | string;
   provider_device_id: string;
+  /**
+   * ADR-033: capability map — same semantics as Device.capabilities.
+   * `null` = unknown → fail-open (all action options shown).
+   */
+  capabilities: Record<string, Record<string, unknown>> | null;
 }
 
 /** A device action attached to a scene, as returned by the API. */

@@ -100,7 +100,14 @@
             <div class="device-card-head">
               <div class="device-card-title-wrap">
                 <h2 class="device-card-name">{{ device.name }}</h2>
-                <span class="device-card-type">{{ device.type || 'device' }}</span>
+                <span class="device-card-type">
+                  <ion-icon
+                    :icon="deviceTypeInfo(device.type).icon"
+                    aria-hidden="true"
+                    class="device-type-icon"
+                  />
+                  {{ deviceTypeInfo(device.type).label }}
+                </span>
               </div>
               <ion-badge :color="statusBadge(device.status).color">
                 {{ statusBadge(device.status).label }}
@@ -171,6 +178,7 @@ import {
 import {
   connectionStatusBadge,
   deviceStatusBadge as statusBadge,
+  deviceTypeInfo,
   providerLabel,
 } from '@/utils/device-status';
 
@@ -363,11 +371,18 @@ async function runSync(): Promise<void> {
 }
 
 .device-card-type {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 2px;
   font-size: var(--app-font-size-body-sm);
   color: var(--app-color-text-secondary);
   text-transform: capitalize;
+}
+
+.device-type-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .device-card-meta {
