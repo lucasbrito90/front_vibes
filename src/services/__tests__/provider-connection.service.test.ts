@@ -229,4 +229,37 @@ describe('provider-connection.service — protected requests', () => {
     );
     expect(fetch).not.toHaveBeenCalled();
   });
+
+  it('GETs /api/provider-types and returns the data array', async () => {
+    const mockTypes = [
+      {
+        slug: 'home_assistant',
+        label: 'Home Assistant',
+        config: { base_url: { type: 'string', required: true, format: 'url:https' } },
+        credentials: { access_token: { type: 'string', required: true } },
+      },
+    ];
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: mockTypes }),
+    } as unknown as Response);
+
+    const result = await providerConnectionService.getProviderTypes();
+    expect(result).toEqual(mockTypes);
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/provider-types$/),
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
+  it('getProviderTypes throws when the API returns an error', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ message: 'Server error' }),
+    } as unknown as Response);
+
+    await expect(providerConnectionService.getProviderTypes()).rejects.toThrow('Server error');
+  });
 });

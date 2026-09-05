@@ -55,7 +55,7 @@
           v-else-if="listError && !devices.length"
           class="devices-state-slot"
           compact
-          title="Couldn’t load devices"
+          title="Couldn't load devices"
           :description="listError ?? ''"
           retry-label="Retry"
           @retry="fetchDevices"
@@ -67,8 +67,8 @@
           variant="card"
           :icon="hardwareChipOutline"
           title="Connect your smart home"
-          description="Add a Home Assistant connection to import and control your devices from IXORA."
-          :action-label="offline ? undefined : 'Add Home Assistant'"
+          description="Add a smart home connection to import and control your devices from IXORA."
+          :action-label="offline ? undefined : 'Add connection'"
           @action="goAddProvider"
         />
 
@@ -110,7 +110,7 @@
             <dl class="device-card-meta">
               <div class="device-card-meta-row">
                 <ion-icon :icon="hardwareChipOutline" aria-hidden="true" />
-                <dd>{{ providerLabel(device.provider) }}</dd>
+                <dd>{{ providerLabel(device.provider, providerTypes) }}</dd>
               </div>
               <div class="device-card-meta-row">
                 <ion-icon :icon="pricetagOutline" aria-hidden="true" />
@@ -163,6 +163,7 @@ import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { useDevices } from '@/composables/useDevices';
 import { useProviderConnections } from '@/composables/useProviderConnections';
+import { useProviderTypes } from '@/composables/useProviderTypes';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
@@ -181,6 +182,7 @@ const {
   fetchConnections,
   syncConnection,
 } = useProviderConnections();
+const { providerTypes, fetchProviderTypes } = useProviderTypes();
 
 const offline = ref(isDeviceOffline());
 const syncing = ref(false);
@@ -209,12 +211,14 @@ function onNetworkChange(): void {
   updateOnlineState();
   void fetchConnections();
   void fetchDevices();
+  void fetchProviderTypes();
 }
 
 onIonViewWillEnter(() => {
   updateOnlineState();
   void fetchConnections();
   void fetchDevices();
+  void fetchProviderTypes();
 });
 
 function notify(message: string): void {
@@ -250,13 +254,14 @@ async function onRefresh(event: RefresherCustomEvent): Promise<void> {
   updateOnlineState();
   await fetchConnections();
   await fetchDevices();
+  await fetchProviderTypes();
   await event.target.complete();
 }
 
 async function runSync(): Promise<void> {
   if (blockedOffline()) return;
   if (!primaryConnection.value) {
-    notify('Add a Home Assistant connection first.');
+    notify('Add a connection first.');
     return;
   }
   syncing.value = true;
