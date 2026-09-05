@@ -1,3 +1,10 @@
+import {
+  appsOutline,
+  bulbOutline,
+  leafOutline,
+  powerOutline,
+  tvOutline,
+} from 'ionicons/icons';
 import type { DeviceStatus } from '@/services/device.service';
 import type { ConnectionStatus, ProviderType } from '@/services/provider-connection.service';
 
@@ -51,4 +58,40 @@ export function connectionStatusBadge(status: ConnectionStatus | string): Status
  */
 export function providerLabel(provider: string, providerTypes?: ProviderType[]): string {
   return providerTypes?.find((p) => p.slug === provider)?.label ?? provider;
+}
+
+export interface DeviceTypeInfo {
+  /** Ionicons icon string. */
+  icon: string;
+  /** Human-readable label (Title Case). */
+  label: string;
+}
+
+/**
+ * Map a device type slug (T15 vocabulary: lighting / switchable / media /
+ * ventilation / other) to an icon + label pair. Falls back gracefully for
+ * null / undefined / unrecognised slugs so the UI never shows a blank.
+ *
+ * Icon choices:
+ * - lighting    → bulbOutline      (light bulb, universally understood)
+ * - switchable  → powerOutline     (power/switch button)
+ * - media       → tvOutline        (screen/media device)
+ * - ventilation → leafOutline      (eco/airflow — ionicons has no fan icon)
+ * - other       → appsOutline      (generic grid / catch-all)
+ * - null/unknown → appsOutline     (same safe fallback)
+ */
+export function deviceTypeInfo(type: string | null | undefined): DeviceTypeInfo {
+  switch (type) {
+    case 'lighting':
+      return { icon: bulbOutline, label: 'Lighting' };
+    case 'switchable':
+      return { icon: powerOutline, label: 'Switch' };
+    case 'media':
+      return { icon: tvOutline, label: 'Media' };
+    case 'ventilation':
+      return { icon: leafOutline, label: 'Ventilation' };
+    case 'other':
+    default:
+      return { icon: appsOutline, label: type ? String(type) : 'Device' };
+  }
 }
