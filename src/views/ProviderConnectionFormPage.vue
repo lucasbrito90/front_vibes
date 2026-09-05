@@ -20,8 +20,9 @@
           </div>
 
           <p class="provider-form-hint">
-            Connect your Home Assistant instance. Your access token is stored securely on the
-            server and is never shown again after saving.
+            Connect your
+            {{ selectedProviderType?.label ?? 'smart home provider' }}. Your credentials are
+            stored securely on the server and are never shown again after saving.
           </p>
 
           <ion-item class="auth-item" lines="none">
@@ -29,9 +30,16 @@
               v-model="form.provider"
               label="Provider"
               label-placement="floating"
-              :disabled="submitting"
+              :disabled="submitting || typesLoading"
+              @ion-change="onProviderChange"
             >
-              <ion-select-option value="home_assistant">Home Assistant</ion-select-option>
+              <ion-select-option
+                v-for="pt in providerTypes"
+                :key="pt.slug"
+                :value="pt.slug"
+              >
+                {{ pt.label }}
+              </ion-select-option>
             </ion-select>
           </ion-item>
 
@@ -46,31 +54,45 @@
             />
           </ion-item>
 
-          <ion-item class="auth-item" lines="none">
-            <ion-input
-              v-model="form.baseUrl"
-              type="url"
-              inputmode="url"
-              label="Base URL (HTTPS)"
-              label-placement="floating"
-              placeholder="https://ha.example.com:8123"
-              :disabled="submitting"
-              required
-            />
-          </ion-item>
+          <!-- Dynamic config fields from the selected provider type schema -->
+          <template v-if="selectedProviderType">
+            <ion-item
+              v-for="(schema, key) in selectedProviderType.config"
+              :key="`config-${key}`"
+              class="auth-item"
+              lines="none"
+            >
+              <ion-input
+                v-model="configValues[key]"
+                :type="fieldInputType(schema)"
+                :inputmode="fieldInputMode(schema)"
+                :label="fieldLabel(key)"
+                label-placement="floating"
+                :placeholder="fieldPlaceholder(key, schema)"
+                :disabled="submitting"
+                :required="schema.required"
+              />
+            </ion-item>
 
-          <ion-item class="auth-item" lines="none">
-            <ion-input
-              v-model="form.accessToken"
-              type="password"
-              label="Long-lived access token"
-              label-placement="floating"
-              placeholder="Paste token"
-              autocomplete="off"
-              :disabled="submitting"
-              required
-            />
-          </ion-item>
+            <!-- Dynamic credential fields — always rendered as password -->
+            <ion-item
+              v-for="(schema, key) in selectedProviderType.credentials"
+              :key="`cred-${key}`"
+              class="auth-item"
+              lines="none"
+            >
+              <ion-input
+                v-model="credentialValues[key]"
+                type="password"
+                :label="fieldLabel(key)"
+                label-placement="floating"
+                :placeholder="`Paste ${fieldLabel(key).toLowerCase()}`"
+                autocomplete="off"
+                :disabled="submitting"
+                :required="schema.required"
+              />
+            </ion-item>
+          </template>
 
           <p v-if="errorMessage" class="provider-form-error" role="alert">{{ errorMessage }}</p>
 
@@ -115,17 +137,19 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { chevronBackOutline, cloudOfflineOutline } from 'ionicons/icons';
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useProviderConnections } from '@/composables/useProviderConnections';
+import { useProviderTypes } from '@/composables/useProviderTypes';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
-  type ProviderSlug,
+  type ProviderFieldSchema,
 } from '@/services/provider-connection.service';
 
 const router = useRouter();
 const { createConnection } = useProviderConnections();
+const { providerTypes, loading: typesLoading, fetchProviderTypes } = useProviderTypes();
 
 const offline = ref(isDeviceOffline());
 const submitting = ref(false);
@@ -134,31 +158,100 @@ const showToast = ref(false);
 const toastMessage = ref('');
 
 const form = reactive<{
-  provider: ProviderSlug;
+  provider: string;
   name: string;
-  baseUrl: string;
-  accessToken: string;
 }>({
-  provider: 'home_assistant',
+  provider: '',
   name: '',
-  baseUrl: '',
-  accessToken: '',
 });
 
-const canSubmit = computed(
-  () =>
-    form.name.trim().length > 0 &&
-    form.baseUrl.trim().length > 0 &&
-    form.accessToken.trim().length > 0,
+const configValues = reactive<Record<string, string>>({});
+const credentialValues = reactive<Record<string, string>>({});
+
+const selectedProviderType = computed(() =>
+  providerTypes.value.find((p) => p.slug === form.provider),
 );
+
+/** Initialise dynamic field maps whenever the selected provider changes. */
+function initFieldValues(slug: string): void {
+  const pt = providerTypes.value.find((p) => p.slug === slug);
+  if (!pt) return;
+
+  // Reset and populate config keys
+  Object.keys(configValues).forEach((k) => delete configValues[k]);
+  for (const key of Object.keys(pt.config)) {
+    configValues[key] = '';
+  }
+
+  // Reset and populate credential keys
+  Object.keys(credentialValues).forEach((k) => delete credentialValues[k]);
+  for (const key of Object.keys(pt.credentials)) {
+    credentialValues[key] = '';
+  }
+}
+
+function onProviderChange(): void {
+  initFieldValues(form.provider);
+}
+
+/** Set provider to first available once the list loads. */
+watch(providerTypes, (types) => {
+  if (types.length > 0 && !form.provider) {
+    form.provider = types[0].slug;
+    initFieldValues(form.provider);
+  }
+});
+
+const canSubmit = computed(() => {
+  if (!form.name.trim() || !form.provider) return false;
+  const pt = selectedProviderType.value;
+  if (!pt) return false;
+  for (const [key, schema] of Object.entries(pt.config)) {
+    if (schema.required && !(configValues[key] ?? '').trim()) return false;
+  }
+  for (const [key, schema] of Object.entries(pt.credentials)) {
+    if (schema.required && !(credentialValues[key] ?? '').trim()) return false;
+  }
+  return true;
+});
+
+/** Map a ProviderFieldSchema to the appropriate HTML input type. */
+function fieldInputType(schema: ProviderFieldSchema): 'text' | 'url' | 'password' | 'email' | 'tel' | 'number' | 'search' | 'date' | 'time' | 'datetime-local' {
+  if (schema.format?.startsWith('url:')) return 'url';
+  return 'text';
+}
+
+/** Map a ProviderFieldSchema to the appropriate inputmode. */
+function fieldInputMode(schema: ProviderFieldSchema): 'url' | 'search' | 'text' | 'email' | 'none' | 'tel' | 'numeric' | 'decimal' | undefined {
+  if (schema.format?.startsWith('url:')) return 'url';
+  return 'text';
+}
+
+/** Convert a snake_case field key to a human-readable label. */
+function fieldLabel(key: string): string {
+  return key
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/** Derive a placeholder from the field key and schema. */
+function fieldPlaceholder(key: string, schema: ProviderFieldSchema): string {
+  if (schema.format?.startsWith('url:')) {
+    const protocol = schema.format.split(':')[1] ?? 'https';
+    return `${protocol}://`;
+  }
+  return `Enter ${fieldLabel(key).toLowerCase()}`;
+}
 
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('online', updateOnlineState);
   window.addEventListener('offline', updateOnlineState);
+  await fetchProviderTypes();
 });
 
 onUnmounted(() => {
@@ -185,13 +278,14 @@ async function handleSubmit(): Promise<void> {
   const connection = await createConnection({
     provider: form.provider,
     name: form.name.trim(),
-    config: { base_url: form.baseUrl.trim() },
-    encrypted_credentials: { access_token: form.accessToken },
+    config: { ...configValues },
+    encrypted_credentials: { ...credentialValues },
   });
 
-  // Clear the token from memory regardless of outcome — it is write-only and
-  // must never be retained on the client after submit.
-  form.accessToken = '';
+  // Clear all credential values from memory — write-only, must not survive submit.
+  for (const key of Object.keys(credentialValues)) {
+    credentialValues[key] = '';
+  }
 
   submitting.value = false;
 

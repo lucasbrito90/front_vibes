@@ -1,5 +1,5 @@
 import type { DeviceStatus } from '@/services/device.service';
-import type { ConnectionStatus } from '@/services/provider-connection.service';
+import type { ConnectionStatus, ProviderType } from '@/services/provider-connection.service';
 
 export interface StatusBadge {
   label: string;
@@ -43,12 +43,12 @@ export function connectionStatusBadge(status: ConnectionStatus | string): Status
   }
 }
 
-/** Human-friendly provider label. MVP: Home Assistant only. */
-export function providerLabel(provider: string): string {
-  switch (provider) {
-    case 'home_assistant':
-      return 'Home Assistant';
-    default:
-      return provider;
-  }
+/**
+ * Human-friendly provider label.
+ * Looks up the provider slug in the provided list of ProviderType objects
+ * (from GET /api/provider-types). Falls back to the raw slug when the list
+ * is absent or the slug is not found.
+ */
+export function providerLabel(provider: string, providerTypes?: ProviderType[]): string {
+  return providerTypes?.find((p) => p.slug === provider)?.label ?? provider;
 }
