@@ -44,3 +44,8 @@ npm-debug.log*
 
 # Backup files created by ionic capacitor run --live-reload
 *.orig
+
+# GH02 spike — Google Home Android SDK (188MB, beta, not redistributable — see
+# docs/specs/smart-home/google-home/access-gate.md finding B). Each dev downloads
+# it from https://developers.home.google.com/apis/android/sdk and extracts here.
+android/google-home-sdk-repo/

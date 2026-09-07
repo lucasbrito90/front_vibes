@@ -185,6 +185,21 @@
             </div>
           </div>
         </section>
+
+        <!-- GH02 spike (v1.6.0) — temporary, remove before this branch leaves the spike -->
+        <section class="settings-block">
+          <h2 class="settings-heading">Dev</h2>
+          <div class="app-surface-card settings-card">
+            <button type="button" class="settings-tile" @click="router.push('/dev/google-home')">
+              <div class="settings-tile-left">
+                <div class="settings-tile-text">
+                  <span class="settings-tile-title">GH02 — Google Home Debug</span>
+                </div>
+              </div>
+              <ion-icon :icon="chevronForwardOutline" class="settings-tile-chevron" />
+            </button>
+          </div>
+        </section>
       </div>
 
       <ion-alert

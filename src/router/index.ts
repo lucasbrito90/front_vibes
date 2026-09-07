@@ -81,6 +81,14 @@ const routes: Array<RouteRecordRaw> = [
      */
     meta: { requiresAuth: true, hideMiniPlayer: true, statusBarTheme: 'dark', screenName: 'VibePlayerPage' },
   },
+  {
+    // GH02 spike (v1.6.0, ADR-036) — temporary debug page to drive the
+    // GoogleHome Capacitor plugin interactively. Not a product surface;
+    // remove before this branch is considered for anything beyond the spike.
+    path: '/dev/google-home',
+    component: () => import('@/views/dev/GoogleHomeDebugPage.vue'),
+    meta: { requiresAuth: true, screenName: 'GoogleHomeDebugPage' },
+  },
 
   // ── Authenticated routes (tab bar visible) ────────────────────────────────
   // All authenticated pages live inside TabsLayout so Ionic's ion-router-outlet
