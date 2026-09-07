@@ -11,6 +11,8 @@ import android.util.Log;
 
 import com.getcapacitor.BridgeActivity;
 
+import app.ixora.googlehome.GoogleHomePlugin;
+
 /**
  * Bridges Android system audio events to the Capacitor JS layer.
  *
@@ -53,6 +55,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // GH02 spike (v1.6.0, ADR-036): registerPlugin() must run before
+        // super.onCreate() so Plugin.load() executes during bridge init.
+        registerPlugin(GoogleHomePlugin.class);
         super.onCreate(savedInstanceState);
         registerNoisyReceiver();
     }
