@@ -103,3 +103,160 @@ Then update `com.google.android.gms:play-services-home*` versions in
 depends on still exists with the same shape (this project has already been
 burned once by trusting a secondhand claim about this SDK's API surface
 over the real, extracted bytecode — see the P09 Trello card).
+
+## CI/CD and Build Environment Limitation
+
+### 1. Current Google distribution model
+
+Google Home Android SDK `17.1.0` is distributed exclusively through an
+authenticated download from the Google Home Developers portal (see
+"How to get the artifacts" above). It is **not** available through Maven
+Central, Google's Maven repository, or any other standard public package
+repository — confirmed directly from Google's own documentation
+(developers.home.google.com/apis/android/sdk): *"The Home APIs in this
+open beta are not yet part of the standard libraries provided by Google
+for development."*
+
+### 2. CI limitation
+
+P10 investigated whether an automated CI environment can obtain this SDK
+directly from Google through any officially documented mechanism —
+service account download, OAuth machine-to-machine flow, Workload
+Identity / Workload Identity Federation, a CLI, an API endpoint, or
+documented GitHub Actions / Cloud Build integration. **None was found.**
+Every official page checked (SDK setup, get-started, API overview,
+release notes, OAuth setup, Developer Policies) describes exactly one
+access path: an interactive human sign-in.
+
+**This is a Google distribution limitation, not an Ixora code
+limitation.** Nothing in this repository's build configuration is the
+cause — there is simply no machine identity Google's own SDK download
+flow currently accepts.
+
+Developer/local environment (works today):
+```
+Developer machine
+    ↓
+Google Home SDK obtained manually (interactive sign-in)
+    ↓
+Gradle build
+    ↓
+Ixora Android build
+```
+
+Current automated CI (does not work today):
+```
+CI runner
+    ↓
+Attempt to download Google Home SDK automatically
+    ↓
+No official documented mechanism
+    ↓
+Build cannot resolve the SDK unless the environment already has it
+```
+
+### 3. Important licensing constraint
+
+The SDK's own POM declares the Android Software Development Kit License
+Agreement. Based on the P10 investigation, no explicit redistribution
+exception for this use case was identified. Any future redistribution or
+internal artifact-hosting approach — committing the AAR to this
+repository, a private Maven repository, GitHub Packages, DigitalOcean
+Spaces/S3, a Docker image, or any other package distribution mechanism —
+must be validated against the applicable Google/Android SDK terms before
+adoption. This document does not offer a legal opinion; it records what
+the investigation did and did not find documented.
+
+### 4. Possible future solutions
+
+**Option A — Developer machine**
+
+A developer manually obtains the SDK from Google Home Developers and
+builds locally.
+
+Status:
+- Currently supported operational workflow.
+- Suitable for current development.
+- Not ideal as the long-term release process.
+
+**Option B — Dedicated/self-hosted Android build runner**
+
+A dedicated build machine/runner could potentially have the Google Home
+SDK installed manually beforehand and then execute the normal Gradle
+build:
+```
+GitHub Actions
+    ↓
+Self-hosted Android runner
+    ↓
+Google Home SDK already installed
+    ↓
+Gradle build
+    ↓
+AAB
+```
+This is documented here only as a **technically possible future
+architecture** — Google has not explicitly approved this setup, and it
+requires confirmation that keeping the SDK on such a build environment is
+compliant with the applicable license/terms before adoption. This is
+particularly relevant for a future production/Play Store release
+pipeline.
+
+**Option C — Docker/build image containing the SDK**
+
+Creating a Docker image containing the Google Home AARs would be
+technically possible, but is **not currently an approved/recommended
+solution**: distributing an image containing the SDK may constitute
+redistribution under the same license constraint in §3. This option is
+not recommended unless the licensing terms are explicitly validated.
+
+**Option D — Official Google automated distribution**
+
+If Google later provides an official Maven repository, API, CLI,
+service-account flow, or another supported machine-to-machine
+distribution mechanism, CI could be revisited. This is the **preferred
+long-term solution** if and when Google provides one.
+
+### 5. Future impact
+
+This limitation does **not** prevent Ixora from:
+- including Google Home functionality in the Android application;
+- developing the Google Home integration;
+- producing an Android release from an authorized environment (a
+  developer machine that has obtained the SDK per §"How to get the
+  artifacts");
+- publishing the resulting application to Google Play.
+
+The limitation is specifically about **how the build environment obtains
+and provides the Google Home SDK** — it is separate from, and does not
+block, the Android application build itself or Play Store publication.
+To be explicit about the three distinct concerns this document touches:
+
+1. **SDK download/distribution** — constrained as described above.
+2. **Android application build** — unaffected; works from any environment
+   that has the SDK, exactly as GH02 and P09 already demonstrated.
+3. **Play Store publication** — a separate process entirely, downstream
+   of a successful build, not addressed by this constraint at all.
+
+This becomes more important when:
+- another developer joins the project;
+- Android builds need to be reproducible across multiple machines;
+- automated release builds are established;
+- the production/Play Store pipeline is prepared.
+
+### 6. Decision from P10
+
+P10 decision: do not implement a CI SDK download workaround. Treat the
+current Google Home SDK distribution model as an external constraint and
+revisit the build infrastructure when the project requires
+multi-developer or automated Android release builds.
+
+### 7. Future revisit trigger
+
+Revisit this decision when:
+- Ixora introduces automated Android release builds;
+- a second developer needs to build the Android target;
+- Google changes the Home APIs SDK distribution model;
+- a new SDK version becomes available through a standard Google
+  repository;
+- a compliant self-hosted build environment is being designed.
