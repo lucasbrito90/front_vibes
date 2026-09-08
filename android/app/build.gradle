@@ -30,9 +30,13 @@ repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
-    // TEMPORARY (P09): Google Home Android SDK local Maven repo — NOT on Maven Central.
-    // Each developer must download artifacts into android/google-home-sdk-repo/.
-    // Reproducible dependency distribution is tracked in P10 — do not resolve here.
+    // Google Home Android SDK local Maven repo — NOT on Maven Central, and
+    // NOT rehosted/committed here on purpose (P10): the SDK's own Android
+    // SDK License Agreement prohibits redistribution. Each developer (and
+    // CI/staging, if that build target is ever enabled there) downloads
+    // its own copy directly from Google. See android/GOOGLE_HOME_SDK.md
+    // for the exact reproducible procedure and integrity verification —
+    // do not treat this directory or this comment as a stopgap to replace.
     maven {
         url = uri('../google-home-sdk-repo')
     }
