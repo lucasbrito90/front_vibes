@@ -36,8 +36,9 @@ import kotlinx.coroutines.launch
  *
  * Ported from the GH02 spike (feature/gh02-google-home-android-spike,
  * commit 3ae9f1b) with additions for can_set_brightness (LevelControl +
- * 0–254→0–255 normalization) and can_toggle (read/invert composition —
- * OnOffTrait has no native toggle() command).
+ * 0–254→0–255 normalization) and can_toggle (OnOffCommands.toggle() —
+ * a real native suspend command; see executeToggle() for the correction
+ * of GH04's claim that no native toggle() exists).
  *
  * This plugin discovers devices, reads state, and executes actions locally
  * via the Google Home Android SDK. Results are returned to the JS layer;
@@ -233,8 +234,18 @@ class GoogleHomePlugin : Plugin() {
     }
 
     /**
-     * can_toggle — no native toggle() on OnOffTrait (GH04 confirmed).
-     * Read current onOff attribute, invert, call on() or off().
+     * can_toggle via OnOffCommands.toggle() — a real native suspend command.
+     *
+     * GH04 stated OnOffTrait had no native toggle() and recommended a
+     * read/invert composition instead; that claim was WRONG. Verified
+     * directly against the real play-services-home-types:17.1.0 AAR
+     * bytecode (javap on OnOffCommands.class) during P09 review: the
+     * interface declares `public abstract Object toggle(Continuation<...>)`
+     * and `BatchableCommand<Unit> toggleBatchable()`, both real callable
+     * members — not merely the Command.Toggle protocol-level enum tag GH04's
+     * reading may have stopped at. Uses the native command: simpler, and
+     * avoids a read-then-invert race with no clear benefit over letting the
+     * device/hub handle the toggle atomically.
      */
     private suspend fun executeToggle(device: HomeDevice, call: PluginCall) {
         val onOff = resolveOnOffTrait(device)
@@ -243,13 +254,7 @@ class GoogleHomePlugin : Plugin() {
             return
         }
 
-        val currentOn = onOff.onOff
-        if (currentOn == null) {
-            call.reject("Unable to read current on/off state for toggle: ${device.id.id}")
-            return
-        }
-
-        if (currentOn) onOff.off() else onOff.on()
+        onOff.toggle()
 
         val payload = JSObject()
         payload.put("ok", true)
