@@ -44,3 +44,7 @@ npm-debug.log*
 
 # Backup files created by ionic capacitor run --live-reload
 *.orig
+
+# Google Home Android SDK (not on Maven Central — each dev downloads locally).
+# Reproducible distribution tracked in P10. See android/app/build.gradle.
+android/google-home-sdk-repo/
