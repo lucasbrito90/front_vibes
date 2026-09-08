@@ -32,6 +32,57 @@ export function actionTypeOptions(): ActionTypeOption[] {
   return ACTION_TYPES.map((value) => ({ value, label: actionTypeLabel(value) }));
 }
 
+/**
+ * Required capability key for each MVP action type (ADR-033 mapping).
+ * Mirrors App\SmartHome\ActionType::requiredCapability() on the backend.
+ */
+const CAPABILITY_REQUIRED: Record<ActionType, string> = {
+  turn_on: 'can_turn_on',
+  turn_off: 'can_turn_off',
+  toggle: 'can_toggle',
+};
+
+/**
+ * Returns the subset of MVP action type options that are allowed for a
+ * device with the given capabilities, applying the backend fail-open rule
+ * (ADR-033, mirroring ActionType::isBlockedByDeviceCapabilities()):
+ *
+ * - capabilities === null / undefined → **never block** — return all options.
+ * - capabilities is a map → only include options whose required capability
+ *   key exists as a key in the map.
+ *
+ * Additionally, if `currentActionType` is supplied (edit mode), that option
+ * is always included in the result even when the capability is absent — so
+ * an existing saved action is never silently hidden from the editor. When
+ * the current type is already allowed by capabilities, it is NOT duplicated.
+ */
+export function availableActionTypeOptions(
+  capabilities: Record<string, Record<string, unknown>> | null | undefined,
+  currentActionType?: ActionType | null,
+): ActionTypeOption[] {
+  // Fail-open: unknown capabilities → all options
+  if (capabilities === null || capabilities === undefined) {
+    return actionTypeOptions();
+  }
+
+  const allowed = ACTION_TYPES.filter((type) => {
+    const required = CAPABILITY_REQUIRED[type];
+    return Object.prototype.hasOwnProperty.call(capabilities, required);
+  }).map((value) => ({ value, label: actionTypeLabel(value) }));
+
+  // Always include currentActionType (edit mode) even if capability is absent,
+  // but don't duplicate it when it is already in the allowed list.
+  if (
+    currentActionType != null &&
+    isMvpActionType(currentActionType) &&
+    !allowed.some((opt) => opt.value === currentActionType)
+  ) {
+    allowed.push({ value: currentActionType, label: actionTypeLabel(currentActionType) });
+  }
+
+  return allowed;
+}
+
 /** True when the value is an MVP-supported action type. */
 export function isMvpActionType(value: unknown): value is ActionType {
   return typeof value === 'string' && (ACTION_TYPES as readonly string[]).includes(value);

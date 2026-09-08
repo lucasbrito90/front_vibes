@@ -17,15 +17,34 @@ import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel
  *   and NEVER returned by the API, never logged, and never stored locally.
  */
 
-/** Provider slugs the mobile UI may offer. MVP: Home Assistant only. */
-export type ProviderSlug = 'home_assistant';
+/** Schema for a single field returned by GET /api/provider-types. */
+export interface ProviderFieldSchema {
+  type: string;
+  required: boolean;
+  /** Present when the field has a specific format constraint (e.g. 'url:https'). */
+  format?: string;
+}
+
+/**
+ * Provider type descriptor returned by GET /api/provider-types.
+ * `config` and `credentials` are maps of field key → schema.
+ * No credential values are ever returned — only the expected format.
+ */
+export interface ProviderType {
+  slug: string;
+  label: string;
+  config: Record<string, ProviderFieldSchema>;
+  credentials: Record<string, ProviderFieldSchema>;
+}
 
 /** Provider connection health, mirrored from the backend ConnectionStatus enum. */
 export type ConnectionStatus = 'connected' | 'unreachable' | 'unknown';
 
-export interface ProviderConnectionConfig {
-  base_url: string;
-}
+/**
+ * Provider connection config as stored on the backend.
+ * Generalised to Record<string, string> since the form is now schema-driven.
+ */
+export type ProviderConnectionConfig = Record<string, string>;
 
 /**
  * Provider connection as returned by the API. Note: there is intentionally NO
@@ -34,7 +53,7 @@ export interface ProviderConnectionConfig {
 export interface ProviderConnection {
   id: number;
   name: string;
-  provider: ProviderSlug | string;
+  provider: string;
   config: ProviderConnectionConfig;
   status: ConnectionStatus | string;
   last_tested_at: string | null;
@@ -42,23 +61,23 @@ export interface ProviderConnection {
   updated_at: string | null;
 }
 
-/** Create payload. `access_token` is nested under `encrypted_credentials` per the API contract. */
+/**
+ * Create payload. Credentials are nested under `encrypted_credentials` per the API contract.
+ * Both `config` and `encrypted_credentials` are generic key→value maps since
+ * the fields are now driven by the provider type schema.
+ */
 export interface ProviderConnectionPayload {
   name: string;
-  provider: ProviderSlug;
-  config: ProviderConnectionConfig;
-  encrypted_credentials: {
-    access_token: string;
-  };
+  provider: string;
+  config: Record<string, string>;
+  encrypted_credentials: Record<string, string>;
 }
 
-/** Partial update payload — name / config / token only. */
+/** Partial update payload — name / config / credentials only. */
 export interface ProviderConnectionUpdatePayload {
   name?: string;
-  config?: ProviderConnectionConfig;
-  encrypted_credentials?: {
-    access_token: string;
-  };
+  config?: Record<string, string>;
+  encrypted_credentials?: Record<string, string>;
 }
 
 /** Summary returned by the sync endpoint. */
@@ -108,6 +127,14 @@ async function handleResponse<T>(res: LaravelHttpResponse): Promise<T> {
     throw new Error((body as { message?: string })?.message ?? `Request failed: ${res.status}`);
   }
   return res.json() as Promise<T>;
+}
+
+async function getProviderTypes(): Promise<ProviderType[]> {
+  const res = await laravelFetch(laravelApiUrl('/api/provider-types'), {
+    headers: await protectedAuthHeaders(),
+  });
+  const body = await handleResponse<{ data: ProviderType[] }>(res);
+  return body.data;
 }
 
 async function getProviderConnections(): Promise<ProviderConnection[]> {
@@ -176,6 +203,7 @@ async function syncProviderConnection(id: number): Promise<ProviderSyncResult> {
 }
 
 export const providerConnectionService = {
+  getProviderTypes,
   getProviderConnections,
   getProviderConnection,
   createProviderConnection,

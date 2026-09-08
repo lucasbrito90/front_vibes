@@ -111,7 +111,7 @@ import {
   modalController,
 } from '@ionic/vue';
 import { bulbOutline, cloudOfflineOutline } from 'ionicons/icons';
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useDevices } from '@/composables/useDevices';
 import { useSceneDeviceActions } from '@/composables/useSceneDeviceActions';
 import {
@@ -121,7 +121,7 @@ import {
 import type { ActionType, SceneDeviceAction } from '@/services/scene-device-action.service';
 import { deviceStatusBadge } from '@/utils/device-status';
 import {
-  actionTypeOptions,
+  availableActionTypeOptions,
   MAX_DELAY_SECONDS,
   validateActionDraft,
 } from '@/utils/device-action';
@@ -136,7 +136,13 @@ const { devices, fetchDevices } = useDevices();
 const { createAction, updateAction, error, clearError } = useSceneDeviceActions();
 
 const isEdit = computed(() => props.action != null);
-const actionOptions = actionTypeOptions();
+
+/**
+ * The action type that was already saved when opening in edit mode.
+ * Always kept in the option list so existing saves are never hidden.
+ */
+const originalActionType = (props.action?.action_type as ActionType | undefined) ?? null;
+
 const offline = ref(isDeviceOffline());
 const saving = ref(false);
 
@@ -151,6 +157,35 @@ const form = reactive<{
 });
 
 const selectedDevice = computed(() => devices.value.find((d) => d.id === form.device_id) ?? null);
+
+/**
+ * Reactive action type options filtered by the selected device's capabilities.
+ * Fail-open: null capabilities → all three options always appear.
+ * In edit mode the original saved type is always included so the UI never
+ * hides a value the user already chose.
+ */
+const actionOptions = computed(() =>
+  availableActionTypeOptions(selectedDevice.value?.capabilities, originalActionType),
+);
+
+/**
+ * When the device changes, check whether the currently selected action type
+ * is still in the new set of allowed options. If not (and it isn't the
+ * original edit value), clear it — an invalid action must not be submitted.
+ */
+watch(
+  () => form.device_id,
+  () => {
+    const current = form.action_type;
+    if (current && !actionOptions.value.some((opt) => opt.value === current)) {
+      // Only clear when switching devices in create mode, or when the new
+      // device no longer supports even the original type.
+      if (current !== originalActionType) {
+        form.action_type = null;
+      }
+    }
+  },
+);
 
 const errors = computed(() =>
   validateActionDraft({

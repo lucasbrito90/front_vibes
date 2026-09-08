@@ -32,6 +32,19 @@ const mockResult = {
   dispatched: 2,
   skipped: 1,
   action_ids: [10, 11],
+  scene_execution_id: 'exec-uuid-123',
+};
+
+const mockExecutionSummary = {
+  scene_execution_id: 'exec-uuid-123',
+  scene_id: 7,
+  state: 'success' as const,
+  count_success: 2,
+  count_non_success: 0,
+  count_total: 2,
+  executed_at: '2026-09-05T00:00:00Z',
+  by_provider: [{ provider: 'home_assistant', count_success: 2, count_non_success: 0 }],
+  actions: [],
 };
 
 describe('scene-dispatch.service — protected requests', () => {
@@ -96,5 +109,44 @@ describe('scene-dispatch.service — protected requests', () => {
     mockGetRequiredIdToken.mockRejectedValueOnce(new Error('Firebase auth gate'));
     await expect(sceneDispatchService.executeScene(7)).rejects.toThrow('Firebase auth gate');
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('GETs the execution summary for a given sceneId and executionId', async () => {
+    let capturedUrl = '';
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+      capturedUrl = String(input);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: mockExecutionSummary }),
+      } as unknown as Response;
+    });
+
+    const result = await sceneDispatchService.getExecutionSummary(7, 'exec-uuid-123');
+    expect(capturedUrl).toMatch(/\/api\/scenes\/7\/executions\/exec-uuid-123$/);
+    expect(result).toEqual(mockExecutionSummary);
+  });
+
+  it('getExecutionSummary returns null for 404 (row not yet written)', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ message: 'Not Found' }),
+    } as unknown as Response);
+
+    const result = await sceneDispatchService.getExecutionSummary(7, 'exec-uuid-123');
+    expect(result).toBeNull();
+  });
+
+  it('getExecutionSummary throws on non-404 error responses', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ message: 'Server error' }),
+    } as unknown as Response);
+
+    await expect(sceneDispatchService.getExecutionSummary(7, 'exec-uuid-123')).rejects.toThrow(
+      'Server error',
+    );
   });
 });

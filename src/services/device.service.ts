@@ -33,6 +33,11 @@ export interface Device {
   metadata: Record<string, unknown> | null;
   created_at: string | null;
   updated_at: string | null;
+  /**
+   * ADR-033: capability map (capability slug → constraint object, `{}` for boolean caps).
+   * `null` means unknown — fail-open: never block an action when capabilities is null.
+   */
+  capabilities: Record<string, Record<string, unknown>> | null;
 }
 
 /** Create payload — manual device creation (optional MVP path). */

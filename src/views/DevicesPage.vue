@@ -55,7 +55,7 @@
           v-else-if="listError && !devices.length"
           class="devices-state-slot"
           compact
-          title="Couldn’t load devices"
+          title="Couldn't load devices"
           :description="listError ?? ''"
           retry-label="Retry"
           @retry="fetchDevices"
@@ -67,8 +67,8 @@
           variant="card"
           :icon="hardwareChipOutline"
           title="Connect your smart home"
-          description="Add a Home Assistant connection to import and control your devices from IXORA."
-          :action-label="offline ? undefined : 'Add Home Assistant'"
+          description="Add a smart home connection to import and control your devices from IXORA."
+          :action-label="offline ? undefined : 'Add connection'"
           @action="goAddProvider"
         />
 
@@ -100,7 +100,14 @@
             <div class="device-card-head">
               <div class="device-card-title-wrap">
                 <h2 class="device-card-name">{{ device.name }}</h2>
-                <span class="device-card-type">{{ device.type || 'device' }}</span>
+                <span class="device-card-type">
+                  <ion-icon
+                    :icon="deviceTypeInfo(device.type).icon"
+                    aria-hidden="true"
+                    class="device-type-icon"
+                  />
+                  {{ deviceTypeInfo(device.type).label }}
+                </span>
               </div>
               <ion-badge :color="statusBadge(device.status).color">
                 {{ statusBadge(device.status).label }}
@@ -110,7 +117,7 @@
             <dl class="device-card-meta">
               <div class="device-card-meta-row">
                 <ion-icon :icon="hardwareChipOutline" aria-hidden="true" />
-                <dd>{{ providerLabel(device.provider) }}</dd>
+                <dd>{{ providerLabel(device.provider, providerTypes) }}</dd>
               </div>
               <div class="device-card-meta-row">
                 <ion-icon :icon="pricetagOutline" aria-hidden="true" />
@@ -163,6 +170,7 @@ import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { useDevices } from '@/composables/useDevices';
 import { useProviderConnections } from '@/composables/useProviderConnections';
+import { useProviderTypes } from '@/composables/useProviderTypes';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
@@ -170,6 +178,7 @@ import {
 import {
   connectionStatusBadge,
   deviceStatusBadge as statusBadge,
+  deviceTypeInfo,
   providerLabel,
 } from '@/utils/device-status';
 
@@ -181,6 +190,7 @@ const {
   fetchConnections,
   syncConnection,
 } = useProviderConnections();
+const { providerTypes, fetchProviderTypes } = useProviderTypes();
 
 const offline = ref(isDeviceOffline());
 const syncing = ref(false);
@@ -209,12 +219,14 @@ function onNetworkChange(): void {
   updateOnlineState();
   void fetchConnections();
   void fetchDevices();
+  void fetchProviderTypes();
 }
 
 onIonViewWillEnter(() => {
   updateOnlineState();
   void fetchConnections();
   void fetchDevices();
+  void fetchProviderTypes();
 });
 
 function notify(message: string): void {
@@ -250,13 +262,14 @@ async function onRefresh(event: RefresherCustomEvent): Promise<void> {
   updateOnlineState();
   await fetchConnections();
   await fetchDevices();
+  await fetchProviderTypes();
   await event.target.complete();
 }
 
 async function runSync(): Promise<void> {
   if (blockedOffline()) return;
   if (!primaryConnection.value) {
-    notify('Add a Home Assistant connection first.');
+    notify('Add a connection first.');
     return;
   }
   syncing.value = true;
@@ -358,11 +371,18 @@ async function runSync(): Promise<void> {
 }
 
 .device-card-type {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 2px;
   font-size: var(--app-font-size-body-sm);
   color: var(--app-color-text-secondary);
   text-transform: capitalize;
+}
+
+.device-type-icon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .device-card-meta {

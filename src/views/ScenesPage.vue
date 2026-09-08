@@ -132,6 +132,7 @@ import {
   isDeviceOffline,
 } from '@/services/provider-connection.service';
 import { sceneDispatchService } from '@/services/scene-dispatch.service';
+import type { SceneExecutionByProvider } from '@/services/scene-dispatch.service';
 import type { Scene } from '@/services/scene.service';
 
 const router = useRouter();
@@ -182,6 +183,87 @@ function formatDispatchMessage(dispatched: number, skipped: number): string {
   return `${dispatchedLabel}.`;
 }
 
+/**
+ * Format the list of failing providers from a by_provider breakdown.
+ * Returns a comma-separated string like "tuya, alexa".
+ */
+function formatFailingProviders(byProvider: SceneExecutionByProvider[]): string {
+  return byProvider
+    .filter((p) => p.count_non_success > 0)
+    .map((p) => p.provider)
+    .join(', ');
+}
+
+/**
+ * Format the second-stage execution result toast message.
+ * Never collapses 'partial_success' into 'success' or 'failure'.
+ */
+function formatExecutionMessage(
+  state: string,
+  countSuccess: number,
+  countNonSuccess: number,
+  byProvider: SceneExecutionByProvider[],
+): string {
+  const failingProviders = formatFailingProviders(byProvider);
+
+  switch (state) {
+    case 'success':
+      return `All ${countSuccess} action${countSuccess === 1 ? '' : 's'} succeeded.`;
+
+    case 'partial_success': {
+      const providerNote = failingProviders ? ` (${failingProviders})` : '';
+      return `Partial: ${countSuccess} succeeded, ${countNonSuccess} failed${providerNote}.`;
+    }
+
+    case 'failure': {
+      const providerNote = failingProviders ? ` Provider${failingProviders.includes(',') ? 's' : ''}: ${failingProviders}.` : '';
+      return `Execution failed.${providerNote}`;
+    }
+
+    case 'no_actions':
+    default:
+      return '';
+  }
+}
+
+/**
+ * Poll GET /api/scenes/{sceneId}/executions/{executionId} until the execution
+ * row exists (not 404) and has a terminal state (not pending).
+ *
+ * Parameters chosen for user experience:
+ * - 5 attempts × 1 500 ms interval = up to 7.5 s total wait (covers the typical
+ *   queue processing time in staging; fast enough to feel responsive for small scenes).
+ * - Any error or timeout is treated as non-blocking: we simply resolve with null
+ *   and the dispatch-message toast is already visible.
+ */
+async function pollExecutionSummary(
+  sceneId: number,
+  sceneExecutionId: string,
+): Promise<ReturnType<typeof formatExecutionMessage> | null> {
+  const MAX_ATTEMPTS = 5;
+  const INTERVAL_MS = 1_500;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      await new Promise<void>((resolve) => setTimeout(resolve, INTERVAL_MS));
+    }
+    try {
+      const summary = await sceneDispatchService.getExecutionSummary(sceneId, sceneExecutionId);
+      if (summary === null) continue; // 404 — row not yet written, keep polling
+      return formatExecutionMessage(
+        summary.state,
+        summary.count_success,
+        summary.count_non_success,
+        summary.by_provider,
+      );
+    } catch {
+      // Non-blocking: network blip or unexpected error — stop polling quietly
+      return null;
+    }
+  }
+  return null; // exhausted attempts — dispatch toast already shown
+}
+
 onMounted(() => {
   window.addEventListener('online', updateOnlineState);
   window.addEventListener('offline', updateOnlineState);
@@ -215,7 +297,17 @@ async function handleExecute(sceneId: number): Promise<void> {
   setExecuting(sceneId, true);
   try {
     const result = await sceneDispatchService.executeScene(sceneId);
+    // Stage 1: show dispatch count immediately (fire-and-forget confirmed).
     notify(formatDispatchMessage(result.dispatched, result.skipped));
+
+    // Stage 2: poll for the real execution outcome when we have an ID and
+    // at least one action was dispatched (no point polling an empty dispatch).
+    if (result.dispatched > 0 && result.scene_execution_id) {
+      // Fire polling in the background — non-blocking from the user's perspective.
+      void pollExecutionSummary(sceneId, result.scene_execution_id).then((message) => {
+        if (message) notify(message);
+      });
+    }
   } catch (err) {
     if (err instanceof DeviceOfflineError) {
       notify(DEVICE_OFFLINE_MUTATION_MESSAGE);
