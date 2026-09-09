@@ -194,7 +194,7 @@ const {
   fetchConnections,
   syncConnection,
 } = useProviderConnections();
-const { providerTypes, fetchProviderTypes } = useProviderTypes();
+const { providerTypes, fetchProviderTypes, findProviderType } = useProviderTypes();
 
 const offline = ref(isDeviceOffline());
 const syncing = ref(false);
@@ -272,24 +272,47 @@ async function onRefresh(event: RefresherCustomEvent): Promise<void> {
   await event.target.complete();
 }
 
+/**
+ * ADR-036 Decision 2 — same capability chain as
+ * ProviderConnectionDetailPage.vue::handleSyncOrDiscover(). The toolbar
+ * shortcut and the "No devices yet" empty-state action both call this, and
+ * both must route through execution_capabilities rather than assuming the
+ * single connection is always server-pull-capable — POST
+ * /api/provider-connections/{id}/sync is home_assistant-only; calling it for
+ * a device-discovery-only provider (e.g. google_home) throws an uncaught
+ * exception on the backend (ProviderDeviceSyncService::sync()).
+ */
 async function runSync(): Promise<void> {
   if (blockedOffline()) return;
   if (!primaryConnection.value) {
     notify('Add a connection first.');
     return;
   }
-  syncing.value = true;
-  try {
-    const result = await syncConnection(primaryConnection.value.id);
-    if (result) {
-      await refreshAfterSync();
-      notify(`Synced ${result.synced} device(s).`);
-    } else {
-      notify('Could not sync devices.');
+
+  const capabilities = findProviderType(primaryConnection.value.provider)?.execution_capabilities ?? [];
+
+  if (capabilities.includes('server_side_execution')) {
+    syncing.value = true;
+    try {
+      const result = await syncConnection(primaryConnection.value.id);
+      if (result) {
+        await refreshAfterSync();
+        notify(`Synced ${result.synced} device(s).`);
+      } else {
+        notify('Could not sync devices.');
+      }
+    } finally {
+      syncing.value = false;
     }
-  } finally {
-    syncing.value = false;
+    return;
   }
+
+  if (capabilities.includes('device_discovery')) {
+    router.push(`/devices/providers/${primaryConnection.value.id}/discover`);
+    return;
+  }
+
+  notify('This provider does not support device sync.');
 }
 </script>
 
