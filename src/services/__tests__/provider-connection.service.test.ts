@@ -262,4 +262,102 @@ describe('provider-connection.service — protected requests', () => {
 
     await expect(providerConnectionService.getProviderTypes()).rejects.toThrow('Server error');
   });
+
+  // ── syncReportedDevices (ADR-036 Decision 7 / P05 — client-reported devices) ──
+
+  it('POSTs to the devices/sync endpoint with the devices payload and returns the result', async () => {
+    let capturedUrl = '';
+    let capturedMethod: string | undefined;
+    let capturedBody: string | undefined;
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      capturedUrl = String(input);
+      capturedMethod = init?.method;
+      capturedBody = init?.body as string;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: {
+            provider_connection_id: 12,
+            synced: 2,
+            created: 2,
+            updated: 0,
+            offline: 0,
+            status: 'connected',
+          },
+        }),
+      } as unknown as Response;
+    });
+
+    const devices = [
+      {
+        provider_device_id: 'device@abc',
+        name: 'Living Room Light',
+        type: 'lighting',
+        capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
+      },
+    ];
+
+    const result = await providerConnectionService.syncReportedDevices(12, devices);
+
+    expect(capturedMethod).toBe('POST');
+    expect(capturedUrl).toMatch(/\/api\/provider-connections\/12\/devices\/sync$/);
+    expect(JSON.parse(capturedBody ?? '{}')).toEqual({ devices });
+    expect(result.synced).toBe(2);
+  });
+
+  it('never leaks the raw provider_device_id outside the request body it belongs in', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: { provider_connection_id: 1, synced: 1, created: 1, updated: 0, offline: 0, status: 'connected' },
+      }),
+    } as unknown as Response);
+
+    await providerConnectionService.syncReportedDevices(1, [
+      { provider_device_id: 'device@secret-raw-id', name: 'Light' },
+    ]);
+
+    // Sanity check: the id is expected exactly once, inside the request body.
+    const call = vi.mocked(fetch).mock.calls[0];
+    const body = call[1]?.body as string;
+    expect(body).toContain('device@secret-raw-id');
+  });
+
+  it('surfaces a 422 error from syncReportedDevices (e.g. invalid capability key)', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({ message: 'devices.0.capabilities.can_fly does not belong to the ADR-033 capability vocabulary.' }),
+    } as unknown as Response);
+
+    await expect(
+      providerConnectionService.syncReportedDevices(1, [
+        { provider_device_id: 'x', name: 'X', capabilities: { can_fly: {} } },
+      ]),
+    ).rejects.toThrow('does not belong to the ADR-033 capability vocabulary');
+  });
+
+  it('surfaces a 404 error from syncReportedDevices (connection not found / not owned)', async () => {
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ message: 'Not Found' }),
+    } as unknown as Response);
+
+    await expect(
+      providerConnectionService.syncReportedDevices(999, [
+        { provider_device_id: 'x', name: 'X' },
+      ]),
+    ).rejects.toThrow('Not Found');
+  });
+
+  it('blocks syncReportedDevices when offline and never calls fetch', async () => {
+    setOnline(false);
+    await expect(
+      providerConnectionService.syncReportedDevices(1, [{ provider_device_id: 'x', name: 'X' }]),
+    ).rejects.toBeInstanceOf(DeviceOfflineError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

@@ -23,6 +23,13 @@ const mockHomeAssistant = {
   label: 'Home Assistant',
   config: { base_url: { type: 'string', required: true, format: 'url:https' } },
   credentials: { access_token: { type: 'string', required: true } },
+  execution_capabilities: [
+    'device_discovery',
+    'state_read',
+    'interactive_execution',
+    'server_side_execution',
+    'scheduled_execution',
+  ],
 };
 
 describe('useProviderTypes', () => {
