@@ -5,7 +5,7 @@
         <ion-title>Devices</ion-title>
         <ion-buttons slot="end">
           <ion-button
-            v-if="hasConnection"
+            v-if="showToolbarSync"
             fill="clear"
             aria-label="Sync devices"
             :disabled="offline || syncing"
@@ -37,10 +37,18 @@
         </div>
 
         <div v-if="hasConnection && !offline" class="devices-connection-row">
-          <button type="button" class="devices-connection-chip" @click="goProviderDetail">
+          <button
+            v-for="connection in connections"
+            :key="connection.id"
+            type="button"
+            class="devices-connection-chip"
+            @click="goProviderDetail(connection.id)"
+          >
             <ion-icon :icon="hardwareChipOutline" aria-hidden="true" />
-            <span class="devices-connection-name">{{ primaryConnection?.name }}</span>
-            <ion-badge :color="connectionBadge.color">{{ connectionBadge.label }}</ion-badge>
+            <span class="devices-connection-name">{{ connection.name }}</span>
+            <ion-badge :color="connectionStatusBadge(connection.status).color">
+              {{ connectionStatusBadge(connection.status).label }}
+            </ion-badge>
           </button>
         </div>
 
@@ -119,10 +127,6 @@
                 <ion-icon :icon="hardwareChipOutline" aria-hidden="true" />
                 <dd>{{ providerLabel(device.provider, providerTypes) }}</dd>
               </div>
-              <div class="device-card-meta-row">
-                <ion-icon :icon="pricetagOutline" aria-hidden="true" />
-                <dd>{{ device.provider_device_id }}</dd>
-              </div>
             </dl>
           </article>
         </div>
@@ -160,7 +164,6 @@ import {
   addOutline,
   cloudOfflineOutline,
   hardwareChipOutline,
-  pricetagOutline,
   syncOutline,
 } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -185,6 +188,7 @@ import {
 const router = useRouter();
 const { devices, listLoading, listError, fetchDevices, refreshAfterSync } = useDevices();
 const {
+  connections,
   hasConnection,
   primaryConnection,
   fetchConnections,
@@ -197,9 +201,13 @@ const syncing = ref(false);
 const showToast = ref(false);
 const toastMessage = ref('');
 
-const connectionBadge = computed(() =>
-  connectionStatusBadge(primaryConnection.value?.status ?? 'unknown'),
-);
+/**
+ * The toolbar sync shortcut only makes sense when there is exactly one
+ * connection (unambiguous target, identical behaviour to before multiple
+ * simultaneous connections were possible). With >1 connection the user
+ * syncs from each connection's own detail page instead.
+ */
+const showToolbarSync = computed(() => connections.value.length === 1);
 
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
@@ -248,10 +256,8 @@ function goAddProvider(): void {
   router.push('/devices/providers/new');
 }
 
-function goProviderDetail(): void {
-  if (primaryConnection.value) {
-    router.push(`/devices/providers/${primaryConnection.value.id}`);
-  }
+function goProviderDetail(connectionId: number): void {
+  router.push(`/devices/providers/${connectionId}`);
 }
 
 function goDeviceDetail(id: number): void {
@@ -317,6 +323,9 @@ async function runSync(): Promise<void> {
 }
 
 .devices-connection-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-2);
   margin-bottom: var(--app-space-4);
 }
 

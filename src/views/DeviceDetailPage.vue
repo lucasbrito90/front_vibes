@@ -46,10 +46,6 @@
                 <dd>{{ providerLabel(device.provider) }}</dd>
               </div>
               <div class="device-detail-row">
-                <dt>Provider device ID</dt>
-                <dd class="device-detail-mono">{{ device.provider_device_id }}</dd>
-              </div>
-              <div class="device-detail-row">
                 <dt>Status</dt>
                 <dd>{{ statusBadge.label }}</dd>
               </div>

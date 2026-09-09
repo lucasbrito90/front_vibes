@@ -35,6 +35,16 @@ export interface ProviderType {
   label: string;
   config: Record<string, ProviderFieldSchema>;
   credentials: Record<string, ProviderFieldSchema>;
+  /**
+   * ADR-036 Decision 2 — closed vocabulary describing what the PROVIDER can
+   * do at the execution layer (device_discovery, state_read,
+   * interactive_execution, server_side_execution, scheduled_execution,
+   * automation_delegation). Orthogonal to a DEVICE's own ADR-033 `can_*`
+   * capabilities. This is the provider-neutral mechanism for deciding which
+   * device-import flow applies to a connection — never compare `provider`
+   * slugs directly.
+   */
+  execution_capabilities: string[];
 }
 
 /** Provider connection health, mirrored from the backend ConnectionStatus enum. */
@@ -78,6 +88,20 @@ export interface ProviderConnectionUpdatePayload {
   name?: string;
   config?: Record<string, string>;
   encrypted_credentials?: Record<string, string>;
+}
+
+/**
+ * A single client-reported device, as sent to
+ * POST /api/provider-connections/{id}/devices/sync (ADR-036 Decision 7 / P05).
+ * Unlike the server-pull sync above, this is device-side discovery pushed by
+ * the mobile runtime (e.g. the Google Home native plugin) — the backend
+ * validates shape/ownership only, it never reaches out to the provider.
+ */
+export interface ReportedDevicePayload {
+  provider_device_id: string;
+  name: string;
+  type?: string | null;
+  capabilities?: Record<string, Record<string, unknown>> | null;
 }
 
 /** Summary returned by the sync endpoint. */
@@ -202,6 +226,30 @@ async function syncProviderConnection(id: number): Promise<ProviderSyncResult> {
   return body.data;
 }
 
+/**
+ * Pushes a client-reported device catalog for a connection (ADR-036
+ * Decision 7 / P05) — e.g. devices discovered on-device by the Google Home
+ * native plugin. The backend requires at least one device (`min:1`); callers
+ * must never invoke this with an empty array — treat "nothing selected" as
+ * "nothing to sync", not as an API call to make.
+ */
+async function syncReportedDevices(
+  connectionId: number,
+  devices: ReportedDevicePayload[],
+): Promise<ProviderSyncResult> {
+  assertOnlineForMutation();
+  const res = await laravelFetch(
+    laravelApiUrl(`/api/provider-connections/${connectionId}/devices/sync`),
+    {
+      method: 'POST',
+      headers: await protectedAuthHeaders(),
+      body: JSON.stringify({ devices }),
+    },
+  );
+  const body = await handleResponse<{ data: ProviderSyncResult }>(res);
+  return body.data;
+}
+
 export const providerConnectionService = {
   getProviderTypes,
   getProviderConnections,
@@ -210,4 +258,5 @@ export const providerConnectionService = {
   updateProviderConnection,
   deleteProviderConnection,
   syncProviderConnection,
+  syncReportedDevices,
 };
