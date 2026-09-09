@@ -793,3 +793,106 @@ adb logcat -s IxoraTaskRemoved IxoraForegroundServiceStop IxoraNativeAudioStop N
 | iOS native Google Sign-In | Medium | `@codetrix-studio/capacitor-google-auth` supports iOS; needs Firebase iOS app registration |
 | Staging/production environment switching for native builds | Low | Consider a proper Capacitor environment plugin or build variants |
 | Password toggle icon bug ([#4](https://github.com/lucasbrito90/front_vibes/issues/4)) | Medium | Login screen icon does not change state on toggle |
+
+---
+
+## Section 11 — Google Home native module: device identity is stateless
+
+**File:** `android/app/src/main/java/app/ixora/googlehome/GoogleHomePlugin.kt`
+**Investigation:** v1.6.0 P11 (Trello card "Android: camada de identidade/persistência do device")
+
+### The invariant
+
+**The Google Home native module (`app.ixora.googlehome` package) does not
+persist any identifier supplied by the Google Home SDK, on the device, in
+any form.** `com.google.home.Id` (the value returned by `HomeDevice.getId()`
+and consumed as `device.id.id` throughout `GoogleHomePlugin.kt`) is used
+exactly the way `listDevices()` / `readDeviceState()` / `executeAction()`
+already use it today: it flows from the SDK, out to the JS bridge for the
+duration of one call, and back in as a parameter on the next call. It is
+never written to `SharedPreferences`, `DataStore`, a database, a file, or
+any other on-device storage mechanism — and no such mechanism must ever be
+introduced into this package for this purpose.
+
+When a Google device ID is needed for discovery, state reads, or action
+execution, it is obtained through the existing runtime flow (Google Home
+SDK discovery on the Android side, or the backend's already-normative
+`provider_device_id` field on the JS side — see below) — never read back
+from local storage.
+
+This also means: **no persistent mapping from a Google device ID to an
+Ixora-generated ID is created on Android.** Deriving a "safer" local
+identifier and persisting *that* was considered and explicitly rejected —
+see "Why not persist an Ixora-generated ID instead?" below.
+
+### Why this exists
+
+`back_vibes` already persists `devices.provider_device_id` (the Google
+device ID, for Google Home devices) as of P05
+(`ReportedDeviceSyncService`), under an explicit, temporary development
+decision — not a confirmed compliance solution (see the `GH-COMPLIANCE`
+Trello card and GH03c). `DeviceResource` and `SceneActionResource` already
+expose that same field back to the mobile client whenever a device or
+scene action is fetched — the app receives the Google device ID from the
+backend at exactly the two moments (device listing, scene action read) it
+would need it.
+
+P11 investigated whether the Android app should *additionally* persist
+that identifier locally (e.g. to support offline device selection or to
+avoid re-fetching it), as the original P11 card scope proposed. The
+investigation found:
+
+1. **No compliance benefit.** GH03c (formal compliance review of Google's
+   data retention policy for Home APIs) concluded — `INFERRED`, reasoned
+   from official policy text, not stated outright — that relocating a
+   retained Google-derived identifier from backend storage to on-device
+   storage does not change the retention obligation: *"moving the
+   identifier from backend to the Android device does not, on the
+   available text, change the obligation."* Adding on-device persistence
+   would therefore create a **second** retention surface for the same
+   already-unresolved compliance question, with no demonstrated benefit.
+2. **No architectural necessity.** The backend is already the boundary
+   that holds this identifier (P05) and already returns it to the client
+   on demand. The Android app does not need its own copy to function —
+   confirmed by reading `DeviceResource.php`/`SceneActionResource.php`
+   directly.
+3. **`scene_actions` never reference the Google ID at all.**
+   `scene_actions.device_id` is a foreign key into `devices.id` (Ixora's
+   own internal identifier) — the Google device ID never appears on that
+   path. Scenes are already isolated from it.
+
+### Why not persist an Ixora-generated ID instead?
+
+Considered and rejected as a "compliance workaround": generating a local
+Ixora ID and persisting a mapping `{ixoraId: googleId}` on-device does not
+avoid the retention question — it just renames it. GH03c's question 5
+("does a one-way opaque internal reference to Google-derived data still
+count as retained 'data' under the 10-day rule?") is explicitly
+**`UNRESOLVED`**, not resolved in the affirmative. Treating a renamed
+mapping as a solution would be presenting an unresolved compliance
+question as answered. This module does not do that.
+
+### What this does NOT resolve
+
+GH03c (Google Home device data retention compliance) remains an **open,
+unresolved compliance question** — tracked on the `GH-COMPLIANCE` Trello
+card as a blocker for public production / certification, not for
+development. This section only records an architectural decision scoped
+to the Android native module: **do not add a second, on-device retention
+surface for the Google device identifier.** It does not, and cannot,
+close GH03c.
+
+### Guard test
+
+`android/app/src/test/java/app/ixora/googlehome/GoogleHomeStatelessIdentityGuardTest.kt`
+scans every `.kt` file in this package for references to on-device
+persistence APIs (`SharedPreferences`, `EncryptedSharedPreferences`,
+`androidx.security.crypto`, `DataStore`, `SQLiteOpenHelper`,
+`androidx.room` / `@Entity` / `@Database`, `Context.openFileOutput` /
+`getFilesDir` / `getCacheDir` / `getExternalFilesDir`, `ContentResolver`,
+`WorkManager`) and fails the build if any future change introduces one —
+the same "structural boundary guard, not a business-logic test" pattern
+already used server-side by
+`back_vibes/tests/Unit/SmartHome/ProviderExtensibilityBoundaryTest.php`.
+
+---
