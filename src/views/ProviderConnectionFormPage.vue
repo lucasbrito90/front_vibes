@@ -149,7 +149,12 @@ import {
 
 const router = useRouter();
 const { createConnection } = useProviderConnections();
-const { providerTypes, loading: typesLoading, fetchProviderTypes } = useProviderTypes();
+const {
+  providerTypes,
+  loading: typesLoading,
+  fetchProviderTypes,
+  findProviderType,
+} = useProviderTypes();
 
 const offline = ref(isDeviceOffline());
 const submitting = ref(false);
@@ -290,11 +295,32 @@ async function handleSubmit(): Promise<void> {
   submitting.value = false;
 
   if (connection) {
-    router.replace(`/devices/providers/${connection.id}`);
+    router.replace(postCreateDestination(connection.id, connection.provider));
   } else {
     const { error } = useProviderConnections();
     errorMessage.value = error.value ?? 'Could not save the connection.';
   }
+}
+
+/**
+ * Decides where to send the user right after a connection is created, based
+ * on the provider's ADR-036 execution_capabilities — never on the raw
+ * `provider` slug. A provider with server_side_execution keeps the existing
+ * behaviour (server-pull sync on the detail page); a device-discovery-only
+ * provider (e.g. google_home) goes straight to the discovery flow instead.
+ * A provider with neither capability falls back to the detail page, which
+ * shows its own "not supported" state via the same capability chain.
+ */
+function postCreateDestination(connectionId: number, provider: string): string {
+  const capabilities = findProviderType(provider)?.execution_capabilities ?? [];
+
+  if (capabilities.includes('server_side_execution')) {
+    return `/devices/providers/${connectionId}`;
+  }
+  if (capabilities.includes('device_discovery')) {
+    return `/devices/providers/${connectionId}/discover`;
+  }
+  return `/devices/providers/${connectionId}`;
 }
 </script>
 
