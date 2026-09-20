@@ -76,6 +76,11 @@
             </ion-select>
           </ion-item>
 
+          <div v-if="hasUnschedulableActions" class="schedule-execution-warning" role="status">
+            <ion-icon :icon="warningOutline" />
+            <span>{{ SCHEDULE_EXECUTION_WARNING_MESSAGE }}</span>
+          </div>
+
           <ion-item class="auth-item" lines="none">
             <ion-input
               v-model="form.timezone"
@@ -188,12 +193,14 @@ import {
   chevronBackOutline,
   cloudOfflineOutline,
   musicalNotesOutline,
+  warningOutline,
 } from 'ionicons/icons';
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AppAutomationBadge from '@/components/ui/AppAutomationBadge.vue';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
+import { useScheduleExecutionWarning } from '@/composables/useScheduleExecutionWarning';
 import { useSchedules } from '@/composables/useSchedules';
 import { useVibes } from '@/composables/useVibes';
 import {
@@ -206,6 +213,7 @@ import {
 } from '@/services/schedule.service';
 import { scheduleAutomationBadge } from '@/utils/automation-badges';
 import {
+  SCHEDULE_EXECUTION_WARNING_MESSAGE,
   hasDeviceActions,
   resolveScheduleVibeName,
 } from '@/utils/automation-summary';
@@ -225,6 +233,8 @@ const route = useRoute();
 const router = useRouter();
 const { getSchedule, createSchedule, updateSchedule } = useSchedules();
 const { vibes, fetchVibes, vibesListLoading: vibesLoading } = useVibes();
+const { hasUnschedulableActions, evaluate: evaluateScheduleExecutionWarning } =
+  useScheduleExecutionWarning();
 
 const scheduleId = computed(() => {
   const raw = route.params.id;
@@ -262,6 +272,23 @@ const detailVibeName = computed(() => {
 
 const detailAutomationBadge = computed(() =>
   scheduleAutomationBadge(hasDeviceActions(loadedSchedule.value), { includeEmpty: true })!,
+);
+
+/**
+ * ADR-036 Decision 5 — re-derive the schedule-execution warning whenever the
+ * selected vibe changes (including the initial assignment from a loaded
+ * schedule in edit mode, which this watcher also catches). `evaluate()` is
+ * called once eagerly, right now, with `form.vibe_id`'s initial `null` — the
+ * underlying warning flag is a module-level singleton, so this clears any
+ * stale value left over from a previous page visit before the first render.
+ */
+void evaluateScheduleExecutionWarning(form.vibe_id);
+
+watch(
+  () => form.vibe_id,
+  (vibeId) => {
+    void evaluateScheduleExecutionWarning(vibeId);
+  },
 );
 
 function updateOnlineState(): void {
@@ -422,6 +449,25 @@ async function handleSubmit(): Promise<void> {
   flex-shrink: 0;
   font-size: 18px;
   color: var(--app-color-text-muted);
+}
+
+.schedule-execution-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  margin: 0 var(--app-space-1) var(--app-space-4);
+  padding: var(--app-space-3) var(--app-space-4);
+  border-radius: var(--app-radius-md);
+  background: rgba(250, 204, 21, 0.18);
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  color: var(--app-color-text-primary);
+  font-size: var(--app-font-size-body-sm);
+}
+
+.schedule-execution-warning ion-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--ion-color-warning);
 }
 
 .schedule-detail-summary {

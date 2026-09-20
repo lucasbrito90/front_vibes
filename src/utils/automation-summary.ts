@@ -25,6 +25,16 @@ export const NO_ACTIVE_SCHEDULES_LABEL = 'No active schedules';
 /** Clearer detail-screen wording when a vibe is not referenced by any schedule. */
 export const VIBE_NOT_SCHEDULED_MESSAGE = 'Not scheduled yet';
 
+/**
+ * ADR-036 Decision 5 — shown on the schedule form when the selected vibe has
+ * at least one Smart Home device action whose provider does not declare
+ * `scheduled_execution` (e.g. Google Home). Informative only: the schedule
+ * can still be saved with this warning showing — the limitation is known
+ * and accepted, not an error.
+ */
+export const SCHEDULE_EXECUTION_WARNING_MESSAGE =
+  'Scheduled execution is not available for some devices in this vibe — they will be skipped when the schedule runs.';
+
 type SchedulePart = Pick<Schedule, 'has_device_actions' | 'device_actions_count'>;
 type VibePart = Pick<Vibe, 'has_active_schedule' | 'active_schedules_count'>;
 
