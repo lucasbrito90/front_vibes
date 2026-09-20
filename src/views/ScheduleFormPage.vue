@@ -291,6 +291,22 @@ watch(
   },
 );
 
+/**
+ * The evaluation resolves the selected vibe (and its `scene_id`) out of the
+ * `vibes` list, so it is only meaningful once that list has loaded. In edit
+ * mode `fetchVibes()` is fired without awaiting while `getSchedule()` runs in
+ * parallel: whenever the schedule wins that race, the watcher above evaluates
+ * against a still-empty list, finds no vibe, and silently concludes there is
+ * nothing to warn about. Re-evaluating when the list lands closes that hole —
+ * `evaluate()` invalidates any in-flight run of its own, so the extra call is
+ * safe even when both watchers fire together.
+ */
+watch(vibes, () => {
+  if (form.vibe_id !== null) {
+    void evaluateScheduleExecutionWarning(form.vibe_id);
+  }
+});
+
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
 }
