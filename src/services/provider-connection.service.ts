@@ -101,7 +101,18 @@ export interface ReportedDevicePayload {
   provider_device_id: string;
   name: string;
   type?: string | null;
-  capabilities?: Record<string, Record<string, unknown>> | null;
+  /**
+   * The device's capability payload.
+   *
+   * Deliberately `unknown` per value rather than the old
+   * `Record<string, Record<string, unknown>>`: during the ADR-037 §8 transition
+   * this carries two shapes at once — the canonical envelope, whose
+   * `contract_version` is a plain string, and the legacy `can_*` map, whose
+   * values are objects. Narrowing it to the legacy shape would make the
+   * canonical half unrepresentable, which is what the type was quietly doing
+   * before CSDM-04. CSDM-06 narrows it again, to the canonical shape alone.
+   */
+  capabilities?: Record<string, unknown> | null;
 }
 
 /** Summary returned by the sync endpoint. */

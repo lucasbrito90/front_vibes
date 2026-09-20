@@ -37,13 +37,59 @@ export interface RawGoogleHomeDevice {
   hasDimmableLight: boolean;
 }
 
-/** ADR-033 capability map shape — mirrors HomeAssistantAdapter::deriveCapabilities() output. */
+/**
+ * The capability payload this service produces.
+ *
+ * Two shapes at once, deliberately (CSDM-04, ADR-037 §8) — the same
+ * expand/contract the Home Assistant mapper uses on the backend:
+ *
+ * - The **canonical** half (`contract_version` + `capabilities`) is the
+ *   authoritative one, and what CSDM-06 will read.
+ * - The **legacy** `can_*` keys are still emitted because `utils/device-action.ts`
+ *   builds the action editor from them and the backend's
+ *   `ActionType::isBlockedByDeviceCapabilities` reads them too. Dropping them
+ *   now would leave every imported Google device offering no actions at all.
+ *
+ * CSDM-07 removes the legacy half.
+ */
 export interface GoogleHomeDeviceCapabilities {
+  // Canonical half (ADR-037 §2-§5).
+  contract_version?: string;
+  capabilities?: Record<string, CanonicalCapability>;
+
+  // Legacy half (ADR-033), transitional.
   can_turn_on?: Record<string, never>;
   can_turn_off?: Record<string, never>;
   can_toggle?: Record<string, never>;
   can_set_brightness?: { min: number; max: number; step: number };
 }
+
+/** One canonical capability, mirroring the shared schema in ixora-infra/contracts. */
+export interface CanonicalCapability {
+  id: string;
+  access: 'read' | 'write' | 'read_write';
+  operations: string[];
+  constraints:
+    | { type: 'number'; min: number | null; max: number | null; step: number | null; unit: string }
+    | { type: 'enum'; allowed_values: string[] }
+    | { type: 'boolean' }
+    | null;
+}
+
+/**
+ * Semver of the canonical contract this service emits. Must match
+ * `contracts/smart-home/capability.v1.schema.json`; the backend rejects an
+ * envelope whose major version it does not understand.
+ */
+export const CANONICAL_CONTRACT_VERSION = '1.0.0';
+
+/**
+ * Canonical brightness range, fixed by ADR-037 §5 — NOT Matter's 0-254 and not
+ * Home Assistant's 0-255. Both are protocol artifacts; the native plugin
+ * converts Matter's scale at its own boundary (CanonicalBrightness.kt), and
+ * nothing on this side of the bridge needs to know it exists.
+ */
+const CANONICAL_BRIGHTNESS = { min: 0, max: 100, step: 1, unit: 'percent' } as const;
 
 /** Ixora device type vocabulary (back_vibes App\SmartHome\DeviceType) this mapping can infer. */
 export type IxoraDeviceType = 'lighting' | 'switchable' | null;
@@ -110,16 +156,45 @@ async function listDevices(): Promise<RawGoogleHomeDevice[]> {
  * No Capacitor import, no side effects — directly testable with plain objects.
  */
 function mapToIxoraDevice(raw: RawGoogleHomeDevice): IxoraMappedDevice {
+  const canonical: Record<string, CanonicalCapability> = {};
   const capabilities: GoogleHomeDeviceCapabilities = {};
 
   if (raw.hasOnOffLight || raw.hasOnOffPlug || raw.hasDimmableLight) {
+    // `toggle` is a canonical operation regardless of how a provider performs
+    // it. Google's SDK exposes a native OnOffCommands.toggle() — verified
+    // against the real AAR bytecode during P09 review, correcting GH04's
+    // earlier claim that it did not exist — so the plugin calls it directly
+    // rather than composing read-invert-write. Either way the domain sees one
+    // operation, which is the whole point of the canonical model.
+    canonical.power = {
+      id: 'power',
+      access: 'read_write',
+      operations: ['on', 'off', 'toggle'],
+      constraints: { type: 'boolean' },
+    };
+
     capabilities.can_turn_on = {};
     capabilities.can_turn_off = {};
     capabilities.can_toggle = {};
   }
 
   if (raw.hasDimmableLight) {
+    canonical.brightness = {
+      id: 'brightness',
+      access: 'read_write',
+      operations: ['set'],
+      constraints: { type: 'number', ...CANONICAL_BRIGHTNESS },
+    };
+
+    // The legacy half still declares the scale the pre-ADR-037 pipeline used,
+    // because the backend range-checks legacy-shaped parameters against it
+    // (CSDM-02) while the transition window is open.
     capabilities.can_set_brightness = { min: 0, max: 255, step: 1 };
+  }
+
+  if (Object.keys(canonical).length > 0) {
+    capabilities.contract_version = CANONICAL_CONTRACT_VERSION;
+    capabilities.capabilities = canonical;
   }
 
   let type: IxoraDeviceType = null;
