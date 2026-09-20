@@ -19,8 +19,14 @@ import { laravelApiUrl, laravelFetch, type LaravelHttpResponse } from './laravel
  * - MVP action types only: turn_on, turn_off, toggle.
  */
 
-/** MVP-supported action types, mirrored from the backend ActionType enum. */
-export type ActionType = 'turn_on' | 'turn_off' | 'toggle';
+/**
+ * Action types mirrored from the backend ActionType enum.
+ *
+ * `set_brightness` has always existed server-side; CSDM-06 is what finally
+ * lets the UI render it, because the canonical contract supplies the range a
+ * control needs (ADR-037 §5).
+ */
+export type ActionType = 'turn_on' | 'turn_off' | 'toggle' | 'set_brightness';
 
 /** Nested device summary returned alongside each action. */
 export interface SceneDeviceActionDevice {

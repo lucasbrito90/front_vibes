@@ -70,6 +70,48 @@
         </ion-item>
         <p v-if="errors.action_type" class="action-field-error">{{ errors.action_type }}</p>
 
+        <!--
+          CSDM-06: the control is derived from the capability's constraint, not
+          from the action name. A numeric constraint renders a range; an enum
+          renders a picker. Nothing here knows what a provider is, and no
+          native scale reaches the user — the value is canonical.
+        -->
+        <template v-if="valueConstraint">
+          <ion-item v-if="valueConstraint.type === 'number'" lines="full">
+            <ion-range
+              :model-value="numericValue"
+              @ion-input="onRangeInput"
+              :min="valueConstraint.min ?? 0"
+              :max="valueConstraint.max ?? 100"
+              :step="valueConstraint.step ?? 1"
+              :disabled="offline || saving"
+              :pin="true"
+              :label="`${valueLabel} (${valueConstraint.unit})`"
+              label-placement="stacked"
+            />
+          </ion-item>
+
+          <ion-item v-else-if="valueConstraint.type === 'enum'" lines="full">
+            <ion-select
+              v-model="form.value"
+              :label="valueLabel"
+              label-placement="floating"
+              :disabled="offline || saving"
+              interface="action-sheet"
+            >
+              <ion-select-option
+                v-for="allowed in valueConstraint.allowed_values"
+                :key="allowed"
+                :value="allowed"
+              >
+                {{ allowed }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <p v-if="errors.value" class="action-field-error">{{ errors.value }}</p>
+        </template>
+
         <ion-item lines="full">
           <ion-input
             v-model.number="form.delay_seconds"
@@ -103,6 +145,7 @@ import {
   IonInput,
   IonItem,
   IonPage,
+  IonRange,
   IonSelect,
   IonSelectOption,
   IonSpinner,
@@ -118,6 +161,14 @@ import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
 } from '@/services/provider-connection.service';
+import {
+  actionValueLabel,
+  buildParameters,
+  constraintForAction,
+  defaultValueFor,
+  parseCapabilities,
+  validateCanonicalValue,
+} from '@/utils/canonical-capabilities';
 import type { ActionType, SceneDeviceAction } from '@/services/scene-device-action.service';
 import { deviceStatusBadge } from '@/utils/device-status';
 import {
@@ -150,10 +201,15 @@ const form = reactive<{
   device_id: number | null;
   action_type: ActionType | null;
   delay_seconds: number;
+  /** Canonical parameter value (ADR-037 §12); null when the action takes none. */
+  value: number | string | boolean | null;
 }>({
   device_id: props.action?.device_id ?? null,
   action_type: (props.action?.action_type as ActionType | undefined) ?? null,
   delay_seconds: props.action?.delay_seconds ?? 0,
+  // Canonical parameter value (ADR-037 §12). Restored from a saved action when
+  // editing, so reopening an existing brightness shows what the user chose.
+  value: (props.action?.parameters?.value ?? null) as number | string | boolean | null,
 });
 
 const selectedDevice = computed(() => devices.value.find((d) => d.id === form.device_id) ?? null);
@@ -166,6 +222,51 @@ const selectedDevice = computed(() => devices.value.find((d) => d.id === form.de
  */
 const actionOptions = computed(() =>
   availableActionTypeOptions(selectedDevice.value?.capabilities, originalActionType),
+);
+
+/**
+ * CSDM-06 — the control the user sees comes from the capability's constraint.
+ *
+ * `null` means the selected action carries no value (turn_on and friends) or
+ * the device declares no constraint for it, in which case nothing is rendered
+ * and nothing is sent.
+ */
+const deviceCapabilities = computed(() => parseCapabilities(selectedDevice.value?.capabilities));
+
+const valueConstraint = computed(() =>
+  form.action_type ? constraintForAction(deviceCapabilities.value, form.action_type) : null,
+);
+
+const valueLabel = computed(() =>
+  form.action_type ? actionValueLabel(form.action_type) : 'Value',
+);
+
+/**
+ * `ion-range` speaks numbers only, while `form.value` holds whatever the
+ * capability's constraint calls for — a number, an enum string, a boolean.
+ * Bridging here keeps the canonical value one field rather than one per
+ * control type.
+ */
+const numericValue = computed(() => (typeof form.value === 'number' ? form.value : 0));
+
+function onRangeInput(event: CustomEvent): void {
+  const detail = event.detail as { value?: number | { lower: number; upper: number } };
+
+  if (typeof detail.value === 'number') {
+    form.value = detail.value;
+  }
+}
+
+/**
+ * Seed the control when the action changes, and clear it when the new action
+ * carries no value — leaving a stale brightness on a turn_off would send a
+ * parameter the operation does not take.
+ */
+watch(
+  () => form.action_type,
+  () => {
+    form.value = valueConstraint.value ? defaultValueFor(valueConstraint.value) : null;
+  },
 );
 
 /**
@@ -187,13 +288,21 @@ watch(
   },
 );
 
-const errors = computed(() =>
-  validateActionDraft({
+const errors = computed(() => {
+  const base: Record<string, string | undefined> = validateActionDraft({
     device_id: form.device_id ?? undefined,
     action_type: form.action_type ?? undefined,
     delay_seconds: Number(form.delay_seconds),
-  }),
-);
+  });
+
+  // Mirrors the backend's CommandValidator so the user is told before the
+  // request, not by a 422 afterwards. Laravel remains the authority.
+  const valueError = valueConstraint.value
+    ? validateCanonicalValue(valueConstraint.value, form.value, valueLabel.value)
+    : null;
+
+  return valueError ? { ...base, value: valueError } : base;
+});
 
 const canSave = computed(() => Object.keys(errors.value).length === 0);
 
@@ -230,6 +339,10 @@ async function handleSave(): Promise<void> {
     device_id: form.device_id as number,
     action_type: form.action_type as ActionType,
     delay_seconds: Number(form.delay_seconds) || 0,
+    // The canonical parameter key, on the domain's own scale (ADR-037 §12).
+    // `null` for an operation that takes no value, so a stale control never
+    // leaks a parameter into a turn_off.
+    parameters: buildParameters(form.action_type as ActionType, form.value),
   };
 
   const result = isEdit.value
