@@ -20,9 +20,14 @@
           </div>
 
           <p class="provider-form-hint">
-            Connect your
-            {{ selectedProviderType?.label ?? 'smart home provider' }}. Your credentials are
-            stored securely on the server and are never shown again after saving.
+            Connect your {{ selectedProviderType?.label ?? 'smart home provider' }}.
+            <template v-if="selectedProviderHasCredentials">
+              Your credentials are stored securely on the server and are never shown again after
+              saving.
+            </template>
+            <template v-else>
+              Connection settings are stored securely on the server.
+            </template>
           </p>
 
           <ion-item class="auth-item" lines="none">
@@ -176,6 +181,12 @@ const credentialValues = reactive<Record<string, string>>({});
 const selectedProviderType = computed(() =>
   providerTypes.value.find((p) => p.slug === form.provider),
 );
+
+/** From the provider-type descriptor — not inferred from the slug string. */
+const selectedProviderHasCredentials = computed(() => {
+  const credentials = selectedProviderType.value?.credentials;
+  return credentials != null && Object.keys(credentials).length > 0;
+});
 
 /** Initialise dynamic field maps whenever the selected provider changes. */
 function initFieldValues(slug: string): void {

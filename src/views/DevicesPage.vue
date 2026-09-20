@@ -86,12 +86,8 @@
           variant="card"
           :icon="hardwareChipOutline"
           title="No devices yet"
-          :description="
-            offline
-              ? 'Reconnect to sync devices from your provider.'
-              : 'Sync your provider connection to import devices.'
-          "
-          :action-label="offline ? undefined : 'Sync devices'"
+          :description="emptyStateDescription"
+          :action-label="emptyStateActionLabel"
           @action="runSync"
         />
 
@@ -209,6 +205,28 @@ const toastMessage = ref('');
  */
 const showToolbarSync = computed(() => connections.value.length === 1);
 
+/**
+ * Empty-state sync must not pick an arbitrary connection when several exist
+ * (primaryConnection is list order, not user intent). Mirror the toolbar rule:
+ * only offer sync when there is exactly one connection.
+ */
+const showEmptyStateSync = computed(() => connections.value.length === 1);
+
+const emptyStateDescription = computed(() => {
+  if (offline.value) {
+    return 'Reconnect to sync devices from your provider.';
+  }
+  if (!showEmptyStateSync.value) {
+    return 'Open a connection above to sync or discover devices.';
+  }
+  return 'Sync your provider connection to import devices.';
+});
+
+const emptyStateActionLabel = computed(() => {
+  if (offline.value || !showEmptyStateSync.value) return undefined;
+  return 'Sync devices';
+});
+
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
 }
@@ -284,6 +302,9 @@ async function onRefresh(event: RefresherCustomEvent): Promise<void> {
  */
 async function runSync(): Promise<void> {
   if (blockedOffline()) return;
+  if (connections.value.length > 1) {
+    return;
+  }
   if (!primaryConnection.value) {
     notify('Add a connection first.');
     return;
