@@ -224,3 +224,22 @@ describe('DevicesPage — toolbar sync routes by execution_capabilities', () => 
     expect(toast.props('message')).toBe('This provider does not support device sync.');
   });
 });
+
+describe('DevicesPage — empty state sync with multiple connections', () => {
+  it('does not offer a sync action and never calls syncConnection when more than one connection exists', async () => {
+    const { connections } = useProviderConnections();
+    const { providerTypes } = useProviderTypes();
+    connections.value = [homeAssistantConnection(1), googleHomeConnection(2)] as never;
+    providerTypes.value = [homeAssistantProviderType, googleHomeProviderType];
+
+    const { wrapper } = mountDevicesPage();
+    await vi.waitFor(() => wrapper.text().includes('No devices yet'));
+
+    const emptyState = wrapper.findComponent({ name: 'AppEmptyState' });
+    expect(emptyState.props('actionLabel')).toBeUndefined();
+    expect(emptyState.props('description')).toBe(
+      'Open a connection above to sync or discover devices.',
+    );
+    expect(mockSyncProviderConnection).not.toHaveBeenCalled();
+  });
+});
