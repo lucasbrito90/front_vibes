@@ -127,12 +127,15 @@ describe('mapToIxoraDevice', () => {
       rawDevice({ id: 'light-1', name: 'Kitchen Light', hasOnOffLight: true }),
     );
 
-    expect(mapped).toEqual({
+    expect(mapped).toMatchObject({
       provider_device_id: 'light-1',
       name: 'Kitchen Light',
       type: 'lighting',
       capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
     });
+
+    // Still no brightness — the assertion the exact-shape check was making.
+    expect(mapped.capabilities.can_set_brightness).toBeUndefined();
   });
 
   it('maps a dimmable-light-only device to lighting + brightness capability', () => {
@@ -140,7 +143,7 @@ describe('mapToIxoraDevice', () => {
       rawDevice({ id: 'dim-1', name: 'Bedroom Light', hasDimmableLight: true }),
     );
 
-    expect(mapped).toEqual({
+    expect(mapped).toMatchObject({
       provider_device_id: 'dim-1',
       name: 'Bedroom Light',
       type: 'lighting',
@@ -158,12 +161,14 @@ describe('mapToIxoraDevice', () => {
       rawDevice({ id: 'plug-1', name: 'Fan Plug', hasOnOffPlug: true }),
     );
 
-    expect(mapped).toEqual({
+    expect(mapped).toMatchObject({
       provider_device_id: 'plug-1',
       name: 'Fan Plug',
       type: 'switchable',
       capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
     });
+
+    expect(mapped.capabilities.can_set_brightness).toBeUndefined();
   });
 
   it('maps a device with no known flags to null type and no capabilities', () => {
@@ -186,5 +191,77 @@ describe('mapToIxoraDevice', () => {
 
     expect(mapped.provider_device_id).toBe('device@raw-id-123');
     expect(JSON.stringify(mapped.name)).not.toContain('raw-id-123');
+  });
+});
+
+// ── CSDM-04 — the canonical half (ADR-037 §2-§5) ────────────────────────────
+
+describe('mapToIxoraDevice — canonical capabilities', () => {
+  it('emits the canonical envelope alongside the legacy keys', () => {
+    const mapped = googleHomeService.mapToIxoraDevice(
+      rawDevice({ id: 'dim-2', name: 'Hall Light', hasDimmableLight: true }),
+    );
+
+    // Canonical half — authoritative, and what CSDM-06 will read.
+    expect(mapped.capabilities.contract_version).toBe('1.0.0');
+    expect(Object.keys(mapped.capabilities.capabilities ?? {})).toEqual(['power', 'brightness']);
+
+    // Legacy half — still there, because the action editor and the backend
+    // capability gate both read it until CSDM-06/CSDM-07 move them.
+    expect(mapped.capabilities.can_turn_on).toBeDefined();
+  });
+
+  it('declares brightness in the canonical range, never a provider scale', () => {
+    const mapped = googleHomeService.mapToIxoraDevice(
+      rawDevice({ id: 'dim-3', name: 'Desk Light', hasDimmableLight: true }),
+    );
+
+    expect(mapped.capabilities.capabilities?.brightness).toEqual({
+      id: 'brightness',
+      access: 'read_write',
+      operations: ['set'],
+      // Neither Matter's 0-254 nor Home Assistant's 0-255: both are protocol
+      // artifacts, converted at the plugin boundary (CanonicalBrightness.kt).
+      constraints: { type: 'number', min: 0, max: 100, step: 1, unit: 'percent' },
+    });
+  });
+
+  it('declares power as a boolean capability carrying all three operations', () => {
+    const mapped = googleHomeService.mapToIxoraDevice(
+      rawDevice({ id: 'plug-2', name: 'Lamp Plug', hasOnOffPlug: true }),
+    );
+
+    expect(mapped.capabilities.capabilities?.power).toEqual({
+      id: 'power',
+      access: 'read_write',
+      // toggle is canonical regardless of how the provider performs it — the
+      // Google SDK has a native toggle(), verified against the real AAR during
+      // P09 review; Home Assistant has one too. The domain sees one operation.
+      operations: ['on', 'off', 'toggle'],
+      constraints: { type: 'boolean' },
+    });
+  });
+
+  it('emits no envelope at all for a device with no known capability', () => {
+    const mapped = googleHomeService.mapToIxoraDevice(
+      rawDevice({ id: 'unknown-2', name: 'Mystery' }),
+    );
+
+    // Fail-open (ADR-033 §5): an empty payload means unknown, not unsupported.
+    expect(mapped.capabilities.contract_version).toBeUndefined();
+    expect(mapped.capabilities.capabilities).toBeUndefined();
+  });
+
+  it('never lets a Matter level or trait name reach the canonical half', () => {
+    const mapped = googleHomeService.mapToIxoraDevice(
+      rawDevice({ id: 'dim-4', name: 'Leak Check', hasDimmableLight: true }),
+    );
+
+    const canonical = JSON.stringify(mapped.capabilities.capabilities);
+
+    expect(canonical).not.toContain('254');
+    expect(canonical).not.toContain('255');
+    expect(canonical.toLowerCase()).not.toContain('levelcontrol');
+    expect(canonical.toLowerCase()).not.toContain('onofftrait');
   });
 });
