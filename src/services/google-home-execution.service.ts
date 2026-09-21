@@ -41,6 +41,23 @@ import { createLogger } from '@/utils/player-debug';
  *   each report call in case connectivity drops mid-flight.
  * - GH-COMPLIANCE: `provider_device_id` is never logged. The debug log below
  *   only ever carries `scene_action_id` and the translated action verb.
+ *
+ * Delays (PO decision, 20/09/2026 — option (a)): `delay_seconds` is honored
+ * here, per action and absolute from the moment execution starts, never
+ * cumulative along `sort_order`. The backend applies the same rule when it
+ * enqueues a SceneActionJob, so a delay does not change meaning with the
+ * device's provider — exactly the divergence the canonical model (ADR-037)
+ * exists to prevent, and exactly what fixing only the server-side half would
+ * have created. Before this, every device-side action fired at once: two
+ * actions delayed 100s and 1s were observed executing 4ms apart on a physical
+ * device.
+ *
+ * Delays here are plain timers, so they last only as long as the app is alive.
+ * On the Vibe-play path the audio foreground service already keeps it alive;
+ * on manual Scene execution the action editor warns above
+ * LONG_DELAY_WARNING_SECONDS rather than promising something the runtime
+ * cannot deliver. Native scheduling (WorkManager) was considered and rejected
+ * as disproportionate to the gain.
  */
 
 const log = createLogger('GoogleHomeExecution');
@@ -76,6 +93,52 @@ function translateActionType(actionType: string): GoogleHomeExecuteAction | null
 function extractBrightnessPercent(parameters: SceneDeviceAction['parameters']): number | undefined {
   const value = parameters?.value;
   return typeof value === 'number' ? value : undefined;
+}
+
+/**
+ * The delay above which a device-side action needs the app to stay open for it
+ * to run at all. Exported so the action editor warns at the same threshold the
+ * runtime is actually bound by, rather than a second number that can drift.
+ */
+export const LONG_DELAY_WARNING_SECONDS = 60;
+
+/**
+ * Resolves after `seconds`, or immediately when there is nothing to wait for.
+ *
+ * A plain timer: it does not survive the app being killed, which is why the
+ * editor warns about long device-side delays instead of the runtime pretending
+ * otherwise.
+ */
+function wait(seconds: number): Promise<void> {
+  if (!(seconds > 0)) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, seconds * 1000);
+  });
+}
+
+/** A non-negative delay, whatever the API sent. */
+function delayFor(action: SceneDeviceAction): number {
+  const raw = Number(action.delay_seconds);
+
+  return Number.isFinite(raw) && raw > 0 ? raw : 0;
+}
+
+/**
+ * Execution order: by delay first, then `sort_order`.
+ *
+ * `sort_order` alone stops being enough once delays are honored — an action
+ * ordered first but delayed 100s must not hold back one ordered second with no
+ * delay. Sorting by delay makes the waiting monotonic, and `sort_order` stays
+ * the tie-break among actions due at the same moment, which is the only case
+ * where the user's ordering is still observable.
+ */
+function inExecutionOrder(actions: SceneDeviceAction[]): SceneDeviceAction[] {
+  return [...actions].sort(
+    (a, b) => delayFor(a) - delayFor(b) || a.sort_order - b.sort_order,
+  );
 }
 
 /**
@@ -201,9 +264,24 @@ async function executeDeviceSideActions(sceneId: number, input: DeviceSideExecut
     return;
   }
 
-  const targets = actions.filter((action) => deviceActionIds.includes(action.id));
+  const targets = inExecutionOrder(
+    actions.filter((action) => deviceActionIds.includes(action.id)),
+  );
 
-  await Promise.all(targets.map((action) => executeOneAction(action, sceneExecutionId)));
+  // Sequential rather than Promise.all: waiting is only meaningful if each
+  // action's turn actually arrives in order, and running them one at a time
+  // makes the relative ordering a guarantee instead of a scheduling accident.
+  // `elapsed` is measured from the start, so each delay stays absolute — a slow
+  // plugin call shortens the next wait rather than pushing every later action
+  // back, which is what would quietly turn option (a) into cumulative delays.
+  const startedAt = Date.now();
+
+  for (const action of targets) {
+    const elapsedSeconds = (Date.now() - startedAt) / 1000;
+
+    await wait(delayFor(action) - elapsedSeconds);
+    await executeOneAction(action, sceneExecutionId);
+  }
 }
 
 export const googleHomeExecutionService = {
