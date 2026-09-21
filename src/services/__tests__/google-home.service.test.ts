@@ -7,13 +7,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // consumer mocking the raw plugin (that pattern is reserved for
 // useGoogleHomeDiscovery.test.ts, which mocks this whole service instead).
 
-const { mockIsNativePlatform, mockGetPlatform, mockRequestPermissions, mockListDevices } =
-  vi.hoisted(() => ({
-    mockIsNativePlatform: vi.fn((): boolean => true),
-    mockGetPlatform: vi.fn((): string => 'android'),
-    mockRequestPermissions: vi.fn(),
-    mockListDevices: vi.fn(),
-  }));
+const {
+  mockIsNativePlatform,
+  mockGetPlatform,
+  mockRequestPermissions,
+  mockListDevices,
+  mockReadDeviceState,
+  mockExecuteAction,
+} = vi.hoisted(() => ({
+  mockIsNativePlatform: vi.fn((): boolean => true),
+  mockGetPlatform: vi.fn((): string => 'android'),
+  mockRequestPermissions: vi.fn(),
+  mockListDevices: vi.fn(),
+  mockReadDeviceState: vi.fn(),
+  mockExecuteAction: vi.fn(),
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -23,6 +31,8 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => ({
     requestGoogleHomePermissions: mockRequestPermissions,
     listDevices: mockListDevices,
+    readDeviceState: mockReadDeviceState,
+    executeAction: mockExecuteAction,
   })),
 }));
 
@@ -47,6 +57,8 @@ beforeEach(() => {
   mockGetPlatform.mockReturnValue('android');
   mockRequestPermissions.mockReset();
   mockListDevices.mockReset();
+  mockReadDeviceState.mockReset();
+  mockExecuteAction.mockReset();
 });
 
 afterEach(() => {
@@ -116,6 +128,77 @@ describe('listDevices', () => {
 
     await expect(googleHomeService.listDevices()).rejects.toThrow();
     expect(mockListDevices).not.toHaveBeenCalled();
+  });
+});
+
+// ── readDeviceState ───────────────────────────────────────────────────────────
+
+describe('readDeviceState', () => {
+  it('calls the native plugin with the deviceId and returns its result when supported', async () => {
+    mockReadDeviceState.mockResolvedValue({
+      id: 'device@1',
+      name: 'Living Room Light',
+      onOff: true,
+      brightnessPercent: 50,
+      brightness: 127,
+    });
+
+    const result = await googleHomeService.readDeviceState('device@1');
+
+    expect(mockReadDeviceState).toHaveBeenCalledWith({ deviceId: 'device@1' });
+    expect(result.onOff).toBe(true);
+    expect(result.brightnessPercent).toBe(50);
+  });
+
+  it('throws without calling the plugin when unsupported', async () => {
+    mockIsNativePlatform.mockReturnValue(false);
+
+    await expect(googleHomeService.readDeviceState('device@1')).rejects.toThrow();
+    expect(mockReadDeviceState).not.toHaveBeenCalled();
+  });
+});
+
+// ── executeAction ─────────────────────────────────────────────────────────────
+
+describe('executeAction', () => {
+  it('calls the native plugin with deviceId/action and returns its result when supported', async () => {
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    const result = await googleHomeService.executeAction('device@1', 'on');
+
+    expect(mockExecuteAction).toHaveBeenCalledWith({
+      deviceId: 'device@1',
+      action: 'on',
+      value: undefined,
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it('forwards the canonical percent value for set_brightness, never a provider scale', async () => {
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    await googleHomeService.executeAction('device@1', 'set_brightness', 75);
+
+    expect(mockExecuteAction).toHaveBeenCalledWith({
+      deviceId: 'device@1',
+      action: 'set_brightness',
+      value: 75,
+    });
+  });
+
+  it('throws without calling the plugin when unsupported', async () => {
+    mockIsNativePlatform.mockReturnValue(false);
+
+    await expect(googleHomeService.executeAction('device@1', 'toggle')).rejects.toThrow();
+    expect(mockExecuteAction).not.toHaveBeenCalled();
+  });
+
+  it('propagates a plugin rejection rather than swallowing it', async () => {
+    mockExecuteAction.mockRejectedValue(new Error('Device not found: device@1'));
+
+    await expect(googleHomeService.executeAction('device@1', 'off')).rejects.toThrow(
+      'Device not found: device@1',
+    );
   });
 });
 
