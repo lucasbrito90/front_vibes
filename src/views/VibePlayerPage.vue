@@ -314,6 +314,7 @@ import {
 } from '@/services/player-engine.service';
 import { createLogger } from '@/utils/player-debug';
 import { dispatchVibeSmartHomeActions } from '@/services/smart-home-dispatch.service';
+import { googleHomeExecutionService } from '@/services/google-home-execution.service';
 import AppEmptyState from '@/components/ui/AppEmptyState.vue';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
@@ -677,6 +678,43 @@ async function showPlaybackToast(
   await toast.present();
 }
 
+/**
+ * Fire-and-forget Smart Home dispatch for a vibe play, plus the device-side
+ * half of ADR-036 Decision 7: whatever the backend delegates as
+ * `device_action_ids` (today, Google Home) is executed on this device via
+ * google-home-execution.service.ts and reported back — this is the entry
+ * point named in the P15 brief as "onde o usuário mais vai esbarrar" with
+ * the manual-execution-requires-app-open limitation (Decision 1a, PO-confirmed),
+ * so the inline toast warning (Decision 1b, PO-confirmed) lives here.
+ *
+ * Never awaited by togglePlayback()/handleRestartVibe() — failure here must
+ * never block or delay audio.
+ */
+function dispatchSmartHomeForPlayback(playingVibeId: number): void {
+  const sceneId = vibe.value?.scene_id ?? null;
+
+  dispatchVibeSmartHomeActions(playingVibeId)
+    .then((result) => {
+      const deviceActionIds = result?.device_action_ids ?? [];
+      if (deviceActionIds.length === 0 || result == null) return;
+
+      void showPlaybackToast(
+        `${deviceActionIds.length} device${deviceActionIds.length === 1 ? '' : 's'} controlled directly by this app — keep it open to respond.`,
+        { duration: 3_200 },
+      );
+
+      if (sceneId == null) return;
+
+      void googleHomeExecutionService
+        .executeDeviceSideActions(sceneId, {
+          sceneExecutionId: result.scene_execution_id,
+          deviceActionIds,
+        })
+        .catch(() => {});
+    })
+    .catch(() => {});
+}
+
 async function togglePlayback(): Promise<void> {
   log.debug('MAIN PLAYER — togglePlayback', {
     vibeId:           vibeId.value,
@@ -751,7 +789,7 @@ async function togglePlayback(): Promise<void> {
   }
 
   // Fire-and-forget Smart Home dispatch — failure must never block audio.
-  dispatchVibeSmartHomeActions(vibeId.value).catch(() => {});
+  dispatchSmartHomeForPlayback(vibeId.value);
 
   if (playableCount < totalLayers) {
     await showPlaybackToast('Some sounds could not be played');

@@ -1,9 +1,27 @@
 import type { ActionType, SceneDeviceActionPayload } from '@/services/scene-device-action.service';
+import { parseCapabilities, supportedActionTypes } from '@/utils/canonical-capabilities';
+// The threshold the editor warns at is the number the runtime is actually
+// bound by — imported rather than restated so the two cannot drift apart.
+import { LONG_DELAY_WARNING_SECONDS } from '@/services/google-home-execution.service';
 
 export type { ActionType };
+export { LONG_DELAY_WARNING_SECONDS };
 
-/** MVP-allowed action types. Future types are intentionally not exposed in the UI. */
-export const ACTION_TYPES: readonly ActionType[] = ['turn_on', 'turn_off', 'toggle'] as const;
+/**
+ * Action types the UI can render.
+ *
+ * `set_brightness` joins the list in CSDM-06. It has existed in the backend
+ * since v1.4.0 and was excluded here for a concrete reason, not an arbitrary
+ * one: the editor had no way to know a brightness runs 0 to 100, so it could
+ * not have rendered a control for it. The canonical contract supplies that
+ * now (ADR-037 §5), so the capability finally reaches the user.
+ */
+export const ACTION_TYPES: readonly ActionType[] = [
+  'turn_on',
+  'turn_off',
+  'toggle',
+  'set_brightness',
+] as const;
 
 /** Maximum delay allowed per action (1 hour), mirroring the backend constraint. */
 export const MAX_DELAY_SECONDS = 3600;
@@ -22,6 +40,8 @@ export function actionTypeLabel(type: ActionType | string): string {
       return 'Turn off';
     case 'toggle':
       return 'Toggle';
+    case 'set_brightness':
+      return 'Set brightness';
     default:
       return String(type);
   }
@@ -32,24 +52,15 @@ export function actionTypeOptions(): ActionTypeOption[] {
   return ACTION_TYPES.map((value) => ({ value, label: actionTypeLabel(value) }));
 }
 
-/**
- * Required capability key for each MVP action type (ADR-033 mapping).
- * Mirrors App\SmartHome\ActionType::requiredCapability() on the backend.
- */
-const CAPABILITY_REQUIRED: Record<ActionType, string> = {
-  turn_on: 'can_turn_on',
-  turn_off: 'can_turn_off',
-  toggle: 'can_toggle',
-};
+
 
 /**
- * Returns the subset of MVP action type options that are allowed for a
- * device with the given capabilities, applying the backend fail-open rule
- * (ADR-033, mirroring ActionType::isBlockedByDeviceCapabilities()):
+ * Returns the action type options allowed for a device, read from its
+ * canonical capability contract (CSDM-06):
  *
  * - capabilities === null / undefined → **never block** — return all options.
- * - capabilities is a map → only include options whose required capability
- *   key exists as a key in the map.
+ * - otherwise → only actions the device's capabilities actually declare an
+ *   operation for, and only on capabilities whose access permits writing.
  *
  * Additionally, if `currentActionType` is supplied (edit mode), that option
  * is always included in the result even when the capability is absent — so
@@ -57,18 +68,20 @@ const CAPABILITY_REQUIRED: Record<ActionType, string> = {
  * the current type is already allowed by capabilities, it is NOT duplicated.
  */
 export function availableActionTypeOptions(
-  capabilities: Record<string, Record<string, unknown>> | null | undefined,
+  capabilities: unknown,
   currentActionType?: ActionType | null,
 ): ActionTypeOption[] {
-  // Fail-open: unknown capabilities → all options
-  if (capabilities === null || capabilities === undefined) {
-    return actionTypeOptions();
-  }
+  // CSDM-06: derived from the device's declared capabilities and operations
+  // rather than from hardcoded `can_*` keys, so a capability added to the
+  // contract reaches the user without an app change. Fail-open is unchanged:
+  // unknown capabilities offer everything (ADR-033 §5).
+  const parsed = parseCapabilities(capabilities);
+  const supported = supportedActionTypes(parsed);
 
-  const allowed = ACTION_TYPES.filter((type) => {
-    const required = CAPABILITY_REQUIRED[type];
-    return Object.prototype.hasOwnProperty.call(capabilities, required);
-  }).map((value) => ({ value, label: actionTypeLabel(value) }));
+  const allowed = ACTION_TYPES.filter((type) => supported.includes(type)).map((value) => ({
+    value,
+    label: actionTypeLabel(value),
+  }));
 
   // Always include currentActionType (edit mode) even if capability is absent,
   // but don't duplicate it when it is already in the allowed list.
@@ -123,4 +136,32 @@ export function validateActionDraft(draft: SceneDeviceActionPayload): ActionVali
 /** True when the draft has no validation errors. */
 export function isValidActionDraft(draft: SceneDeviceActionPayload): boolean {
   return Object.keys(validateActionDraft(draft)).length === 0;
+}
+
+/**
+ * Whether the editor should warn that this delay depends on the app staying
+ * open.
+ *
+ * Only device-side actions are affected. A server-side action's delay is held
+ * by the queue and runs whether or not the phone is even switched on; a
+ * device-side one is a timer inside this app, so a long delay is a promise the
+ * runtime can keep only while it is alive. On the Vibe-play path the audio
+ * foreground service already keeps it alive — this warning is for a Scene the
+ * user executes by hand.
+ *
+ * The decision comes from `execution_capabilities`, never from a provider slug
+ * — the same rule useScheduleExecutionWarning follows. A provider with no
+ * descriptor is treated as device-side, which is the safe default: warning
+ * about a delay that would in fact have worked is a far smaller harm than
+ * silently promising one that will not.
+ */
+export function delayNeedsAppOpen(
+  executionCapabilities: readonly string[] | null | undefined,
+  delaySeconds: number,
+): boolean {
+  if (!Number.isFinite(delaySeconds) || delaySeconds <= LONG_DELAY_WARNING_SECONDS) {
+    return false;
+  }
+
+  return !(executionCapabilities ?? []).includes('server_side_execution');
 }

@@ -167,6 +167,11 @@ const routes: Array<RouteRecordRaw> = [
         meta: { requiresAuth: true, screenName: 'ProviderConnectionDetailPage' },
       },
       {
+        path: 'devices/providers/:id/discover',
+        component: () => import('@/views/GoogleHomeDeviceDiscoveryPage.vue'),
+        meta: { requiresAuth: true, screenName: 'GoogleHomeDeviceDiscoveryPage' },
+      },
+      {
         path: 'devices/:id',
         component: () => import('@/views/DeviceDetailPage.vue'),
         meta: { requiresAuth: true, screenName: 'DeviceDetailPage' },

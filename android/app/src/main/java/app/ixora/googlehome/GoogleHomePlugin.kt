@@ -268,10 +268,23 @@ class GoogleHomePlugin : Plugin() {
      * DimmableLightDevice — checked explicitly, never assumed.
      */
     private suspend fun executeSetBrightness(call: PluginCall, device: HomeDevice) {
-        val brightness = call.getInt("brightness")
-        if (brightness == null || brightness !in 0..BrightnessNormalization.IXORA_MAX) {
-            call.reject("brightness (0-255) is required for set_brightness")
-            return
+        // CSDM-04: the canonical parameter is a percentage (ADR-037 §5). The
+        // legacy 0-255 field is still accepted while a pre-CSDM-04 web build
+        // may be calling this plugin; CSDM-07 removes it.
+        val percent = call.getInt("value")
+        val legacyBrightness = call.getInt("brightness")
+
+        val matterLevel = when {
+            percent != null && percent in CanonicalBrightness.CANONICAL_MIN..CanonicalBrightness.CANONICAL_MAX ->
+                CanonicalBrightness.percentToMatter(percent)
+
+            legacyBrightness != null && legacyBrightness in 0..BrightnessNormalization.IXORA_MAX ->
+                BrightnessNormalization.ixoraToMatter(legacyBrightness)
+
+            else -> {
+                call.reject("value (0-100 percent) is required for set_brightness")
+                return
+            }
         }
 
         val levelControl = resolveLevelControl(device)
@@ -280,7 +293,6 @@ class GoogleHomePlugin : Plugin() {
             return
         }
 
-        val matterLevel = BrightnessNormalization.ixoraToMatter(brightness)
         val defaultOptions = LevelControlTrait.OptionsBitmap()
         levelControl.moveToLevel(
             matterLevel.toUByte(),
@@ -305,18 +317,25 @@ class GoogleHomePlugin : Plugin() {
         val levelControl = resolveLevelControl(device)
         if (levelControl == null) {
             payload.put("brightness", JSObject.NULL)
+            payload.put("brightnessPercent", JSObject.NULL)
             return
         }
 
         val currentLevel = levelControl.currentLevel
-        payload.put(
-            "brightness",
-            if (currentLevel != null) {
-                BrightnessNormalization.matterToIxora(currentLevel.toInt())
-            } else {
-                JSObject.NULL
-            },
-        )
+
+        if (currentLevel == null) {
+            payload.put("brightness", JSObject.NULL)
+            payload.put("brightnessPercent", JSObject.NULL)
+            return
+        }
+
+        // CSDM-04: the canonical value, which is what JS should read.
+        payload.put("brightnessPercent", CanonicalBrightness.matterToPercent(currentLevel.toInt()))
+
+        // Transitional: the P09 field, on the 0-255 scale ADR-037 §5 rejects as
+        // a domain value. Kept so a build of the web layer that predates CSDM-04
+        // keeps working; removed by CSDM-07.
+        payload.put("brightness", BrightnessNormalization.matterToIxora(currentLevel.toInt()))
     }
 
     // ── Trait resolvers ────────────────────────────────────────────────────

@@ -45,9 +45,9 @@
                 <dt>Provider</dt>
                 <dd>{{ providerLabel(connection.provider) }}</dd>
               </div>
-              <div class="provider-detail-row">
+              <div v-if="connection.config?.base_url" class="provider-detail-row">
                 <dt>Base URL</dt>
-                <dd class="provider-detail-url">{{ connection.config?.base_url }}</dd>
+                <dd class="provider-detail-url">{{ connection.config.base_url }}</dd>
               </div>
               <div class="provider-detail-row">
                 <dt>Status</dt>
@@ -64,12 +64,12 @@
             <ion-button
               expand="block"
               :disabled="offline || syncing"
-              @click="runSync"
+              @click="handleSyncOrDiscover"
             >
               <ion-spinner v-if="syncing" name="crescent" />
               <template v-else>
                 <ion-icon slot="start" :icon="syncOutline" />
-                Sync devices
+                {{ syncActionLabel }}
               </template>
             </ion-button>
 
@@ -121,6 +121,7 @@ import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { useDevices } from '@/composables/useDevices';
 import { useProviderConnections } from '@/composables/useProviderConnections';
+import { useProviderTypes } from '@/composables/useProviderTypes';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
@@ -138,6 +139,7 @@ const {
   syncConnection,
 } = useProviderConnections();
 const { refreshAfterSync } = useDevices();
+const { fetchProviderTypes, findProviderType } = useProviderTypes();
 
 const connectionId = Number(route.params.id);
 const offline = ref(isDeviceOffline());
@@ -147,6 +149,25 @@ const showToast = ref(false);
 const toastMessage = ref('');
 
 const statusBadge = computed(() => connectionStatusBadge(connection.value?.status ?? 'unknown'));
+
+/**
+ * ADR-036 Decision 2 — decide what the "sync" action does purely from the
+ * connection's provider execution_capabilities, never from the `provider`
+ * slug. A provider with server_side_execution keeps the existing
+ * server-pull sync (home_assistant, unchanged behaviour). A
+ * device-discovery-only provider (e.g. google_home) navigates to the
+ * dedicated discovery screen instead. A provider with neither is a
+ * defensive fallback — should not happen with the two providers known
+ * today, but must not crash if it ever does.
+ */
+const executionCapabilities = computed(() => findProviderType(connection.value?.provider ?? '')?.execution_capabilities ?? []);
+const supportsServerSideExecution = computed(() => executionCapabilities.value.includes('server_side_execution'));
+const supportsDeviceDiscovery = computed(() => executionCapabilities.value.includes('device_discovery'));
+const syncActionLabel = computed(() => {
+  if (supportsServerSideExecution.value) return 'Sync devices';
+  if (supportsDeviceDiscovery.value) return 'Discover devices';
+  return 'Import devices';
+});
 
 function updateOnlineState(): void {
   offline.value = isDeviceOffline();
@@ -165,6 +186,7 @@ onUnmounted(() => {
 onIonViewWillEnter(() => {
   updateOnlineState();
   void getConnection(connectionId);
+  void fetchProviderTypes();
 });
 
 function notify(message: string): void {
@@ -201,6 +223,18 @@ async function runSync(): Promise<void> {
     }
   } finally {
     syncing.value = false;
+  }
+}
+
+function handleSyncOrDiscover(): void {
+  if (blockedOffline()) return;
+
+  if (supportsServerSideExecution.value) {
+    void runSync();
+  } else if (supportsDeviceDiscovery.value) {
+    router.push(`/devices/providers/${connectionId}/discover`);
+  } else {
+    notify('This provider does not support importing devices yet.');
   }
 }
 

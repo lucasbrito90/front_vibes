@@ -20,9 +20,14 @@
           </div>
 
           <p class="provider-form-hint">
-            Connect your
-            {{ selectedProviderType?.label ?? 'smart home provider' }}. Your credentials are
-            stored securely on the server and are never shown again after saving.
+            Connect your {{ selectedProviderType?.label ?? 'smart home provider' }}.
+            <template v-if="selectedProviderHasCredentials">
+              Your credentials are stored securely on the server and are never shown again after
+              saving.
+            </template>
+            <template v-else>
+              Connection settings are stored securely on the server.
+            </template>
           </p>
 
           <ion-item class="auth-item" lines="none">
@@ -149,7 +154,12 @@ import {
 
 const router = useRouter();
 const { createConnection } = useProviderConnections();
-const { providerTypes, loading: typesLoading, fetchProviderTypes } = useProviderTypes();
+const {
+  providerTypes,
+  loading: typesLoading,
+  fetchProviderTypes,
+  findProviderType,
+} = useProviderTypes();
 
 const offline = ref(isDeviceOffline());
 const submitting = ref(false);
@@ -171,6 +181,12 @@ const credentialValues = reactive<Record<string, string>>({});
 const selectedProviderType = computed(() =>
   providerTypes.value.find((p) => p.slug === form.provider),
 );
+
+/** From the provider-type descriptor — not inferred from the slug string. */
+const selectedProviderHasCredentials = computed(() => {
+  const credentials = selectedProviderType.value?.credentials;
+  return credentials != null && Object.keys(credentials).length > 0;
+});
 
 /** Initialise dynamic field maps whenever the selected provider changes. */
 function initFieldValues(slug: string): void {
@@ -290,11 +306,32 @@ async function handleSubmit(): Promise<void> {
   submitting.value = false;
 
   if (connection) {
-    router.replace(`/devices/providers/${connection.id}`);
+    router.replace(postCreateDestination(connection.id, connection.provider));
   } else {
     const { error } = useProviderConnections();
     errorMessage.value = error.value ?? 'Could not save the connection.';
   }
+}
+
+/**
+ * Decides where to send the user right after a connection is created, based
+ * on the provider's ADR-036 execution_capabilities — never on the raw
+ * `provider` slug. A provider with server_side_execution keeps the existing
+ * behaviour (server-pull sync on the detail page); a device-discovery-only
+ * provider (e.g. google_home) goes straight to the discovery flow instead.
+ * A provider with neither capability falls back to the detail page, which
+ * shows its own "not supported" state via the same capability chain.
+ */
+function postCreateDestination(connectionId: number, provider: string): string {
+  const capabilities = findProviderType(provider)?.execution_capabilities ?? [];
+
+  if (capabilities.includes('server_side_execution')) {
+    return `/devices/providers/${connectionId}`;
+  }
+  if (capabilities.includes('device_discovery')) {
+    return `/devices/providers/${connectionId}/discover`;
+  }
+  return `/devices/providers/${connectionId}`;
 }
 </script>
 

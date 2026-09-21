@@ -43,11 +43,7 @@
             <dl class="device-detail-meta">
               <div class="device-detail-row">
                 <dt>Provider</dt>
-                <dd>{{ providerLabel(device.provider) }}</dd>
-              </div>
-              <div class="device-detail-row">
-                <dt>Provider device ID</dt>
-                <dd class="device-detail-mono">{{ device.provider_device_id }}</dd>
+                <dd>{{ providerLabel(device.provider, providerTypes) }}</dd>
               </div>
               <div class="device-detail-row">
                 <dt>Status</dt>
@@ -157,6 +153,7 @@ import { useRoute, useRouter } from 'vue-router';
 import AppErrorState from '@/components/ui/AppErrorState.vue';
 import AppLoadingState from '@/components/ui/AppLoadingState.vue';
 import { useDevices } from '@/composables/useDevices';
+import { useProviderTypes } from '@/composables/useProviderTypes';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
   isDeviceOffline,
@@ -173,6 +170,7 @@ const {
   updateDevice,
   deleteDevice,
 } = useDevices();
+const { providerTypes, fetchProviderTypes } = useProviderTypes();
 
 const deviceId = Number(route.params.id);
 const offline = ref(isDeviceOffline());
@@ -217,6 +215,7 @@ onUnmounted(() => {
 onIonViewWillEnter(() => {
   updateOnlineState();
   void getDevice(deviceId);
+  void fetchProviderTypes();
 });
 
 function notify(message: string): void {
