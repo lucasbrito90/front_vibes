@@ -133,6 +133,7 @@ import {
 } from '@/services/provider-connection.service';
 import { sceneDispatchService } from '@/services/scene-dispatch.service';
 import type { SceneExecutionByProvider } from '@/services/scene-dispatch.service';
+import { googleHomeExecutionService } from '@/services/google-home-execution.service';
 import type { Scene } from '@/services/scene.service';
 
 const router = useRouter();
@@ -175,12 +176,28 @@ function setExecuting(sceneId: number, executing: boolean): void {
   executingSceneIds.value = next;
 }
 
-function formatDispatchMessage(dispatched: number, skipped: number): string {
+/**
+ * ADR-036 Decision 7 — a device-side action (today, Google Home) is neither
+ * `dispatched` nor `skipped`; it runs on this device instead. Surfacing the
+ * count here — and the app-must-stay-open caveat — is this feature's UI
+ * warning for MANUAL execution (Decision 1a/1b, confirmed by the PO):
+ * unlike Decision 5's scheduling limitation (P13, warned ahead of time in
+ * ScheduleFormPage), a manual Execute is already a foreground action, so the
+ * warning is surfaced at the moment it matters — right after the tap —
+ * rather than pre-emptively at scene-configuration time.
+ */
+function formatDispatchMessage(dispatched: number, skipped: number, deviceSideCount: number): string {
   const dispatchedLabel = `${dispatched} action${dispatched === 1 ? '' : 's'} dispatched`;
-  if (skipped > 0) {
-    return `${dispatchedLabel}, ${skipped} skipped.`;
+  const parts = [dispatchedLabel];
+  if (deviceSideCount > 0) {
+    parts.push(
+      `${deviceSideCount} action${deviceSideCount === 1 ? '' : 's'} running on this device (requires the app to stay open)`,
+    );
   }
-  return `${dispatchedLabel}.`;
+  if (skipped > 0) {
+    parts.push(`${skipped} skipped`);
+  }
+  return `${parts.join(', ')}.`;
 }
 
 /**
@@ -297,12 +314,30 @@ async function handleExecute(sceneId: number): Promise<void> {
   setExecuting(sceneId, true);
   try {
     const result = await sceneDispatchService.executeScene(sceneId);
-    // Stage 1: show dispatch count immediately (fire-and-forget confirmed).
-    notify(formatDispatchMessage(result.dispatched, result.skipped));
+    const deviceActionIds = result.device_action_ids ?? [];
 
-    // Stage 2: poll for the real execution outcome when we have an ID and
-    // at least one action was dispatched (no point polling an empty dispatch).
-    if (result.dispatched > 0 && result.scene_execution_id) {
+    // Stage 1: show dispatch count immediately (fire-and-forget confirmed).
+    notify(formatDispatchMessage(result.dispatched, result.skipped, deviceActionIds.length));
+
+    // ADR-036 Decision 7 — actions the backend delegated because their
+    // provider has no server-side execution capability. Executed on this
+    // device (google-home-execution.service.ts) and reported back;
+    // fire-and-forget by the same contract as smart-home-dispatch.service.ts
+    // — a failure here must never block the toast/poll below or the UI.
+    if (deviceActionIds.length > 0) {
+      void googleHomeExecutionService
+        .executeDeviceSideActions(sceneId, {
+          sceneExecutionId: result.scene_execution_id,
+          deviceActionIds,
+        })
+        .catch(() => {});
+    }
+
+    // Stage 2: poll for the real execution outcome when we have an ID and at
+    // least one action is in flight — either a dispatched job or a
+    // device-side action reporting back under the same scene_execution_id
+    // (no point polling when the scene had no actions at all).
+    if ((result.dispatched > 0 || deviceActionIds.length > 0) && result.scene_execution_id) {
       // Fire polling in the background — non-blocking from the user's perspective.
       void pollExecutionSummary(sceneId, result.scene_execution_id).then((message) => {
         if (message) notify(message);

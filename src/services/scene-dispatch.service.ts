@@ -20,6 +20,13 @@ export interface SceneDispatchResult {
   action_ids: number[];
   /** T21: execution ID for polling results via GET /api/scenes/{id}/executions/{executionId}. */
   scene_execution_id: string;
+  /**
+   * P15/ADR-036 Decision 7 — scene_action_id values whose provider does not
+   * declare server_side_execution. Not enqueued as a backend job; the
+   * caller is expected to execute these device-side (google-home-execution.service.ts)
+   * and report the outcome itself. Additive field.
+   */
+  device_action_ids: number[];
 }
 
 /** Per-provider breakdown in a SceneExecutionSummary. */

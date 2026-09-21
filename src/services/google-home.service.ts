@@ -102,9 +102,41 @@ export interface IxoraMappedDevice {
   capabilities: GoogleHomeDeviceCapabilities;
 }
 
+/**
+ * Actions GoogleHomePlugin.kt's `executeAction()` accepts — mirrors its
+ * `SUPPORTED_ACTIONS` set verbatim (Kotlin is the source of truth; this is
+ * not a separate vocabulary to keep in sync by convention).
+ */
+export type GoogleHomeExecuteAction = 'on' | 'off' | 'toggle' | 'set_brightness';
+
+/** Plugin resolve shape for executeAction() — mirrors the Kotlin `{ ok: true }` payload. */
+export interface GoogleHomeExecuteResult {
+  ok: boolean;
+}
+
+/**
+ * Plugin resolve shape for readDeviceState() (P06/P09). `brightnessPercent`
+ * is the canonical field (ADR-037 §5); `brightness` is the transitional
+ * 0-255 field the plugin also emits — never read by this app (CSDM-04/07).
+ */
+export interface RawGoogleHomeDeviceState {
+  id: string;
+  name: string;
+  onOff: boolean | null;
+  brightnessPercent: number | null;
+  brightness: number | null;
+}
+
 interface GoogleHomeNativePlugin {
   requestGoogleHomePermissions(): Promise<GoogleHomePermissionResult>;
   listDevices(): Promise<{ devices: RawGoogleHomeDevice[] }>;
+  readDeviceState(options: { deviceId: string }): Promise<RawGoogleHomeDeviceState>;
+  executeAction(options: {
+    deviceId: string;
+    action: GoogleHomeExecuteAction;
+    /** Canonical percentage (0-100, ADR-037 §5) — required only for 'set_brightness'. */
+    value?: number;
+  }): Promise<GoogleHomeExecuteResult>;
 }
 
 // No `web:` implementation — Android-only by ADR-036 decision, not a gap to
@@ -147,6 +179,38 @@ async function listDevices(): Promise<RawGoogleHomeDevice[]> {
 
   const result = await GoogleHomeNative.listDevices();
   return result.devices;
+}
+
+/**
+ * Reads current state for one Google Home device via the native plugin.
+ * Never calls the plugin when the platform gate fails — throws instead,
+ * mirroring listDevices().
+ */
+async function readDeviceState(deviceId: string): Promise<RawGoogleHomeDeviceState> {
+  if (!isGoogleHomeSupported()) {
+    throw new Error(UNSUPPORTED_PLATFORM_MESSAGE);
+  }
+
+  return GoogleHomeNative.readDeviceState({ deviceId });
+}
+
+/**
+ * Executes one action (on/off/toggle/set_brightness) against a Google Home
+ * device via the native plugin (P09/ADR-036 Decision 7). `value` is the
+ * canonical percentage (ADR-037 §5) — this service never sends a
+ * provider-native scale. Never calls the plugin when the platform gate
+ * fails — throws instead, mirroring listDevices()/readDeviceState().
+ */
+async function executeAction(
+  deviceId: string,
+  action: GoogleHomeExecuteAction,
+  value?: number,
+): Promise<GoogleHomeExecuteResult> {
+  if (!isGoogleHomeSupported()) {
+    throw new Error(UNSUPPORTED_PLATFORM_MESSAGE);
+  }
+
+  return GoogleHomeNative.executeAction({ deviceId, action, value });
 }
 
 /**
@@ -216,5 +280,7 @@ export const googleHomeService = {
   isGoogleHomeSupported,
   requestPermissions,
   listDevices,
+  readDeviceState,
+  executeAction,
   mapToIxoraDevice,
 };
