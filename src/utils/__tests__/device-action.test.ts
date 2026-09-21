@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   ACTION_TYPES,
+  LONG_DELAY_WARNING_SECONDS,
   MAX_DELAY_SECONDS,
   actionTypeLabel,
+  delayNeedsAppOpen,
   actionTypeOptions,
   availableActionTypeOptions,
   isMvpActionType,
@@ -163,5 +165,49 @@ describe('device-action utils', () => {
       });
       expect(errors.delay_seconds).toBeTruthy();
     });
+  });
+});
+
+describe('delayNeedsAppOpen', () => {
+  /*
+   * A delay means two different things depending on who holds it. The queue
+   * holds a server-side one and runs it whether or not the phone is switched
+   * on; the app itself holds a device-side one, as a timer that dies with the
+   * process. The editor says so instead of letting the same field quietly mean
+   * both.
+   */
+  const SERVER_SIDE = ['device_discovery', 'state_read', 'server_side_execution'];
+  const DEVICE_SIDE = ['device_discovery', 'state_read', 'interactive_execution'];
+
+  it('warns about a long delay on a device the phone controls', () => {
+    expect(delayNeedsAppOpen(DEVICE_SIDE, LONG_DELAY_WARNING_SECONDS + 1)).toBe(true);
+  });
+
+  it('says nothing about a long delay the queue will hold', () => {
+    expect(delayNeedsAppOpen(SERVER_SIDE, 3600)).toBe(false);
+  });
+
+  it('says nothing about a short delay, whoever holds it', () => {
+    expect(delayNeedsAppOpen(DEVICE_SIDE, LONG_DELAY_WARNING_SECONDS)).toBe(false);
+    expect(delayNeedsAppOpen(DEVICE_SIDE, 0)).toBe(false);
+  });
+
+  it('decides from execution_capabilities, never from a provider slug', () => {
+    // The same fictional provider warns or not purely on what it declares —
+    // there is no slug this function could be reading instead.
+    expect(delayNeedsAppOpen(['server_side_execution'], 600)).toBe(false);
+    expect(delayNeedsAppOpen(['interactive_execution'], 600)).toBe(true);
+  });
+
+  it('treats an undescribed provider as device-side', () => {
+    // Warning about a delay that would in fact have worked is a much smaller
+    // harm than silently promising one that will not.
+    expect(delayNeedsAppOpen(null, 600)).toBe(true);
+    expect(delayNeedsAppOpen(undefined, 600)).toBe(true);
+    expect(delayNeedsAppOpen([], 600)).toBe(true);
+  });
+
+  it('says nothing about a delay that is not a number', () => {
+    expect(delayNeedsAppOpen(DEVICE_SIDE, Number.NaN)).toBe(false);
   });
 });

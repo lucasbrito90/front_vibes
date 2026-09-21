@@ -331,3 +331,253 @@ describe('executeDeviceSideActions — provider neutrality', () => {
     );
   });
 });
+
+// ── delay_seconds — the device-side half of the delay fix ────────────────────
+//
+// `delay_seconds` was validated, persisted, exposed by the API and editable in
+// the app since v1.3.0, and honored by nobody. On a physical device, two
+// actions delayed 100s and 1s were observed executing 4ms apart.
+//
+// Semantics (PO decision, 20/09/2026 — option (a)): per action, absolute from
+// the moment execution starts, never cumulative along sort_order. The backend
+// applies the same rule when it enqueues, so the delay a user sets does not
+// change meaning with the device's provider.
+
+describe('executeDeviceSideActions — delay_seconds', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The verbs the plugin was actually driven with, in the order it saw them. */
+  function executedVerbs(): string[] {
+    return mockExecuteAction.mock.calls.map((call) => String(call[1]));
+  }
+
+  it('does not execute a delayed action before its delay elapses', async () => {
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'turn_on',
+        delay_seconds: 30,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    const run = googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1],
+    });
+
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(mockExecuteAction).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(mockExecuteAction).toHaveBeenCalledTimes(1);
+
+    await run;
+  });
+
+  it('executes an undelayed action without waiting for a timer', async () => {
+    // Guards the path every existing scene takes today: a zero delay must
+    // behave exactly as it did before this change.
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'turn_on',
+        delay_seconds: 0,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    await googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1],
+    });
+
+    expect(mockExecuteAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats each delay as absolute from the start, not cumulative', async () => {
+    // The distinguishing assertion for option (a): both actions are due at
+    // +10s. Under cumulative semantics the second would run at +20s.
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'turn_on',
+        delay_seconds: 10,
+        sort_order: 0,
+        device: device({ provider: 'google_home' }),
+      }),
+      action({
+        id: 2,
+        action_type: 'turn_off',
+        delay_seconds: 10,
+        sort_order: 1,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    const run = googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1, 2],
+    });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(executedVerbs()).toEqual(['on', 'off']);
+
+    await run;
+  });
+
+  it('reproduces the observed defect: a long delay no longer drags a short one with it', async () => {
+    // The exact scene from the physical evidence — turn_on at 100s and
+    // set_brightness at 1s, which fired 4ms apart before this fix.
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'turn_on',
+        delay_seconds: 100,
+        sort_order: 0,
+        device: device({ provider: 'google_home' }),
+      }),
+      action({
+        id: 2,
+        action_type: 'set_brightness',
+        parameters: { value: 87 },
+        delay_seconds: 1,
+        sort_order: 1,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    const run = googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1, 2],
+    });
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(executedVerbs()).toEqual(['set_brightness']);
+
+    await vi.advanceTimersByTimeAsync(99_000);
+    expect(executedVerbs()).toEqual(['set_brightness', 'on']);
+
+    await run;
+  });
+
+  it('keeps sort_order as the tie-break between actions due at the same moment', async () => {
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'set_brightness',
+        parameters: { value: 50 },
+        delay_seconds: 5,
+        sort_order: 2,
+        device: device({ provider: 'google_home' }),
+      }),
+      action({
+        id: 2,
+        action_type: 'turn_on',
+        delay_seconds: 5,
+        sort_order: 1,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    const run = googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1, 2],
+    });
+
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    // Turning a lamp on after setting its brightness is a different outcome
+    // from doing it the other way round, so the tie-break is not cosmetic.
+    expect(executedVerbs()).toEqual(['on', 'set_brightness']);
+
+    await run;
+  });
+
+  it('still reports the outcome of a delayed action', async () => {
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 9,
+        action_type: 'turn_on',
+        delay_seconds: 7,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    const run = googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [9],
+    });
+
+    await vi.advanceTimersByTimeAsync(7_000);
+    await run;
+
+    expect(mockReportSceneActionExecution).toHaveBeenCalledWith(
+      expect.objectContaining({ scene_action_id: 9, outcome: 'success' }),
+    );
+  });
+
+  it('does not wait on a malformed delay', async () => {
+    // The API sends an integer, but a nonsense value must not stall an action
+    // forever — an action that never runs is worse than one that runs at once.
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'turn_on',
+        delay_seconds: Number.NaN,
+        device: device({ provider: 'google_home' }),
+      }),
+      action({
+        id: 2,
+        action_type: 'turn_off',
+        delay_seconds: -5,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockResolvedValue({ ok: true });
+
+    await googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1, 2],
+    });
+
+    expect(mockExecuteAction).toHaveBeenCalledTimes(2);
+  });
+
+  it('never throws out of a delayed action that fails', async () => {
+    mockListSceneDeviceActions.mockResolvedValue([
+      action({
+        id: 1,
+        action_type: 'turn_on',
+        delay_seconds: 3,
+        device: device({ provider: 'google_home' }),
+      }),
+    ]);
+    mockExecuteAction.mockRejectedValue(new Error('Device not found'));
+
+    const run = googleHomeExecutionService.executeDeviceSideActions(SCENE_ID, {
+      sceneExecutionId: SCENE_EXECUTION_ID,
+      deviceActionIds: [1],
+    });
+
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    await expect(run).resolves.toBeUndefined();
+    expect(mockReportSceneActionExecution).toHaveBeenCalledWith(
+      expect.objectContaining({ scene_action_id: 1, outcome: 'failure' }),
+    );
+  });
+});

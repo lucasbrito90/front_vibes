@@ -128,6 +128,11 @@
         <p v-if="errors.delay_seconds" class="action-field-error">{{ errors.delay_seconds }}</p>
         <p class="action-field-hint">Wait this long before the action runs (0–{{ MAX_DELAY_SECONDS }}s).</p>
 
+        <p v-if="delayNeedsAppOpen" class="action-field-warning">
+          This device is controlled by the phone, so a delay this long only runs
+          while the app stays open. It is reliable while a Vibe is playing.
+        </p>
+
         <p v-if="error" class="action-error">{{ error }}</p>
       </template>
     </ion-content>
@@ -156,6 +161,7 @@ import {
 import { bulbOutline, cloudOfflineOutline } from 'ionicons/icons';
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useDevices } from '@/composables/useDevices';
+import { useProviderTypes } from '@/composables/useProviderTypes';
 import { useSceneDeviceActions } from '@/composables/useSceneDeviceActions';
 import {
   DEVICE_OFFLINE_MUTATION_MESSAGE,
@@ -173,6 +179,7 @@ import type { ActionType, SceneDeviceAction } from '@/services/scene-device-acti
 import { deviceStatusBadge } from '@/utils/device-status';
 import {
   availableActionTypeOptions,
+  delayNeedsAppOpen as delayNeedsAppOpenFor,
   MAX_DELAY_SECONDS,
   validateActionDraft,
 } from '@/utils/device-action';
@@ -213,6 +220,33 @@ const form = reactive<{
 });
 
 const selectedDevice = computed(() => devices.value.find((d) => d.id === form.device_id) ?? null);
+
+const { providerTypes, fetchProviderTypes, findProviderType } = useProviderTypes();
+
+/**
+ * Warn when a long delay is one the app itself has to hold.
+ *
+ * A server-side delay is held by the queue and runs whether or not the phone
+ * is even switched on; a device-side one is a timer inside this app. Saying so
+ * is better than a field that silently means two different things depending on
+ * which device it is attached to.
+ *
+ * Derived from execution_capabilities, never a provider slug — the same rule
+ * as useScheduleExecutionWarning. While provider types are still loading the
+ * warning stays hidden rather than flashing on and off.
+ */
+const delayNeedsAppOpen = computed(() => {
+  const device = selectedDevice.value;
+
+  if (device === null || providerTypes.value.length === 0) {
+    return false;
+  }
+
+  return delayNeedsAppOpenFor(
+    findProviderType(device.provider)?.execution_capabilities,
+    Number(form.delay_seconds),
+  );
+});
 
 /**
  * Reactive action type options filtered by the selected device's capabilities.
@@ -317,6 +351,11 @@ onMounted(() => {
   if (!devices.value.length) {
     void fetchDevices();
   }
+  if (!providerTypes.value.length) {
+    // Advisory only: fetchProviderTypes() records failures on its own error
+    // ref rather than throwing, and an empty list simply hides the warning.
+    void fetchProviderTypes();
+  }
 });
 
 onUnmounted(() => {
@@ -412,6 +451,13 @@ async function handleSave(): Promise<void> {
   padding-left: var(--app-space-1);
   font-size: var(--app-font-size-caption);
   color: var(--app-color-text-tertiary);
+}
+
+.action-field-warning {
+  margin: var(--app-space-1) 0 0;
+  padding-left: var(--app-space-1);
+  font-size: var(--app-font-size-caption);
+  color: var(--ion-color-warning-shade);
 }
 
 .action-error {

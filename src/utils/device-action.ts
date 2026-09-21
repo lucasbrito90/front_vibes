@@ -1,7 +1,11 @@
 import type { ActionType, SceneDeviceActionPayload } from '@/services/scene-device-action.service';
 import { parseCapabilities, supportedActionTypes } from '@/utils/canonical-capabilities';
+// The threshold the editor warns at is the number the runtime is actually
+// bound by — imported rather than restated so the two cannot drift apart.
+import { LONG_DELAY_WARNING_SECONDS } from '@/services/google-home-execution.service';
 
 export type { ActionType };
+export { LONG_DELAY_WARNING_SECONDS };
 
 /**
  * Action types the UI can render.
@@ -132,4 +136,32 @@ export function validateActionDraft(draft: SceneDeviceActionPayload): ActionVali
 /** True when the draft has no validation errors. */
 export function isValidActionDraft(draft: SceneDeviceActionPayload): boolean {
   return Object.keys(validateActionDraft(draft)).length === 0;
+}
+
+/**
+ * Whether the editor should warn that this delay depends on the app staying
+ * open.
+ *
+ * Only device-side actions are affected. A server-side action's delay is held
+ * by the queue and runs whether or not the phone is even switched on; a
+ * device-side one is a timer inside this app, so a long delay is a promise the
+ * runtime can keep only while it is alive. On the Vibe-play path the audio
+ * foreground service already keeps it alive — this warning is for a Scene the
+ * user executes by hand.
+ *
+ * The decision comes from `execution_capabilities`, never from a provider slug
+ * — the same rule useScheduleExecutionWarning follows. A provider with no
+ * descriptor is treated as device-side, which is the safe default: warning
+ * about a delay that would in fact have worked is a far smaller harm than
+ * silently promising one that will not.
+ */
+export function delayNeedsAppOpen(
+  executionCapabilities: readonly string[] | null | undefined,
+  delaySeconds: number,
+): boolean {
+  if (!Number.isFinite(delaySeconds) || delaySeconds <= LONG_DELAY_WARNING_SECONDS) {
+    return false;
+  }
+
+  return !(executionCapabilities ?? []).includes('server_side_execution');
 }
