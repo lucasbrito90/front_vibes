@@ -118,7 +118,17 @@ beforeEach(() => {
     provider_device_id: raw.id,
     name: raw.name,
     type: 'lighting',
-    capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
+    capabilities: {
+      contract_version: '1.0.0',
+      capabilities: {
+        power: {
+          id: 'power',
+          access: 'read_write',
+          operations: ['on', 'off', 'toggle'],
+          constraints: { type: 'boolean' },
+        },
+      },
+    },
   }));
 });
 

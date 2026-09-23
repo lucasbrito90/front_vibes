@@ -294,7 +294,17 @@ describe('provider-connection.service — protected requests', () => {
         provider_device_id: 'device@abc',
         name: 'Living Room Light',
         type: 'lighting',
-        capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
+        capabilities: {
+          contract_version: '1.0.0',
+          capabilities: {
+            power: {
+              id: 'power',
+              access: 'read_write',
+              operations: ['on', 'off', 'toggle'],
+              constraints: { type: 'boolean' },
+            },
+          },
+        },
       },
     ];
 
