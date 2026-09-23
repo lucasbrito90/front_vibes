@@ -1,5 +1,11 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
+import {
+  CANONICAL_BRIGHTNESS_RANGE,
+  CANONICAL_CONTRACT_VERSION,
+} from '@/utils/canonical-contract';
+import type { CanonicalCapability } from '@/utils/canonical-capabilities';
+
 /**
  * google-home.service.ts
  *
@@ -38,58 +44,17 @@ export interface RawGoogleHomeDevice {
 }
 
 /**
- * The capability payload this service produces.
+ * Canonical capability envelope reported to the backend (ADR-037 §2-§5).
  *
- * Two shapes at once, deliberately (CSDM-04, ADR-037 §8) — the same
- * expand/contract the Home Assistant mapper uses on the backend:
- *
- * - The **canonical** half (`contract_version` + `capabilities`) is the
- *   authoritative one, and what CSDM-06 will read.
- * - The **legacy** `can_*` keys are still emitted because `utils/device-action.ts`
- *   builds the action editor from them and the backend's
- *   `ActionType::isBlockedByDeviceCapabilities` reads them too. Dropping them
- *   now would leave every imported Google device offering no actions at all.
- *
- * CSDM-07 removes the legacy half.
+ * CSDM-07b emits only this shape — no legacy `can_*` keys and no provider
+ * scales. Devices synced earlier remain readable via `parseCapabilities()`.
  */
 export interface GoogleHomeDeviceCapabilities {
-  // Canonical half (ADR-037 §2-§5).
   contract_version?: string;
   capabilities?: Record<string, CanonicalCapability>;
-
-  // Legacy half (ADR-033), transitional.
-  can_turn_on?: Record<string, never>;
-  can_turn_off?: Record<string, never>;
-  can_toggle?: Record<string, never>;
-  can_set_brightness?: { min: number; max: number; step: number };
 }
 
-/** One canonical capability, mirroring the shared schema in ixora-infra/contracts. */
-export interface CanonicalCapability {
-  id: string;
-  access: 'read' | 'write' | 'read_write';
-  operations: string[];
-  constraints:
-    | { type: 'number'; min: number | null; max: number | null; step: number | null; unit: string }
-    | { type: 'enum'; allowed_values: string[] }
-    | { type: 'boolean' }
-    | null;
-}
-
-/**
- * Semver of the canonical contract this service emits. Must match
- * `contracts/smart-home/capability.v1.schema.json`; the backend rejects an
- * envelope whose major version it does not understand.
- */
-export const CANONICAL_CONTRACT_VERSION = '1.0.0';
-
-/**
- * Canonical brightness range, fixed by ADR-037 §5 — NOT Matter's 0-254 and not
- * Home Assistant's 0-255. Both are protocol artifacts; the native plugin
- * converts Matter's scale at its own boundary (CanonicalBrightness.kt), and
- * nothing on this side of the bridge needs to know it exists.
- */
-const CANONICAL_BRIGHTNESS = { min: 0, max: 100, step: 1, unit: 'percent' } as const;
+export { CANONICAL_CONTRACT_VERSION };
 
 /** Ixora device type vocabulary (back_vibes App\SmartHome\DeviceType) this mapping can infer. */
 export type IxoraDeviceType = 'lighting' | 'switchable' | null;
@@ -237,9 +202,6 @@ function mapToIxoraDevice(raw: RawGoogleHomeDevice): IxoraMappedDevice {
       constraints: { type: 'boolean' },
     };
 
-    capabilities.can_turn_on = {};
-    capabilities.can_turn_off = {};
-    capabilities.can_toggle = {};
   }
 
   if (raw.hasDimmableLight) {
@@ -247,13 +209,8 @@ function mapToIxoraDevice(raw: RawGoogleHomeDevice): IxoraMappedDevice {
       id: 'brightness',
       access: 'read_write',
       operations: ['set'],
-      constraints: { type: 'number', ...CANONICAL_BRIGHTNESS },
+      constraints: { type: 'number', ...CANONICAL_BRIGHTNESS_RANGE },
     };
-
-    // The legacy half still declares the scale the pre-ADR-037 pipeline used,
-    // because the backend range-checks legacy-shaped parameters against it
-    // (CSDM-02) while the transition window is open.
-    capabilities.can_set_brightness = { min: 0, max: 255, step: 1 };
   }
 
   if (Object.keys(canonical).length > 0) {
