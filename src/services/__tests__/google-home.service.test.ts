@@ -205,7 +205,7 @@ describe('executeAction', () => {
 // ── mapToIxoraDevice — pure function, no mocks needed for its own logic ─────
 
 describe('mapToIxoraDevice', () => {
-  it('maps a light-only device to lighting + can_turn_on/off/toggle, no brightness', () => {
+  it('maps a light-only device to lighting with canonical power only', () => {
     const mapped = googleHomeService.mapToIxoraDevice(
       rawDevice({ id: 'light-1', name: 'Kitchen Light', hasOnOffLight: true }),
     );
@@ -214,14 +214,15 @@ describe('mapToIxoraDevice', () => {
       provider_device_id: 'light-1',
       name: 'Kitchen Light',
       type: 'lighting',
-      capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
     });
 
-    // Still no brightness — the assertion the exact-shape check was making.
-    expect(mapped.capabilities.can_set_brightness).toBeUndefined();
+    expect(mapped.capabilities.contract_version).toBe('1.0.0');
+    expect(mapped.capabilities.capabilities?.power?.operations).toEqual(['on', 'off', 'toggle']);
+    expect(mapped.capabilities.capabilities?.brightness).toBeUndefined();
+    expect(mapped.capabilities).not.toHaveProperty('can_turn_on');
   });
 
-  it('maps a dimmable-light-only device to lighting + brightness capability', () => {
+  it('maps a dimmable-light-only device to canonical power and brightness', () => {
     const mapped = googleHomeService.mapToIxoraDevice(
       rawDevice({ id: 'dim-1', name: 'Bedroom Light', hasDimmableLight: true }),
     );
@@ -230,16 +231,20 @@ describe('mapToIxoraDevice', () => {
       provider_device_id: 'dim-1',
       name: 'Bedroom Light',
       type: 'lighting',
-      capabilities: {
-        can_turn_on: {},
-        can_turn_off: {},
-        can_toggle: {},
-        can_set_brightness: { min: 0, max: 255, step: 1 },
-      },
     });
+
+    expect(mapped.capabilities.capabilities?.brightness?.constraints).toEqual({
+      type: 'number',
+      min: 0,
+      max: 100,
+      step: 1,
+      unit: 'percent',
+    });
+    expect(JSON.stringify(mapped.capabilities)).not.toMatch(/\b25[45]\b/);
+    expect(mapped.capabilities).not.toHaveProperty('can_set_brightness');
   });
 
-  it('maps a plug-only device to switchable, no brightness', () => {
+  it('maps a plug-only device to switchable canonical power, no brightness', () => {
     const mapped = googleHomeService.mapToIxoraDevice(
       rawDevice({ id: 'plug-1', name: 'Fan Plug', hasOnOffPlug: true }),
     );
@@ -248,10 +253,11 @@ describe('mapToIxoraDevice', () => {
       provider_device_id: 'plug-1',
       name: 'Fan Plug',
       type: 'switchable',
-      capabilities: { can_turn_on: {}, can_turn_off: {}, can_toggle: {} },
     });
 
-    expect(mapped.capabilities.can_set_brightness).toBeUndefined();
+    expect(mapped.capabilities.capabilities?.power).toBeDefined();
+    expect(mapped.capabilities.capabilities?.brightness).toBeUndefined();
+    expect(mapped.capabilities).not.toHaveProperty('can_turn_on');
   });
 
   it('maps a device with no known flags to null type and no capabilities', () => {
@@ -280,18 +286,15 @@ describe('mapToIxoraDevice', () => {
 // ── CSDM-04 — the canonical half (ADR-037 §2-§5) ────────────────────────────
 
 describe('mapToIxoraDevice — canonical capabilities', () => {
-  it('emits the canonical envelope alongside the legacy keys', () => {
+  it('emits only the canonical envelope (CSDM-07b)', () => {
     const mapped = googleHomeService.mapToIxoraDevice(
       rawDevice({ id: 'dim-2', name: 'Hall Light', hasDimmableLight: true }),
     );
 
-    // Canonical half — authoritative, and what CSDM-06 will read.
     expect(mapped.capabilities.contract_version).toBe('1.0.0');
     expect(Object.keys(mapped.capabilities.capabilities ?? {})).toEqual(['power', 'brightness']);
-
-    // Legacy half — still there, because the action editor and the backend
-    // capability gate both read it until CSDM-06/CSDM-07 move them.
-    expect(mapped.capabilities.can_turn_on).toBeDefined();
+    expect(mapped.capabilities).not.toHaveProperty('can_turn_on');
+    expect(mapped.capabilities).not.toHaveProperty('can_set_brightness');
   });
 
   it('declares brightness in the canonical range, never a provider scale', () => {
