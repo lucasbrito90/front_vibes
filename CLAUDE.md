@@ -17,7 +17,14 @@ Canonical docs: `ixora-infra/docs/` — read per-domain indexes before loading f
 
 ## docs/ in this repo
 
-Files under `front_vibes/docs/` are **secondary mirrors** of the canonical docs in `ixora-infra/docs/`. If they diverge, `ixora-infra/docs/` wins. Key canonical paths:
+Files under `front_vibes/docs/` are **secondary mirrors** of the canonical docs in `ixora-infra/docs/`. If they diverge, `ixora-infra/docs/` wins.
+
+**Do not load mirrored docs by default.** Use `ixora-infra/docs/INDEX.md` and the canonical documents as the primary source. Read a file from `front_vibes/docs/` only when the task specifically concerns repo-local legacy context or you need to check whether a mirror has drifted from the canonical source.
+
+Preferred flow: repo `CLAUDE.md` → `ixora-infra/docs/INDEX.md` → canonical document.  
+Not: repo `CLAUDE.md` → `front_vibes/docs/` mirror → canonical document.
+
+Key canonical paths:
 
 | front_vibes/docs/ | Canonical source |
 | --- | --- |
